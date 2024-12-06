@@ -1,5 +1,7 @@
 # Kodee's Arcade
 
+![Kodee's Arcade](.idea/icon.png)
+
 ## Project Structure
 
 This project is broken down into the following components:
