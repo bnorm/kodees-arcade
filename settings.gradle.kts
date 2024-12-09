@@ -12,6 +12,7 @@ pluginManagement {
         kotlin("plugin.serialization") version kotlinVersion
         kotlin("plugin.compose") version kotlinVersion
         id("org.jetbrains.compose") version "1.7.1"
+        id("com.gradleup.shadow") version "8.3.5"
     }
 
     dependencyResolutionManagement {
@@ -31,3 +32,7 @@ include(":arcade-main")
 include(":arcade-render")
 include(":arcade-runner")
 include(":arcade-ui")
+
+include(":games:cybertanks:cybertanks-api")
+include(":games:cybertanks:cybertanks-cartridge")
+include(":games:cybertanks:cybertanks-sample")
