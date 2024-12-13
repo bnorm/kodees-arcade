@@ -16,6 +16,8 @@ kotlin {
             api(project(":arcade-agent"))
             api(project(":arcade-engine"))
             api(project(":arcade-render"))
+
+            api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
         }
     }
 }

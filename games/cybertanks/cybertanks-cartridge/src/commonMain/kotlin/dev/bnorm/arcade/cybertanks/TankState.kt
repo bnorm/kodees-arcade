@@ -3,12 +3,12 @@ package dev.bnorm.arcade.cybertanks
 class TankState(
     override var x: Double = 0.0,
     override var y: Double = 0.0,
-    override var heading: Double = 0.0,
+    override var heading: Angle = Angle.ZERO,
 ) : Tank {
-    override var velocity: Double = 0.0
+    override var speed: Double = 0.0
 
-    override var remainingTurn: Double = 0.0
-    override fun turn(angle: Double) {
+    override var remainingTurn: Angle = Angle.ZERO
+    override fun turn(angle: Angle) {
         remainingTurn = angle
     }
 
@@ -17,9 +17,9 @@ class TankState(
         remainingMove = distance
     }
 
-    override var gunHeading: Double = heading
-    override var remainingGunTurn: Double = 0.0
-    override fun turnGun(angle: Double) {
+    override var gunHeading: Angle = heading
+    override var remainingGunTurn: Angle = Angle.ZERO
+    override fun turnGun(angle: Angle) {
         remainingGunTurn = angle
     }
 
@@ -27,9 +27,9 @@ class TankState(
         TODO("Not yet implemented")
     }
 
-    override var radarHeading: Double = heading
-    override var remainingRadarTurn: Double = 0.0
-    override fun turnRadar(angle: Double) {
+    override var radarHeading: Angle = heading
+    override var remainingRadarTurn: Angle = Angle.ZERO
+    override fun turnRadar(angle: Angle) {
         remainingRadarTurn = angle
     }
 }

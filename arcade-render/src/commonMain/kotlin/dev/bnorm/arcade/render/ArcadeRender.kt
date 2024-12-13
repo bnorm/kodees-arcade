@@ -1,9 +1,11 @@
 package dev.bnorm.arcade.render
 
+import androidx.compose.ui.graphics.drawscope.DrawScope
+
 interface ArcadeRender {
     interface Factory {
         fun create(): ArcadeRender
     }
 
-    fun render(data: ByteArray): ByteArray
+    fun DrawScope.draw(data: ByteArray)
 }

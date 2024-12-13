@@ -1,28 +1,30 @@
 package dev.bnorm.arcade.ui
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import dev.bnorm.arcade.engine.EngineResult
 import dev.bnorm.arcade.runner.ArcadeCartridge
 import dev.bnorm.arcade.runner.ArcadeController
 import dev.bnorm.arcade.runner.loadCartridge
+import dev.bnorm.arcade.runner.run
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import org.jetbrains.skia.Image
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 @Composable
 fun ArcadeWindow() {
@@ -39,7 +41,7 @@ fun ArcadeWindow() {
             }
         }
 
-        val controllers = remember { mutableStateListOf<ArcadeController>() }
+        val controllers = remember { mutableStateListOf<ArcadeController.Factory>() }
         val controllersLauncher = rememberFilePickerLauncher(
             mode = PickerMode.Single,
             type = PickerType.File(listOf("jar")),
@@ -47,12 +49,19 @@ fun ArcadeWindow() {
         ) { file ->
             if (file != null) {
                 val cartridge = cartridge ?: return@rememberFilePickerLauncher
-                controllers.addAll(
-                    cartridge
-                        .loadControllers(file.path!!)
-                        .filter { cartridge.engineFactory.isSupported(it.agent) }
-                )
+                controllers.addAll(cartridge.loadControllers(file.path!!))
             }
+        }
+
+        LaunchedEffect(Unit) {
+            // TODO temporary automatically load cybertanks to make testing faster.
+            val cybertankCartridge =
+                loadCartridge("../games/cybertanks/cybertanks-cartridge/build/libs/cybertanks-cartridge-cartridge.jar")!!
+            val cybertankControllers =
+                cybertankCartridge.loadControllers("../games/cybertanks/cybertanks-sample/build/libs/cybertanks-sample-jvm.jar")
+
+            cartridge = cybertankCartridge
+            controllers.addAll(cybertankControllers)
         }
 
         var running by remember { mutableStateOf(false) }
@@ -60,7 +69,7 @@ fun ArcadeWindow() {
         Column {
             Button(onClick = {
                 running = false
-                controllers.forEach { it.close() }
+//                controllers.forEach { it.close() }
                 controllers.clear()
                 cartridge?.close()
                 cartridge = null
@@ -79,8 +88,14 @@ fun ArcadeWindow() {
             }
 
             if (controllers.isNotEmpty()) {
-                Button(enabled = !running, onClick = { running = true }) {
-                    Text("Launch")
+                Row {
+                    Button(enabled = !running, onClick = { running = true }) {
+                        Text("Start")
+                    }
+
+                    Button(enabled = running, onClick = { running = false }) {
+                        Text("Stop")
+                    }
                 }
             }
 
@@ -92,42 +107,49 @@ fun ArcadeWindow() {
 }
 
 @Composable
-fun GameView(cartridge: ArcadeCartridge, controllers: List<ArcadeController>) {
-    val engine = remember(cartridge, controllers) { cartridge.engineFactory.create(controllers.map { it.agent }) }
-    val render = remember(cartridge) { cartridge.renderFactory.create() }
-    val state = remember(engine) { MutableStateFlow<ImageBitmap?>(null) }
-    val image by state.collectAsState()
+fun GameView(cartridge: ArcadeCartridge, controllers: List<ArcadeController.Factory>) {
+    val density = LocalDensity.current
 
-    LaunchedEffect(engine) {
-        while (true) {
-            when (val result = engine.advance()) {
-                EngineResult.Complete -> {
-                    break
-                }
+    var desiredFps by remember { mutableIntStateOf(120) }
+    val frameDelay by derivedStateOf { (1.0 / desiredFps).seconds }
 
-                is EngineResult.Running -> {
-                    val stateData = result.state.serialize()
-                    val imageData = render.render(stateData)
-                    state.value = imageData.toImageBitmap()
-                    delay(1_000 / 32)
+    val engine =
+        remember(cartridge, controllers) { cartridge.engineFactory.create(controllers.map { it.create().agent }) }
+    val render = remember(cartridge) { cartridge.renderFactory?.create() }
+    val engineState by remember(engine) {
+        flow {
+            val startTime = TimeSource.Monotonic.markNow()
+            var targetTime = frameDelay
+
+            emitAll(engine.run().map {
+                // Control FPS by delaying until target time for next frame.
+                val currentTime = startTime.elapsedNow()
+                delay(targetTime - currentTime)
+                targetTime += frameDelay
+
+                it.serialize()
+            })
+        }
+    }
+        .collectAsState(null, Dispatchers.Default)
+
+    Column(Modifier.fillMaxSize()) {
+        engineState?.let { data ->
+            Row {
+                TextField(
+                    value = desiredFps.toString(),
+                    onValueChange = { input -> input.toIntOrNull()?.let { fps -> desiredFps = fps } },
+                    label = { Text("Desired FPS") }
+                )
+            }
+            if (render != null) {
+                with(density) {
+                    Canvas(Modifier.requiredSize(800.toDp(), 600.toDp()).border(1.0.dp, Color.Red)) {
+                        with(render) { draw(data) }
+                    }
                 }
             }
         }
     }
-
-    Box(Modifier.fillMaxSize()) {
-        image?.let {
-            Image(
-                bitmap = it,
-                contentDescription = "",
-                modifier = Modifier.border(1.0.dp, Color.Red),
-            )
-        }
-    }
 }
 
-fun ByteArray.toImageBitmap(): ImageBitmap {
-    return Image.makeFromEncoded(this).toComposeImageBitmap()
-//    val bitmap = BitmapFactory.decodeByteArray(this, 0, this.size)
-//    return bitmap.asImageBitmap()
-}

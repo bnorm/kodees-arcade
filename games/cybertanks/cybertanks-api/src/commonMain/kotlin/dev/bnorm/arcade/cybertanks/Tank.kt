@@ -1,17 +1,17 @@
 package dev.bnorm.arcade.cybertanks
 
 interface Tank : Vector {
-    val remainingTurn: Double
-    fun turn(angle: Double)
+    val remainingTurn: Angle
+    fun turn(angle: Angle)
     val remainingMove: Double
     fun move(distance: Double)
 
-    val gunHeading: Double
-    val remainingGunTurn: Double
-    fun turnGun(angle: Double)
+    val gunHeading: Angle
+    val remainingGunTurn: Angle
+    fun turnGun(angle: Angle)
     fun fire(power: Double): Bullet
 
-    val radarHeading: Double
-    val remainingRadarTurn: Double
-    fun turnRadar(angle: Double)
+    val radarHeading: Angle
+    val remainingRadarTurn: Angle
+    fun turnRadar(angle: Angle)
 }

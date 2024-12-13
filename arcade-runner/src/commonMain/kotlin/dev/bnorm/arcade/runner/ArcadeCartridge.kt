@@ -5,7 +5,7 @@ import dev.bnorm.arcade.render.ArcadeRender
 
 interface ArcadeCartridge : AutoCloseable {
     val engineFactory: ArcadeEngine.Factory
-    val renderFactory: ArcadeRender.Factory
+    val renderFactory: ArcadeRender.Factory?
 
-    fun loadControllers(path: String): List<ArcadeController>
+    fun loadControllers(path: String): List<ArcadeController.Factory>
 }
