@@ -5,14 +5,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
-import dev.bnorm.arcade.cybertanks.CybertankEngineState.Companion.serializer
 import dev.bnorm.arcade.render.ArcadeRender
-import kotlinx.serialization.json.Json
 import kotlin.math.PI
 
 class CybertankRender : ArcadeRender {
     override fun DrawScope.draw(data: ByteArray) {
-        val state = Json.decodeFromString(serializer(), data.decodeToString())
+        val state = CybertankEngineState.deserialize(data)
 
         // Draw background.
         drawRect(color = Color.Black, topLeft = Offset.Zero, size = size)

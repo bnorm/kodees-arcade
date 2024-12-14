@@ -22,7 +22,7 @@ kotlin {
             implementation(project(":arcade-engine"))
             implementation(project(":arcade-render"))
 
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.7.3")
 
             implementation(compose.foundation)
         }
