@@ -3,6 +3,7 @@ package dev.bnorm.arcade.cybertanks
 import dev.bnorm.arcade.agent.ArcadeAgent
 import dev.bnorm.arcade.engine.ArcadeEngine
 import dev.bnorm.arcade.engine.EngineResult
+import dev.bnorm.arcade.engine.EngineState
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.min
@@ -14,6 +15,21 @@ class CybertankEngine private constructor(
     private val battleFieldHeight: Int,
     private val states: List<AgentState>,
 ) : ArcadeEngine {
+    override fun init(): EngineState {
+        states.forEach { it.cybertank.onStart(it.tankState) }
+        return CybertankEngineState(
+            tanks = states.map {
+                CybertankEngineState.Tank(
+                    x = it.tankState.x,
+                    y = it.tankState.y,
+                    heading = it.tankState.heading.radians,
+                    gunHeading = it.tankState.gunHeading.radians,
+                    radarHeading = it.tankState.radarHeading.radians,
+                )
+            }
+        )
+    }
+
     override fun advance(): EngineResult {
         for (state in states) {
             state.cybertank.onTurn(state.tankState)
@@ -88,7 +104,6 @@ class CybertankEngine private constructor(
                 )
                 AgentState(it as Cybertank, state)
             }
-            states.forEach { it.cybertank.onStart(it.tankState) }
             return CybertankEngine(battleFieldWidth, battleFieldHeight, states)
         }
     }

@@ -8,5 +8,6 @@ interface ArcadeEngine {
         fun create(agents: List<ArcadeAgent>): ArcadeEngine
     }
 
+    fun init(): EngineState
     fun advance(): EngineResult
 }

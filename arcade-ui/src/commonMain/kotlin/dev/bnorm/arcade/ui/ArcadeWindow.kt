@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.runner.ArcadeCartridge
 import dev.bnorm.arcade.runner.ArcadeController
@@ -23,7 +24,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
 @Composable
@@ -66,29 +69,31 @@ fun ArcadeWindow() {
 
         var running by remember { mutableStateOf(false) }
 
-        Column {
-            Button(onClick = {
-                running = false
-//                controllers.forEach { it.close() }
-                controllers.clear()
-                cartridge?.close()
-                cartridge = null
-            }) {
-                Text("Clear")
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(0.dp), modifier = Modifier.padding(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    running = false
+                    // controllers.forEach { it.close() }
+                    controllers.clear()
+                    cartridge?.close()
+                    cartridge = null
+                }) {
+                    Text("Reset")
+                }
 
-            Button(enabled = !running && cartridge == null, onClick = { cartridgeLauncher.launch() }) {
-                Text("Pick Cartridge")
-            }
+                Button(enabled = !running && cartridge == null, onClick = { cartridgeLauncher.launch() }) {
+                    Text("Pick Cartridge")
+                }
 
-            if (cartridge != null) {
-                Button(enabled = !running && controllers.isEmpty(), onClick = { controllersLauncher.launch() }) {
-                    Text("Pick Agent")
+                if (cartridge != null) {
+                    Button(enabled = !running && controllers.isEmpty(), onClick = { controllersLauncher.launch() }) {
+                        Text("Pick Agent")
+                    }
                 }
             }
 
             if (controllers.isNotEmpty()) {
-                Row {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(enabled = !running, onClick = { running = true }) {
                         Text("Start")
                     }
@@ -111,6 +116,7 @@ fun GameView(cartridge: ArcadeCartridge, controllers: List<ArcadeController.Fact
     val density = LocalDensity.current
 
     var desiredFps by remember { mutableIntStateOf(120) }
+    var actualFps by remember { mutableIntStateOf(0) }
     val frameDelay by derivedStateOf { (1.0 / desiredFps).seconds }
 
     val engine =
@@ -119,13 +125,26 @@ fun GameView(cartridge: ArcadeCartridge, controllers: List<ArcadeController.Fact
     val engineState by remember(engine) {
         flow {
             val startTime = TimeSource.Monotonic.markNow()
-            var targetTime = frameDelay
+            emit(engine.init().serialize())
+            var frame = 1
 
+            var targetTime = frameDelay
+            var lastFpsOutput = Duration.ZERO
             emitAll(engine.run().map {
-                // Control FPS by delaying until target time for next frame.
                 val currentTime = startTime.elapsedNow()
-                delay(targetTime - currentTime)
-                targetTime += frameDelay
+                if (frameDelay.inWholeMilliseconds > 0) {
+                    // Control FPS by delaying until target time for next frame.
+                    delay(targetTime - currentTime)
+                    targetTime += frameDelay
+                }
+
+                frame++
+                if (currentTime > lastFpsOutput) {
+                    val elapsed = (currentTime - lastFpsOutput + 1.seconds).toDouble(DurationUnit.SECONDS)
+                    actualFps = (frame / elapsed).toInt()
+                    frame = 0
+                    lastFpsOutput = currentTime + 1.seconds
+                }
 
                 it.serialize()
             })
@@ -140,6 +159,10 @@ fun GameView(cartridge: ArcadeCartridge, controllers: List<ArcadeController.Fact
                     value = desiredFps.toString(),
                     onValueChange = { input -> input.toIntOrNull()?.let { fps -> desiredFps = fps } },
                     label = { Text("Desired FPS") }
+                )
+                Text(
+                    text = actualFps.toString(),
+                    fontFamily = FontFamily.Monospace,
                 )
             }
             if (render != null) {
