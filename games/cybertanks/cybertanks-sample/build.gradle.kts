@@ -10,8 +10,13 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs()
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmWasi {
+        binaries.executable()
+    }
+
     sourceSets {
-        jvmMain.dependencies {
+        commonMain.dependencies {
             implementation(project(":games:cybertanks:cybertanks-api"))
         }
     }

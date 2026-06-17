@@ -9,4 +9,9 @@ kotlin {
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs()
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmWasi {
+        binaries.executable()
+    }
 }

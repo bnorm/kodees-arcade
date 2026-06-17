@@ -6,13 +6,12 @@ pluginManagement {
     }
 
     plugins {
-        val kotlinVersion = "2.2.0"
+        val kotlinVersion = "2.4.0"
 
         kotlin("multiplatform") version kotlinVersion
         kotlin("plugin.serialization") version kotlinVersion
         kotlin("plugin.compose") version kotlinVersion
-        id("org.jetbrains.compose") version "1.8.2"
-        id("org.jetbrains.compose.hot-reload") version "1.0.0-beta02"
+        id("org.jetbrains.compose") version "1.11.1"
         id("com.gradleup.shadow") version "8.3.5"
     }
 }

@@ -10,6 +10,9 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs()
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmWasi()
+
     sourceSets {
         commonMain.dependencies {
             api(project(":arcade-agent"))

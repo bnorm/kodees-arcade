@@ -2,11 +2,11 @@ package dev.bnorm.arcade.runner
 
 import dev.bnorm.arcade.engine.ArcadeEngine
 import dev.bnorm.arcade.engine.EngineResult
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
-import kotlin.coroutines.coroutineContext
 
 interface ArcadeGame {
     val state: StateFlow<EngineResult>
@@ -31,7 +31,7 @@ private class ArcadeGameImpl(
         get() = _state.asStateFlow()
 
     override suspend fun run() {
-        while (coroutineContext.isActive) {
+        while (currentCoroutineContext().isActive) {
             val result = engine.advance()
             _state.emit(result)
             if (result is EngineResult.Complete) break

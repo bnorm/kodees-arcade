@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
@@ -21,16 +20,12 @@ kotlin {
             api(project(":arcade-agent"))
             api(project(":arcade-runner"))
 
-            api(compose.runtime)
-            api(compose.material)
-            api(compose.components.resources)
+            api("org.jetbrains.compose.runtime:runtime:1.11.1")
+            api("org.jetbrains.compose.material:material:1.11.1")
+            api("org.jetbrains.compose.components:components-resources:1.11.1")
 
             api("io.github.vinceglb:filekit-core:0.8.7")
             api("io.github.vinceglb:filekit-compose:0.8.7")
         }
     }
-}
-
-composeCompiler {
-    featureFlags.add(ComposeFeatureFlag.OptimizeNonSkippingGroups)
 }

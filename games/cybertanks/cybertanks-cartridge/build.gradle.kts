@@ -22,14 +22,14 @@ kotlin {
             implementation(project(":arcade-engine"))
             implementation(project(":arcade-render"))
 
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.7.3")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.11.0")
 
-            implementation(compose.foundation)
+            implementation("org.jetbrains.compose.foundation:foundation:1.11.1")
         }
     }
 }
 
-val cartridge by tasks.creating(ShadowJar::class) {
+val cartridge by tasks.registering(ShadowJar::class) {
     archiveClassifier = "cartridge"
 
     val jvmJar = tasks.named<Jar>("jvmJar")
