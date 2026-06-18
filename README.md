@@ -39,9 +39,9 @@ Open questions:
 
 * [ ] Where does the game render API live? Is this the API module instead?
 
-### [Arcade UI](./arcade-ui/README.md)
+### [Arcade App](arcade-app/README.md)
 
-The UI module is responsible for creating the surrounding application UI elements.
+The app module is responsible for creating the surrounding application UI elements.
 
 ### [Arcade Main](./arcade-main/README.md)
 
@@ -50,6 +50,7 @@ The main module is the entry point for running the desktop application.
 Open questions:
 
 * [ ] Is this also where the web entry point is?
+* [ ] What actually is the purpose of this module? Doesn't App handle this as well?
 
 ## Game Infrastructure
 

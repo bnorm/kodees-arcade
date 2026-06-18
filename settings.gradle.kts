@@ -30,12 +30,12 @@ plugins {
 rootProject.name = "kodees-arcade"
 
 include(":arcade-agent")
+include(":arcade-app")
 include(":arcade-core")
 include(":arcade-engine")
 include(":arcade-main")
 include(":arcade-render")
 include(":arcade-runner")
-include(":arcade-ui")
 
 //include(":games:cybertanks:cybertanks-api")
 //include(":games:cybertanks:cybertanks-cartridge")

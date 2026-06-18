@@ -16,7 +16,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":arcade-core"))
             api(project(":arcade-runner"))
-            api(project(":arcade-ui"))
+            api(project(":arcade-app"))
 
             api("io.github.vinceglb:filekit-core:0.8.7")
             api("io.github.vinceglb:filekit-compose:0.8.7")
