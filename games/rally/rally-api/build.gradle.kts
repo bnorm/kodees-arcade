@@ -10,15 +10,12 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs()
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmWasi()
+
     sourceSets {
         commonMain.dependencies {
             api(project(":arcade-agent"))
-        }
-
-        jvmMain.dependencies {
-            implementation("ai.tegmentum:wasmtime4j-jni:45.0.1-1.1.5")
-            // TODO switch to panama when it works
-            // runtimeOnly("ai.tegmentum:wasmtime4j-panama:45.0.1-1.1.5")
         }
     }
 }

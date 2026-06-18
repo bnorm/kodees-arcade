@@ -27,7 +27,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
 }
 
-rootProject.name = "kodee-arcade"
+rootProject.name = "kodees-arcade"
 
 include(":arcade-agent")
 include(":arcade-core")
@@ -37,6 +37,10 @@ include(":arcade-render")
 include(":arcade-runner")
 include(":arcade-ui")
 
-include(":games:cybertanks:cybertanks-api")
-include(":games:cybertanks:cybertanks-cartridge")
-include(":games:cybertanks:cybertanks-sample")
+//include(":games:cybertanks:cybertanks-api")
+//include(":games:cybertanks:cybertanks-cartridge")
+//include(":games:cybertanks:cybertanks-sample")
+
+include(":games:rally:rally-api")
+include(":games:rally:rally-cartridge")
+include(":games:rally:rally-sample")
