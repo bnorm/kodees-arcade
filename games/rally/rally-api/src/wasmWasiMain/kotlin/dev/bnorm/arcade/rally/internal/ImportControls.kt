@@ -1,8 +1,8 @@
-@file:OptIn(ExperimentalWasmInterop::class)
+package dev.bnorm.arcade.rally.internal
 
-package dev.bnorm.arcade.rally
+import dev.bnorm.arcade.rally.Controls
 
-internal object WasmImportControls : Controls {
+internal object ImportControls : Controls {
     override var throttle: Double
         get() = getControlsThrottle()
         set(value) = setControlsThrottle(value)

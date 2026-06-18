@@ -26,11 +26,14 @@ kotlin {
 //
 //            implementation("org.jetbrains.compose.foundation:foundation:1.11.1")
 
-            api("org.jetbrains.compose.material:material:1.11.1")
+            implementation("org.jetbrains.compose.material:material:1.11.1")
+            implementation("org.jetbrains.compose.components:components-resources:1.11.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
         }
         jvmMain.dependencies {
             implementation("ai.tegmentum:wasmtime4j-jni:45.0.1-1.1.5")
-            api(compose.desktop.currentOs)
+
+            implementation(compose.desktop.currentOs)
         }
     }
 }

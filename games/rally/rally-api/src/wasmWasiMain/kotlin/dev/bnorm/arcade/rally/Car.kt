@@ -1,5 +1,7 @@
 package dev.bnorm.arcade.rally
 
-interface Car : Vector {
+interface Car : Point, Vector {
     val time: Long
+
+    val nextCheckpoint: Int
 }

@@ -13,6 +13,11 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmWasi()
 
+    compilerOptions {
+        optIn.add("kotlin.wasm.ExperimentalWasmInterop")
+        optIn.add("kotlin.wasm.unsafe.UnsafeWasmMemoryApi")
+    }
+
     sourceSets {
         commonMain.dependencies {
             api(project(":arcade-agent"))
