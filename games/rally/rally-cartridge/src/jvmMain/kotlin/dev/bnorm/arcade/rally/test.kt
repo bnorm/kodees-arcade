@@ -45,7 +45,7 @@ import kotlin.time.TimeSource
 
 fun main() {
     val path =
-        Path.of("games/rally/rally-sample/build/compileSync/wasmWasi/main/productionExecutable/kotlin/kodees-arcade-games-rally-rally-sample.wasm")
+        Path.of("../rally-sample/build/compileSync/wasmWasi/main/productionExecutable/kotlin/kodees-arcade-games-rally-rally-sample.wasm")
     val track = Json.decodeFromString<Track>(ClassLoader.getSystemResource("track.json")!!.readText())
 
     val trackWidth = 1024
@@ -82,7 +82,6 @@ fun main() {
                 delay(1.seconds)
 
                 val frameDelay = (1.0 / desiredFps).seconds
-                require(frameDelay.inWholeMilliseconds > 0)
                 val startTime = TimeSource.Monotonic.markNow()
                 var targetTime = 0.seconds
 

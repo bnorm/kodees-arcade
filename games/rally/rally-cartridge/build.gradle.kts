@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
@@ -10,7 +11,12 @@ plugins {
 }
 
 kotlin {
-    jvm()
+    jvm {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        mainRun {
+            mainClass = "dev.bnorm.arcade.rally.TestKt"
+        }
+    }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs()
@@ -49,3 +55,8 @@ val cartridge by tasks.registering(ShadowJar::class) {
     configurations = listOf(target.compilations["main"].runtimeDependencyFiles)
 }
 tasks.assemble.configure { dependsOn(cartridge) }
+
+val testRally by tasks.registering {
+    dependsOn(tasks.named("jvmRun"))
+    dependsOn(project(":games:rally:rally-sample").tasks.named("compileProductionExecutableKotlinWasmWasi"))
+}
