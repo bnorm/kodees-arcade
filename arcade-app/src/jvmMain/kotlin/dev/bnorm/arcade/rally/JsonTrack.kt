@@ -1,12 +1,10 @@
 package dev.bnorm.arcade.rally
 
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import kotlinx.serialization.Serializable
 import kotlin.math.sqrt
 
 @Serializable
-class Track(
+class JsonTrack(
     val scale: Double,
     val checkpoints: List<Line>,
     val obstacles: List<Obstacle>,
@@ -60,24 +58,5 @@ class Track(
     class PolePosition(
         val position: Point,
         val rotation: Rotation,
-    )
-}
-
-fun Track.Obstacle.toTopLeft(): Offset {
-    return Offset(x.toFloat(), y.toFloat())
-}
-
-fun Track.Obstacle.toSize(): Size {
-    return Size(w.toFloat(), h.toFloat())
-}
-
-fun Track.Point.toOffset(): Offset {
-    return Offset(x.toFloat(), y.toFloat())
-}
-
-fun Track.Line.toCenter(): Track.Point {
-    return Track.Point(
-        x = start.x + (end.x - start.x) / 2,
-        y = start.y + (end.y - start.y) / 2,
     )
 }

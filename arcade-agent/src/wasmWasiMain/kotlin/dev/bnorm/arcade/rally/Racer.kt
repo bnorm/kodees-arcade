@@ -1,11 +1,5 @@
 package dev.bnorm.arcade.rally
 
-import dev.bnorm.arcade.rally.internal.ImportControls
-import dev.bnorm.arcade.rally.internal.MemoryCar
-import dev.bnorm.arcade.rally.internal.MemoryTrack
-import kotlin.wasm.unsafe.Pointer
-import kotlin.wasm.unsafe.UnsafeWasmMemoryApi
-
 abstract class Racer {
     open fun onRace(track: Track) {}
     abstract fun move(car: Car, controls: Controls)
@@ -24,25 +18,4 @@ abstract class Racer {
     //  a way to initialize the racer for each race
     //  and a way to preserve data from previous heats
     //    (multiple heats should use the same Wasm instance)
-}
-
-@OptIn(UnsafeWasmMemoryApi::class)
-fun racerOnRace(racer: Racer) {
-    try {
-        racer.onRace(MemoryTrack(Pointer(0u)))
-    } catch (e: Throwable) {
-        e.printStackTrace()
-    }
-}
-
-/**
- * Helper function to use Wasm memory and imported host functions for a [Car] and [Controls].
- */
-@OptIn(UnsafeWasmMemoryApi::class)
-fun racerMove(racer: Racer) {
-    try {
-        racer.move(MemoryCar(Pointer(0u)), ImportControls)
-    } catch (e: Throwable) {
-        e.printStackTrace()
-    }
 }

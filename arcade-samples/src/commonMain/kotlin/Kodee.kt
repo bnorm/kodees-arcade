@@ -18,16 +18,13 @@ object Kodee : Racer() {
 
     override fun move(car: Car, controls: Controls) {
         val next = track.checkpoints[car.nextCheckpoint]
-        val target = Point(
-            x = next.start.x + (next.end.x - next.start.x) / 2,
-            y = next.start.y + (next.end.y - next.start.y) / 2,
-        )
+        val target = next.center
 
         // Go a safe speed... for now!
         controls.throttle = 0.5 - safety
 
         // Figure out how to steer.
-        val targetHeading = atan2(target.y - car.y, target.x - car.x)
+        val targetHeading = atan2(target.y - car.location.y, target.x - car.location.x)
         controls.steering = steeringToHeading(car, targetHeading)
     }
 
@@ -35,11 +32,11 @@ object Kodee : Racer() {
         car: Car,
         targetHeading: Angle
     ): Double {
-        val diff = (targetHeading - car.heading).toRelative()
+        val diff = (targetHeading - car.velocity.heading).toRelative()
         val sign = sign(diff)
         if (sign == 0.0) return 0.0
 
-        val turn = getTurn(car.speed, steering = sign, traction = 1.0)
+        val turn = getTurn(car.velocity.speed, steering = sign, traction = 1.0)
         return sign * (diff / turn).coerceAtMost(1.0)
     }
 }

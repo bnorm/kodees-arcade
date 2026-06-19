@@ -1,20 +1,20 @@
+@file:OptIn(ExperimentalWasmDsl::class)
+
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
 }
 
 kotlin {
     jvm()
-
-    @OptIn(ExperimentalWasmDsl::class)
     wasmJs()
-
-    @OptIn(ExperimentalWasmDsl::class)
     wasmWasi()
 
-    compilerOptions {
-        optIn.add("kotlin.wasm.ExperimentalWasmInterop")
-        optIn.add("kotlin.wasm.unsafe.UnsafeWasmMemoryApi")
+    sourceSets {
+        commonMain.dependencies {
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.11.0")
+        }
     }
 }

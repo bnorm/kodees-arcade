@@ -55,12 +55,8 @@ import kotlin.time.TimeSource
 //  some sort of endurance aspect for the whole season
 
 fun main() {
-    val track = Json.decodeFromString<Track>(ClassLoader.getSystemResource("track.json")!!.readText())
-
-    val trackWidth = 1024
-    val trackHeight = 768
-
     application {
+        val track = remember { loadTrack() }
         Window(
             onCloseRequest = ::exitApplication,
             title = "Rally",
@@ -122,8 +118,6 @@ fun main() {
                             game?.cancel()
                             game = scope.game(
                                 track = track,
-                                trackWidth = trackWidth,
-                                trackHeight = trackHeight,
                                 paths = racers
                             )
                         }
@@ -143,7 +137,11 @@ fun main() {
                 }
 
                 Spacer(Modifier.width(8.dp))
-                FixedSize(IntSize(trackWidth, trackHeight), Density(1f), Modifier.fillMaxWidth()) {
+                FixedSize(
+                    size = IntSize(track.width.toInt(), track.height.toInt()),
+                    density = Density(1f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Image(
                         painter = painterResource(Res.drawable.track),
                         contentDescription = null,
@@ -153,7 +151,10 @@ fun main() {
                     Game(game, desiredFps)
                 }
 
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp)
+                ) {
                     Text(
                         text = "FPS: ${desiredFps.toInt()}",
                         style = MaterialTheme.typography.bodyLarge,
@@ -170,6 +171,28 @@ fun main() {
             }
         }
     }
+}
+
+private fun loadTrack(): Track {
+    val trackWidth = 1024.0
+    val trackHeight = 768.0
+    val jsonTrack = Json.decodeFromString<JsonTrack>(ClassLoader.getSystemResource("track.json")!!.readText())
+    return Track(
+        width = trackWidth,
+        height = trackHeight,
+        checkpoints = jsonTrack.checkpoints.map {
+            Line(
+                start = Point(it.start.x, trackHeight - it.start.y),
+                end = Point(it.end.x, trackHeight - it.end.y),
+            )
+        },
+        positions = jsonTrack.pole_positions.map {
+            Track.Position(
+                location = Point(it.position.x, trackHeight - it.position.y),
+                heading = Angle.ofDegrees(it.rotation.degrees.toDouble())
+            )
+        }
+    )
 }
 
 @Composable

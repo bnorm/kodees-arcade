@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalWasmInterop::class)
+
 package dev.bnorm.arcade.rally.internal
 
 import dev.bnorm.arcade.rally.Controls

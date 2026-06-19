@@ -11,8 +11,8 @@ object FigureEight : Racer() {
         controls.throttle = 1.0
 
         // Do figure eights!
-        val heading = car.heading
-        val turn = getTurn(car.speed, steering = 1.0, traction = 1.0)
+        val heading = car.velocity.heading
+        val turn = getTurn(car.velocity.speed, steering = 1.0, traction = 1.0)
         val sign = sign(targetHeading)
 
         val diff = abs((targetHeading - heading + Angle.QUARTER_CIRCLE).toRelative())

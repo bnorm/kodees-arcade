@@ -1,9 +1,11 @@
 package dev.bnorm.arcade.rally
 
+import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 import kotlin.math.PI
 import kotlin.math.roundToLong
 
+@Serializable
 @JvmInline
 value class Angle private constructor(
     val radians: Double

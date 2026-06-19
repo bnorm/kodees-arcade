@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
+import kotlinx.serialization.protobuf.ProtoBuf
 import java.nio.file.Path
 import kotlin.io.path.readBytes
 import kotlin.math.sqrt
@@ -19,8 +20,8 @@ val carWidth = 12.0
 val carHeight = 16.0
 
 class RallyGameState(
-    val trackWidth: Int,
-    val trackHeight: Int,
+    val trackWidth: Double,
+    val trackHeight: Double,
     var finished: Boolean,
     var time: Long,
     val racers: Map<String, RallyRacerState>,
@@ -45,24 +46,23 @@ class RallyRacerState(
 @OptIn(ExperimentalCoroutinesApi::class)
 fun CoroutineScope.game(
     track: Track,
-    trackWidth: Int,
-    trackHeight: Int,
     paths: Map<String, Path>,
 ): ReceiveChannel<RallyGameState> = produce {
+
     val gameState = RallyGameState(
-        trackWidth = trackWidth,
-        trackHeight = trackHeight,
+        trackWidth = track.width,
+        trackHeight = track.height,
         finished = false,
         time = 0,
         racers = buildMap {
             for ((index, path) in paths.entries.withIndex()) {
-                val position = track.pole_positions[index]
+                val position = track.positions[index]
                 put(
                     path.key,
                     RallyRacerState(
-                        x = position.position.x,
-                        y = trackHeight - position.position.y,
-                        heading = Angle.ofDegrees(position.rotation.degrees.toDouble()),
+                        x = position.location.x,
+                        y = position.location.y,
+                        heading = position.heading,
                     )
                 )
             }
@@ -77,7 +77,7 @@ fun CoroutineScope.game(
         }
 
         for ((racer, _) in racers) {
-            racer.onRace(track, trackHeight)
+            racer.onRace(track)
         }
 
         send(gameState)
@@ -148,7 +148,7 @@ class WasmRacer(
     companion object {
         fun create(
             engine: Engine,
-            linker: Linker<WasiContext>,
+            linker: Linker<*>,
             racer: ByteArray,
             name: String,
         ): WasmRacer {
@@ -171,32 +171,27 @@ class WasmRacer(
     }
 
     fun move(gameState: RallyGameState, carState: RallyRacerState) {
-        memory.ensurePages(64)
+        val car = Car(
+            time = gameState.time,
+            location = Point(carState.x, carState.y),
+            velocity = Velocity(carState.heading, carState.speed),
+            nextCheckpoint = carState.checkpoint,
+        )
+        val bytes = ProtoBuf.encodeToByteArray(Car.serializer(), car)
 
-        // TODO would it be better to use Protobuf instead?
-        memory.writeInt64(0, gameState.time)
-        memory.writeFloat64(8, carState.x)
-        memory.writeFloat64(16, carState.y)
-        memory.writeFloat64(24, carState.heading.radians)
-        memory.writeFloat64(32, carState.speed)
-        memory.writeInt32(40, carState.checkpoint)
+        memory.ensureBytes(4 + bytes.size)
+        memory.writeInt32(0, bytes.size)
+        memory.writeBytes(4, bytes, 0, bytes.size)
 
         moveFunction.callVoid()
     }
 
-    fun onRace(track: Track, trackHeight: Int) {
-        memory.ensurePages(64)
+    fun onRace(track: Track) {
+        val bytes = ProtoBuf.encodeToByteArray(Track.serializer(), track)
 
-        // TODO would it be better to use Protobuf instead?
-        memory.writeInt32(0, track.checkpoints.size)
-        var offset = 4L
-        for (checkpoint in track.checkpoints) {
-            memory.writeFloat64(offset + 0, checkpoint.start.x)
-            memory.writeFloat64(offset + 8, trackHeight - checkpoint.start.y)
-            memory.writeFloat64(offset + 16, checkpoint.end.x)
-            memory.writeFloat64(offset + 24, trackHeight - checkpoint.end.y)
-            offset += 32
-        }
+        memory.ensureBytes(4 + bytes.size)
+        memory.writeInt32(0, bytes.size)
+        memory.writeBytes(4, bytes, 0, bytes.size)
 
         onRaceFunction.callVoid()
     }
@@ -212,6 +207,10 @@ private fun WasmMemory.ensurePages(pages: Int) {
     if (size < pages) {
         grow(pages - size)
     }
+}
+
+private fun WasmMemory.ensureBytes(byteCount: Int) {
+    ensurePages(byteCount / pageSize() + (byteCount % pageSize()).coerceAtMost(1))
 }
 
 private inline fun withEngine(block: (engine: Engine) -> Unit) {
@@ -251,11 +250,12 @@ private fun update(gameState: RallyGameState, track: Track) {
 
         // Update target checkpoint.
         val checkpoint = track.checkpoints[racerState.checkpoint]
-        val target = checkpoint.toCenter()
-        val dx = target.x - racerState.x
-        val dy = (gameState.trackHeight - target.y) - racerState.y
-        val dist = sqrt(dx * dx + dy * dy)
+        val target = checkpoint.center
         val radius = checkpoint.length / 2
+
+        val dx = target.x - racerState.x
+        val dy = (target.y) - racerState.y
+        val dist = sqrt(dx * dx + dy * dy)
         if (dist < radius) {
             racerState.checkpoint += 1
             if (racerState.checkpoint >= track.checkpoints.size) {
