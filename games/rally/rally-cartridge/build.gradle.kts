@@ -32,9 +32,12 @@ kotlin {
 //
 //            implementation("org.jetbrains.compose.foundation:foundation:1.11.1")
 
-            implementation("org.jetbrains.compose.material:material:1.11.1")
+            implementation("org.jetbrains.compose.material3:material3:1.9.0")
             implementation("org.jetbrains.compose.components:components-resources:1.11.1")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+
+            implementation("io.github.vinceglb:filekit-core:0.8.7")
+            implementation("io.github.vinceglb:filekit-compose:0.8.7")
         }
         jvmMain.dependencies {
             implementation("ai.tegmentum:wasmtime4j-jni:45.0.1-1.1.5")
@@ -56,7 +59,13 @@ val cartridge by tasks.registering(ShadowJar::class) {
 }
 tasks.assemble.configure { dependsOn(cartridge) }
 
+tasks.withType<JavaExec>().configureEach {
+    val sample = project(":games:rally:rally-sample").tasks.named("racers")
+    mustRunAfter(sample)
+}
 val testRally by tasks.registering {
-    dependsOn(tasks.named("jvmRun"))
-    dependsOn(project(":games:rally:rally-sample").tasks.named("compileProductionExecutableKotlinWasmWasi"))
+    val racers = project(":games:rally:rally-sample").tasks.named("racers")
+    val run = tasks.named("jvmRun")
+    dependsOn(racers)
+    dependsOn(run)
 }

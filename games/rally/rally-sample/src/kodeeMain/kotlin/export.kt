@@ -1,7 +1,6 @@
-package dev.bnorm.arcade.rally.sample
-
 import dev.bnorm.arcade.rally.racerMove
 import dev.bnorm.arcade.rally.racerOnRace
+import dev.bnorm.arcade.rally.sample.Kodee
 
 private val racer = Kodee
 

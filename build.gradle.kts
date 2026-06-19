@@ -1,10 +1,6 @@
-import org.gradle.kotlin.dsl.configure
-import org.jetbrains.compose.reload.gradle.forAllJvmTargets
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import kotlin.jvm.java
 
 plugins {
     kotlin("multiplatform") apply false
@@ -17,14 +13,14 @@ allprojects {
     group = "dev.bnorm.arcade"
     version = "1.0-SNAPSHOT"
 
-    val javaVersion = JavaVersion.VERSION_25
+    val javaVersion = JavaVersion.VERSION_21
 
     plugins.withId("org.jetbrains.kotlin.multiplatform") {
         extensions.configure<KotlinMultiplatformExtension> {
             compilerOptions {
             }
 
-            targets.withType(KotlinJvmTarget::class.java) {
+            targets.withType<KotlinJvmTarget>().configureEach {
                 compilerOptions {
                     jvmTarget.set(JvmTarget.fromTarget(javaVersion.toString()))
                     freeCompilerArgs.add("-Xjvm-default=all")
@@ -33,12 +29,12 @@ allprojects {
         }
     }
 
-    tasks.withType<JavaCompile> {
+    tasks.withType<JavaCompile>().configureEach {
         sourceCompatibility = javaVersion.toString()
         targetCompatibility = javaVersion.toString()
     }
 
-    tasks.withType<Test> {
+    tasks.withType<Test>().configureEach {
         useJUnitPlatform()
     }
 }
