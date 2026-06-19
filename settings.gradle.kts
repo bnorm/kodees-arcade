@@ -31,12 +31,4 @@ rootProject.name = "kodees-arcade"
 
 include(":arcade-agent")
 include(":arcade-app")
-include(":arcade-core")
-include(":arcade-engine")
-include(":arcade-main")
-include(":arcade-render")
-include(":arcade-runner")
-
-include(":games:rally:rally-api")
-include(":games:rally:rally-cartridge")
-include(":games:rally:rally-sample")
+include(":arcade-samples")

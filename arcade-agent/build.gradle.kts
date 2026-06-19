@@ -11,7 +11,10 @@ kotlin {
     wasmJs()
 
     @OptIn(ExperimentalWasmDsl::class)
-    wasmWasi {
-        binaries.executable()
+    wasmWasi()
+
+    compilerOptions {
+        optIn.add("kotlin.wasm.ExperimentalWasmInterop")
+        optIn.add("kotlin.wasm.unsafe.UnsafeWasmMemoryApi")
     }
 }
