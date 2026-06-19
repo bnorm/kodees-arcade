@@ -1,4 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
@@ -7,7 +6,6 @@ plugins {
     kotlin("plugin.serialization")
     kotlin("plugin.compose")
     id("org.jetbrains.compose")
-    id("com.gradleup.shadow")
 }
 
 kotlin {
@@ -46,18 +44,6 @@ kotlin {
         }
     }
 }
-
-val cartridge by tasks.registering(ShadowJar::class) {
-    archiveClassifier = "cartridge"
-
-    val jvmJar = tasks.named<Jar>("jvmJar")
-    dependsOn(jvmJar)
-    from(jvmJar.map { it.archiveFile })
-
-    val target = kotlin.targets.getByName("jvm")
-    configurations = listOf(target.compilations["main"].runtimeDependencyFiles)
-}
-tasks.assemble.configure { dependsOn(cartridge) }
 
 tasks.withType<JavaExec>().configureEach {
     val sample = project(":games:rally:rally-sample").tasks.named("racers")

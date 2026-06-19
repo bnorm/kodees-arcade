@@ -37,10 +37,6 @@ include(":arcade-main")
 include(":arcade-render")
 include(":arcade-runner")
 
-//include(":games:cybertanks:cybertanks-api")
-//include(":games:cybertanks:cybertanks-cartridge")
-//include(":games:cybertanks:cybertanks-sample")
-
 include(":games:rally:rally-api")
 include(":games:rally:rally-cartridge")
 include(":games:rally:rally-sample")
