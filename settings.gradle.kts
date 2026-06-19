@@ -32,3 +32,6 @@ rootProject.name = "kodees-arcade"
 include(":arcade-agent")
 include(":arcade-app")
 include(":arcade-samples")
+include(":arcade-samples:shared")
+include(":arcade-samples:kodee")
+include(":arcade-samples:snail")

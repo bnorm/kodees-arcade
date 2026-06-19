@@ -7,10 +7,12 @@ import ai.tegmentum.wasmtime4j.func.HostFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
 import ai.tegmentum.wasmtime4j.wasi.WasiContext
 import ai.tegmentum.wasmtime4j.wasi.WasiLinkerUtils
+import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.protobuf.ProtoBuf
 import java.nio.file.Path
 import kotlin.io.path.readBytes
@@ -18,6 +20,9 @@ import kotlin.math.sqrt
 
 val carWidth = 12.0
 val carHeight = 16.0
+//val impactDist = carHeight / 2.0
+val impactDist = (68.0 * 0.4f)
+val impactDistSq = impactDist * impactDist
 
 class RallyGameState(
     val trackWidth: Double,
@@ -33,6 +38,7 @@ class RallyGameState(
 }
 
 class RallyRacerState(
+    val image: ImageBitmap,
     var x: Double,
     var y: Double,
     var heading: Angle,
@@ -40,14 +46,16 @@ class RallyRacerState(
     var steering: Double = 0.0,
     var throttle: Double = 0.0,
     var checkpoint: Int = 0,
-    var lap: Int = 0
+    var lap: Int = 0,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun CoroutineScope.game(
     track: Track,
     paths: Map<String, Path>,
+    carImages: List<ImageBitmap>,
 ): ReceiveChannel<RallyGameState> = produce {
+    val carImages = ArrayDeque(carImages.shuffled())
 
     val gameState = RallyGameState(
         trackWidth = track.width,
@@ -60,6 +68,7 @@ fun CoroutineScope.game(
                 put(
                     path.key,
                     RallyRacerState(
+                        image = carImages.removeFirst(),
                         x = position.location.x,
                         y = position.location.y,
                         heading = position.heading,
@@ -135,6 +144,7 @@ fun createRacerLinker(
 
 interface Racer : AutoCloseable
 
+@OptIn(ExperimentalSerializationApi::class)
 class WasmRacer(
     val name: String,
     val module: Module,
@@ -269,35 +279,31 @@ private fun update(gameState: RallyGameState, track: Track) {
     //  better representation for the cars
     //    rotated ovals?
     //    convex polygons?
-    //  can we do this in a single pass?
     //  should impacts effect speed?
     //    this might make the physics a little more complicated than it needs to be...
-    val impactDistSq = carHeight * carHeight
-    do {
-        var impact = false
-        for ((i, racer1) in racers.withIndex()) {
-            for (j in (i + 1)..<racers.size) {
-                val racer2 = racers[j]
 
-                val dx = racer1.x - racer2.x
-                val dy = racer1.y - racer2.y
-                val distSq = dx * dx + dy * dy
-                if (distSq < impactDistSq) {
-                    impact = true
+    // Only do a single pass...
+    // TODO is a little bit of clipping okay?
+    for ((i, racer1) in racers.withIndex()) {
+        for (j in (i + 1)..<racers.size) {
+            val racer2 = racers[j]
 
-                    val delta = sqrt(impactDistSq) - sqrt(distSq)
-                    val angle = atan2(dy, dx)
-                    val impulse = (delta / 2).coerceAtLeast(0.1)
-                    if (updatePosition(racer1, impulse, angle, gameState)) {
-                        racer1.speed = 0.0
-                    }
-                    if (updatePosition(racer2, impulse, angle + Angle.HALF_CIRCLE, gameState)) {
-                        racer2.speed = 0.0
-                    }
+            val dx = racer1.x - racer2.x
+            val dy = racer1.y - racer2.y
+            val distSq = dx * dx + dy * dy
+            if (distSq < impactDistSq) {
+                val delta = sqrt(impactDistSq) - sqrt(distSq)
+                val angle = atan2(dy, dx)
+                val impulse = (delta / 2).coerceAtLeast(0.1)
+                if (updatePosition(racer1, impulse, angle, gameState)) {
+                    racer1.speed = 0.0
+                }
+                if (updatePosition(racer2, impulse, angle + Angle.HALF_CIRCLE, gameState)) {
+                    racer2.speed = 0.0
                 }
             }
         }
-    } while (impact)
+    }
 }
 
 /** @return if impacted with a wall. */
@@ -312,7 +318,6 @@ private fun updatePosition(
     racerState.x = newX
     racerState.y = newY
 
-    val impactDist = carHeight / 2
     if (
         newX !in impactDist..gameState.trackWidth - impactDist ||
         newY !in impactDist..gameState.trackHeight - impactDist

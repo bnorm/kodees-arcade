@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 class Track(
     val width: Double,
     val height: Double,
-    val checkpoints: List<Line>,
+    val checkpoints: List<Segment>,
     val positions: List<Position>
 ) {
     @Serializable

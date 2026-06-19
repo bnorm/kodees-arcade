@@ -13,17 +13,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import dev.bnorm.arcade.arcade_app.generated.resources.Res
-import dev.bnorm.arcade.arcade_app.generated.resources.track
+import dev.bnorm.arcade.arcade_app.generated.resources.*
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
@@ -31,6 +29,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.json.Json
+import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.painterResource
 import java.nio.file.Path
 import kotlin.io.path.nameWithoutExtension
@@ -57,6 +56,17 @@ import kotlin.time.TimeSource
 fun main() {
     application {
         val track = remember { loadTrack() }
+
+        val carImages = listOf(
+            Res.drawable.car_blue,
+            Res.drawable.car_grey,
+            Res.drawable.car_orange,
+            Res.drawable.car_purple,
+            Res.drawable.car_red,
+            Res.drawable.car_teal,
+            Res.drawable.car_yellow,
+        ).map { imageResource(it) }
+
         Window(
             onCloseRequest = ::exitApplication,
             title = "Rally",
@@ -117,8 +127,9 @@ fun main() {
                         onClick = {
                             game?.cancel()
                             game = scope.game(
+                                carImages = carImages,
                                 track = track,
-                                paths = racers
+                                paths = racers,
                             )
                         }
                     ) {
@@ -181,7 +192,7 @@ private fun loadTrack(): Track {
         width = trackWidth,
         height = trackHeight,
         checkpoints = jsonTrack.checkpoints.map {
-            Line(
+            Segment(
                 start = Point(it.start.x, trackHeight - it.start.y),
                 end = Point(it.end.x, trackHeight - it.end.y),
             )
@@ -227,24 +238,34 @@ private fun Game(
     }
 
     Canvas(Modifier.fillMaxSize()) {
-        for (tank in state?.racers?.values.orEmpty()) {
-            val x = tank.x.toFloat()
-            val y = size.height - tank.y.toFloat()
-            rotate(
-                degrees = 90f - tank.heading.toRelative().degrees.toFloat(),
-                pivot = Offset(x, y)
-            ) {
-                drawRect(
-                    color = Color.Red,
-                    topLeft = Offset(
-                        x = x - (carWidth / 2).toFloat(),
-                        y = y - (carHeight / 2).toFloat(),
-                    ),
-                    size = Size(
-                        width = carWidth.toFloat(),
-                        height = carHeight.toFloat(),
-                    )
-                )
+        for (state in state?.racers?.values.orEmpty()) {
+            val x = state.x.toFloat()
+            val y = size.height - state.y.toFloat()
+            val center = Offset(x, y)
+
+            val heading = 90f - state.heading.toRelative().degrees.toFloat()
+
+            val image = state.image
+            val imageSize = Offset(
+                x = image.width.toFloat(),
+                y = image.height.toFloat(),
+            )
+
+            rotate(degrees = heading, pivot = center) {
+                scale(scale = 0.4f, pivot = center) {
+                    drawImage(image, topLeft = center - (imageSize / 2f))
+                }
+//                drawRect(
+//                    color = Color.Red,
+//                    topLeft = Offset(
+//                        x = x - (carWidth / 2).toFloat(),
+//                        y = y - (carHeight / 2).toFloat(),
+//                    ),
+//                    size = Size(
+//                        width = carWidth.toFloat(),
+//                        height = carHeight.toFloat(),
+//                    )
+//                )
             }
         }
     }
