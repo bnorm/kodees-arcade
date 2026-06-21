@@ -89,7 +89,7 @@ fun getTurn(speed: Double, steering: Double, traction: Double): Angle {
     val maxTurn = (MAX_TURN_RATE - speedPenalty) * tractionPenalty
 
     // If the target turn is greater than the max turn => understeer.
-    val understeerPenalty = (maxTurn - targetTurn).coerceIn(Angle.ZERO, abs(targetTurn))
+    val understeerPenalty = (targetTurn - maxTurn).coerceIn(Angle.ZERO, abs(targetTurn))
     return sign(steering) * (targetTurn - understeerPenalty)
 }
 

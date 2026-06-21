@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.rally.engine
 
 import ai.tegmentum.wasmtime4j.*
 import ai.tegmentum.wasmtime4j.config.EngineConfig
@@ -8,51 +8,22 @@ import ai.tegmentum.wasmtime4j.type.FunctionType
 import ai.tegmentum.wasmtime4j.wasi.WasiContext
 import ai.tegmentum.wasmtime4j.wasi.WasiLinkerUtils
 import androidx.compose.ui.graphics.ImageBitmap
+import dev.bnorm.arcade.rally.Car
+import dev.bnorm.arcade.rally.Point
+import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.rally.Velocity
+import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.protobuf.ProtoBuf
-import java.nio.file.Path
-import kotlin.io.path.readBytes
-import kotlin.math.sqrt
-
-val carWidth = 12.0
-val carHeight = 16.0
-//val impactDist = carHeight / 2.0
-val impactDist = (68.0 * 0.4f)
-val impactDistSq = impactDist * impactDist
-
-class RallyGameState(
-    val trackWidth: Double,
-    val trackHeight: Double,
-    var finished: Boolean,
-    var time: Long,
-    val racers: Map<String, RallyRacerState>,
-) {
-    // TODO hack to make MutableState work...
-    override fun equals(other: Any?): Boolean {
-        return false
-    }
-}
-
-class RallyRacerState(
-    val image: ImageBitmap,
-    var x: Double,
-    var y: Double,
-    var heading: Angle,
-    var speed: Double = 0.0,
-    var steering: Double = 0.0,
-    var throttle: Double = 0.0,
-    var checkpoint: Int = 0,
-    var lap: Int = 0,
-)
 
 @OptIn(ExperimentalCoroutinesApi::class)
-fun CoroutineScope.game(
+actual fun CoroutineScope.game(
     track: Track,
-    paths: Map<String, Path>,
+    paths: Map<String, PlatformFile>,
     carImages: List<ImageBitmap>,
 ): ReceiveChannel<RallyGameState> = produce {
     val carImages = ArrayDeque(carImages.shuffled())
@@ -85,6 +56,8 @@ fun CoroutineScope.game(
             WasmRacer.create(engine, linker, path.readBytes(), name) to racerState
         }
 
+        send(gameState)
+
         for ((racer, _) in racers) {
             racer.onRace(track)
         }
@@ -104,7 +77,7 @@ fun CoroutineScope.game(
     }
 }
 
-fun createRacerLinker(
+private fun createRacerLinker(
     engine: Engine,
     racerState: RallyRacerState
 ): Linker<WasiContext> {
@@ -142,10 +115,8 @@ fun createRacerLinker(
     return linker
 }
 
-interface Racer : AutoCloseable
-
 @OptIn(ExperimentalSerializationApi::class)
-class WasmRacer(
+private class WasmRacer(
     val name: String,
     val module: Module,
     val store: Store,
@@ -235,97 +206,4 @@ private inline fun withEngine(block: (engine: Engine) -> Unit) {
             block(engine)
         }
     }
-}
-
-private fun update(gameState: RallyGameState, track: Track) {
-    gameState.time++
-
-    val racers = gameState.racers.values.toList()
-    for (racerState in racers) {
-        val steering = racerState.steering
-        val throttle = racerState.throttle
-
-        val oldHeading = racerState.heading
-        val oldSpeed = racerState.speed
-
-        // TODO consider traction of track
-        val newHeading = simulateHeading(oldHeading, oldSpeed, steering, traction = 1.0)
-        var newSpeed = simulateSpeed(oldSpeed, throttle)
-        if (updatePosition(racerState, newSpeed, newHeading, gameState)) {
-            newSpeed = 0.0
-        }
-
-        racerState.heading = newHeading
-        racerState.speed = newSpeed
-
-        // Update target checkpoint.
-        val checkpoint = track.checkpoints[racerState.checkpoint]
-        val target = checkpoint.center
-        val radius = checkpoint.length / 2
-
-        val dx = target.x - racerState.x
-        val dy = (target.y) - racerState.y
-        val dist = sqrt(dx * dx + dy * dy)
-        if (dist < radius) {
-            racerState.checkpoint += 1
-            if (racerState.checkpoint >= track.checkpoints.size) {
-                racerState.lap += 1
-                racerState.checkpoint = 0
-            }
-        }
-    }
-
-    // TODO optimize racer collisions
-    //  better representation for the cars
-    //    rotated ovals?
-    //    convex polygons?
-    //  should impacts effect speed?
-    //    this might make the physics a little more complicated than it needs to be...
-
-    // Only do a single pass...
-    // TODO is a little bit of clipping okay?
-    for ((i, racer1) in racers.withIndex()) {
-        for (j in (i + 1)..<racers.size) {
-            val racer2 = racers[j]
-
-            val dx = racer1.x - racer2.x
-            val dy = racer1.y - racer2.y
-            val distSq = dx * dx + dy * dy
-            if (distSq < impactDistSq) {
-                val delta = sqrt(impactDistSq) - sqrt(distSq)
-                val angle = atan2(dy, dx)
-                val impulse = (delta / 2).coerceAtLeast(0.1)
-                if (updatePosition(racer1, impulse, angle, gameState)) {
-                    racer1.speed = 0.0
-                }
-                if (updatePosition(racer2, impulse, angle + Angle.HALF_CIRCLE, gameState)) {
-                    racer2.speed = 0.0
-                }
-            }
-        }
-    }
-}
-
-/** @return if impacted with a wall. */
-private fun updatePosition(
-    racerState: RallyRacerState,
-    magnitude: Double,
-    heading: Angle,
-    gameState: RallyGameState
-): Boolean {
-    val newX = racerState.x + magnitude * cos(heading)
-    val newY = racerState.y + magnitude * sin(heading)
-    racerState.x = newX
-    racerState.y = newY
-
-    if (
-        newX !in impactDist..gameState.trackWidth - impactDist ||
-        newY !in impactDist..gameState.trackHeight - impactDist
-    ) {
-        racerState.x = newX.coerceIn(impactDist, gameState.trackWidth - impactDist)
-        racerState.y = newY.coerceIn(impactDist, gameState.trackHeight - impactDist)
-        return true
-    }
-
-    return false
 }
