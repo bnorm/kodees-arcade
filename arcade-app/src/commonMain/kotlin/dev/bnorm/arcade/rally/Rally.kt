@@ -177,7 +177,7 @@ fun Rally(
         FixedSize(
             size = IntSize(track.width.toInt(), track.height.toInt()),
             density = Density(1f),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().weight(1f)
         ) {
             Image(
                 painter = painterResource(Res.drawable.track),
