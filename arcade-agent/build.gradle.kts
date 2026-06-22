@@ -9,7 +9,9 @@ plugins {
 
 kotlin {
     jvm()
-    wasmJs()
+    wasmJs {
+        browser()
+    }
     wasmWasi()
 
     sourceSets {

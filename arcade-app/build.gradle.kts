@@ -17,7 +17,14 @@ kotlin {
         }
     }
 
-    wasmJs()
+    wasmJs {
+        binaries.executable()
+        browser {
+            commonWebpackConfig {
+                outputFileName = "arcade.js"
+            }
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -36,6 +43,9 @@ kotlin {
             implementation("ai.tegmentum:wasmtime4j-jni:45.0.1-1.1.5")
 
             implementation(compose.desktop.currentOs)
+        }
+        wasmJsMain.dependencies {
+            implementation("org.jetbrains.kotlin-wrappers:kotlin-browser:2026.6.5")
         }
     }
 }
