@@ -7,7 +7,6 @@ import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Point
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.Velocity
-import io.github.vinceglb.filekit.core.PlatformFile
 import js.array.Tuple
 import js.buffer.ArrayBuffer
 import js.buffer.DataView
@@ -33,7 +32,7 @@ import kotlin.random.Random
 @OptIn(ExperimentalCoroutinesApi::class)
 actual fun CoroutineScope.game(
     track: Track,
-    paths: Map<String, PlatformFile>,
+    racers: List<Racer>,
     carImages: List<ImageBitmap>
 ): ReceiveChannel<RallyGameState> = produce {
     val carImages = ArrayDeque(carImages.shuffled())
@@ -44,10 +43,10 @@ actual fun CoroutineScope.game(
         finished = false,
         time = 0,
         racers = buildMap {
-            for ((index, path) in paths.entries.withIndex()) {
+            for ((index, racer) in racers.withIndex()) {
                 val position = track.positions[index]
                 put(
-                    path.key,
+                    racer.name,
                     RallyRacerState(
                         image = carImages.removeFirst(),
                         x = position.location.x,
@@ -61,10 +60,10 @@ actual fun CoroutineScope.game(
 
     send(gameState)
 
-    val racers = paths.map { (name, path) ->
+    val racers = racers.map { racer ->
         try {
-            val racerState = gameState.racers.getValue(name)
-            val racer = WasmRacer.create(racerState, path.readBytes(), name)
+            val racerState = gameState.racers.getValue(racer.name)
+            val racer = WasmRacer.create(racerState, racer.bytes, racer.name)
             racer to racerState
         } catch (t: Throwable) {
             t.printStackTrace()
@@ -98,7 +97,7 @@ private class WasmRacer(
     private val memory: Memory<ArrayBuffer>,
     private val moveFunction: JsFunction<Tuple, JsAny?>,
     private val onRaceFunction: JsFunction<Tuple, JsAny?>,
-) : Racer {
+) {
 
     companion object {
         suspend fun create(
@@ -173,9 +172,6 @@ private class WasmRacer(
         }
 
         invoke(onRaceFunction)
-    }
-
-    override fun close() {
     }
 }
 

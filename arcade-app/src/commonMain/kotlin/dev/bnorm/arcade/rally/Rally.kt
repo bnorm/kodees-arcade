@@ -16,24 +16,17 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import dev.bnorm.arcade.arcade_app.generated.resources.Res
-import dev.bnorm.arcade.arcade_app.generated.resources.car_blue
-import dev.bnorm.arcade.arcade_app.generated.resources.car_grey
-import dev.bnorm.arcade.arcade_app.generated.resources.car_orange
-import dev.bnorm.arcade.arcade_app.generated.resources.car_purple
-import dev.bnorm.arcade.arcade_app.generated.resources.car_red
-import dev.bnorm.arcade.arcade_app.generated.resources.car_teal
-import dev.bnorm.arcade.arcade_app.generated.resources.car_yellow
-import dev.bnorm.arcade.arcade_app.generated.resources.track
+import dev.bnorm.arcade.arcade_app.generated.resources.*
+import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
+import dev.bnorm.arcade.rally.engine.ByteArrayRacer
+import dev.bnorm.arcade.rally.engine.Racer
 import dev.bnorm.arcade.rally.engine.RallyGameState
 import dev.bnorm.arcade.rally.engine.game
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
-import io.github.vinceglb.filekit.core.PlatformFile
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.painterResource
 import kotlin.time.Duration
@@ -62,43 +55,59 @@ fun SampleRally() {
     }
 }
 
+private val BUNDLED_RACERS = listOf("Kodee", "Snail")
+
 @Composable
 fun Rally(
     carImages: List<ImageBitmap>,
     track: Track
 ) {
     val scope = rememberCoroutineScope()
-    var game by remember { mutableStateOf<ReceiveChannel<RallyGameState>?>(null) }
 
-    val racers = remember { mutableStateMapOf<String, PlatformFile>() }
+    val racers = remember { mutableStateListOf<Racer>() }
+    fun pickRacerName(baseName: String): String {
+        val existingNames = racers.mapTo(mutableSetOf()) { it.name }
+        var name = baseName
+        if (name in existingNames) name = "$name (1)"
+        var i = 1
+        while (name in existingNames) {
+            name = name.substringBeforeLast(" ") + " (${i++})"
+        }
+        return name
+    }
+
+    fun canAddRacer(): Boolean = racers.size < 6
+
     val racersLauncher = rememberFilePickerLauncher(
         mode = PickerMode.Single,
         type = PickerType.File(listOf("wasm")),
-        initialDirectory = "../arcade-samples/build/racers",
+        initialDirectory = "../arcade-samples/build/racers/files",
     ) { file ->
         if (file != null) {
-            var name = file.name.substringBeforeLast(".")
-            if (name in racers) name = "$name (1)"
-            var i = 1
-            while (name in racers) {
-                name = name.substringBeforeLast(" ") + " (${i++})"
+            scope.launch {
+                racers.add(
+                    ByteArrayRacer(
+                        name = pickRacerName(file.name.substringBeforeLast(".")),
+                        bytes = file.readBytes()
+                    )
+                )
             }
-            racers[name] = file
         }
     }
 
+    var game by remember { mutableStateOf<ReceiveChannel<RallyGameState>?>(null) }
+
     Column {
         var desiredFps by remember { mutableFloatStateOf(60f) }
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
-                enabled = racers.size < 6,
+                enabled = canAddRacer(),
                 onClick = {
                     racersLauncher.launch()
                 }
             ) {
                 Text("Pick Racer")
             }
-            Spacer(Modifier.width(8.dp))
             Button(
                 enabled = racers.isNotEmpty(),
                 onClick = {
@@ -107,11 +116,31 @@ fun Rally(
             ) {
                 Text("Clear")
             }
+            Text("Quick Add: ")
+            for (racer in BUNDLED_RACERS) {
+                Button(
+                    enabled = canAddRacer(),
+                    onClick = {
+                        scope.launch {
+                            scope.launch {
+                                racers.add(
+                                    ByteArrayRacer(
+                                        name = pickRacerName(racer),
+                                        bytes = BundledRacers.readBytes("files/$racer.wasm")
+                                    )
+                                )
+                            }
+                        }
+                    }
+                ) {
+                    Text(racer)
+                }
+            }
         }
 
-        for ((name, _) in racers) {
+        for (racer in racers) {
             Spacer(Modifier.width(8.dp))
-            Text(name)
+            Text(racer.name)
         }
 
         Spacer(Modifier.width(8.dp))
@@ -121,9 +150,9 @@ fun Rally(
                 onClick = {
                     game?.cancel()
                     game = scope.game(
-                        carImages = carImages,
                         track = track,
-                        paths = racers,
+                        racers = racers,
+                        carImages = carImages,
                     )
                 }
             ) {
@@ -189,21 +218,23 @@ private fun Game(
             return@LaunchedEffect
         }
 
-        state = game.receive()
+        withContext(Dispatchers.Default) {
+            state = game.receive()
 
-        val frameDelay = (1.0 / desiredFps).seconds
-        val startTime = TimeSource.Monotonic.markNow()
-        var targetTime = 0.seconds
+            val frameDelay = (1.0 / desiredFps).seconds
+            val startTime = TimeSource.Monotonic.markNow()
+            var targetTime = 0.seconds
 
-        while (isActive) {
-            val next = game.receive()
+            while (isActive) {
+                val next = game.receive()
 
-            val currentTime = startTime.elapsedNow()
-            val delay = targetTime - currentTime
-            if (delay > Duration.ZERO) delay(delay)
-            targetTime += frameDelay
+                val currentTime = startTime.elapsedNow()
+                val delay = targetTime - currentTime
+                if (delay > Duration.ZERO) delay(delay)
+                targetTime += frameDelay
 
-            state = next
+                state = next
+            }
         }
     }
 
@@ -225,17 +256,6 @@ private fun Game(
                 scale(scale = 0.4f, pivot = center) {
                     drawImage(image, topLeft = center - (imageSize / 2f))
                 }
-//                drawRect(
-//                    color = Color.Red,
-//                    topLeft = Offset(
-//                        x = x - (carWidth / 2).toFloat(),
-//                        y = y - (carHeight / 2).toFloat(),
-//                    ),
-//                    size = Size(
-//                        width = carWidth.toFloat(),
-//                        height = carHeight.toFloat(),
-//                    )
-//                )
             }
         }
     }

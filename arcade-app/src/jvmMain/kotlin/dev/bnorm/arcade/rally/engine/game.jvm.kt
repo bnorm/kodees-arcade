@@ -12,7 +12,6 @@ import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Point
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.Velocity
-import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -23,7 +22,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
 @OptIn(ExperimentalCoroutinesApi::class)
 actual fun CoroutineScope.game(
     track: Track,
-    paths: Map<String, PlatformFile>,
+    racers: List<Racer>,
     carImages: List<ImageBitmap>,
 ): ReceiveChannel<RallyGameState> = produce {
     val carImages = ArrayDeque(carImages.shuffled())
@@ -34,10 +33,10 @@ actual fun CoroutineScope.game(
         finished = false,
         time = 0,
         racers = buildMap {
-            for ((index, path) in paths.entries.withIndex()) {
+            for ((index, racer) in racers.withIndex()) {
                 val position = track.positions[index]
                 put(
-                    path.key,
+                    racer.name,
                     RallyRacerState(
                         image = carImages.removeFirst(),
                         x = position.location.x,
@@ -50,10 +49,10 @@ actual fun CoroutineScope.game(
     )
 
     withEngine { engine ->
-        val racers = paths.map { (name, path) ->
-            val racerState = gameState.racers.getValue(name)
+        val racers = racers.map { racer ->
+            val racerState = gameState.racers.getValue(racer.name)
             val linker = createRacerLinker(engine, racerState)
-            WasmRacer.create(engine, linker, path.readBytes(), name) to racerState
+            WasmRacer.create(engine, linker, racer.bytes, racer.name) to racerState
         }
 
         send(gameState)
@@ -80,7 +79,7 @@ actual fun CoroutineScope.game(
 private fun createRacerLinker(
     engine: Engine,
     racerState: RallyRacerState
-): Linker<WasiContext> {
+): Linker<*> {
     // TODO is it correct to use WasiContext here?
     val linker: Linker<WasiContext> = WasiLinkerUtils.createLinker(engine)
 
@@ -124,7 +123,7 @@ private class WasmRacer(
     private val memory: WasmMemory,
     private val moveFunction: WasmFunction,
     private val onRaceFunction: WasmFunction,
-) : Racer {
+) : AutoCloseable {
 
     companion object {
         fun create(
