@@ -39,3 +39,8 @@ allprojects {
         useJUnitPlatform()
     }
 }
+
+tasks.register<Sync>("site") {
+    into(project.layout.buildDirectory.dir("_site"))
+    from(project(":arcade-app").tasks.named("wasmJsBrowserDistribution"))
+}
