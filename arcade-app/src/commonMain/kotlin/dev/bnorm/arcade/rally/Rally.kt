@@ -10,9 +10,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -238,8 +241,24 @@ private fun Game(
         }
     }
 
+    val textMeasurer = rememberTextMeasurer()
     Canvas(Modifier.fillMaxSize()) {
-        for (state in state?.racers?.values.orEmpty()) {
+        for ((name, state) in state?.racers?.entries.orEmpty()) {
+            val x = state.x.toFloat()
+            val y = size.height - state.y.toFloat()
+            val center = Offset(x, y)
+
+            val image = state.image
+
+            val result = textMeasurer.measure(name)
+            val textOffset = Offset(
+                x = -result.size.width / 2f,
+                y = image.height.toFloat() / 2f * 0.4f,
+            )
+            drawText(result, color = Color.Black, topLeft = center + textOffset)
+        }
+
+        for ((_, state) in state?.racers?.entries.orEmpty()) {
             val x = state.x.toFloat()
             val y = size.height - state.y.toFloat()
             val center = Offset(x, y)
