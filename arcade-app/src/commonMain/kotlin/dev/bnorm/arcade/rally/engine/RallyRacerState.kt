@@ -1,7 +1,7 @@
 package dev.bnorm.arcade.rally.engine
 
 import androidx.compose.ui.graphics.ImageBitmap
-import dev.bnorm.arcade.rally.Angle
+import dev.bnorm.arcade.geometry.Angle
 
 class RallyRacerState(
     val image: ImageBitmap,

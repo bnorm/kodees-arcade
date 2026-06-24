@@ -1,6 +1,8 @@
 package dev.bnorm.arcade.rally.sample
 
 import dev.bnorm.arcade.rally.*
+import dev.bnorm.arcade.geometry.atan2
+import dev.bnorm.arcade.geometry.center
 import kotlin.random.Random
 
 object Snail : Racer() {

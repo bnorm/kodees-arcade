@@ -1,9 +1,9 @@
 package dev.bnorm.arcade.rally.engine.wasm
 
 import dev.bnorm.arcade.rally.Car
-import dev.bnorm.arcade.rally.Point
+import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.rally.Track
-import dev.bnorm.arcade.rally.Velocity
+import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.rally.engine.RallyGameState
 import dev.bnorm.arcade.rally.engine.RallyRacerState
 
@@ -22,7 +22,7 @@ class WasmRacer(
         val car = Car(
             time = gameState.time,
             location = Point(carState.x, carState.y),
-            velocity = Velocity(carState.heading, carState.speed),
+            velocity = Vector(carState.heading, carState.speed),
             nextCheckpoint = carState.checkpoint,
         )
 

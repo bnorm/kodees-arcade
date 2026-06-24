@@ -1,6 +1,10 @@
 package dev.bnorm.arcade.rally.sample
 
 import dev.bnorm.arcade.rally.*
+import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.abs
+import dev.bnorm.arcade.geometry.sign
+import dev.bnorm.arcade.geometry.toRelative
 
 object FigureEight : Racer() {
     private val epsilon = Angle.ofRadians(0.0001)
@@ -11,8 +15,8 @@ object FigureEight : Racer() {
         controls.throttle = 1.0
 
         // Do figure eights!
-        val heading = car.velocity.heading
-        val turn = getTurn(car.velocity.speed, steering = 1.0, traction = 1.0)
+        val heading = car.velocity.angle
+        val turn = getTurn(car.velocity.magnitude, steering = 1.0, traction = 1.0)
         val sign = sign(targetHeading)
 
         val diff = abs((targetHeading - heading + Angle.QUARTER_CIRCLE).toRelative())

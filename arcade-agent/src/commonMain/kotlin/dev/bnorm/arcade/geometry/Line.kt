@@ -1,16 +1,21 @@
-package dev.bnorm.arcade.rally.sample
-
-import dev.bnorm.arcade.rally.Angle
-import dev.bnorm.arcade.rally.Point
-import dev.bnorm.arcade.rally.tan
-import dev.bnorm.arcade.rally.toAbsolute
+package dev.bnorm.arcade.geometry
 
 class Line(
     val m: Double,
     val b: Double,
 ) {
     // For a vertical line, formula is x = b
-    val vertical: Boolean get() = m.isNaN()
+    val isVertical: Boolean get() = m.isNaN()
+    val isHorizontal: Boolean get() = m == 0.0
+
+    override fun equals(other: Any?): Boolean {
+        return this === other || other is Line &&
+                m == other.m && b == other.b
+    }
+
+    override fun hashCode(): Int {
+        return 31 * m.hashCode() + b.hashCode()
+    }
 }
 
 fun Line(p1: Point, p2: Point): Line {
@@ -41,23 +46,26 @@ fun Line(p: Point, angle: Angle): Line {
     return Line(m, b)
 }
 
-fun Line.f(x: Double) = Point(x, m * x + b)
+fun Line.intersectVertical(x: Double): Point? {
+    if (isVertical) return null
+    return Point(x, m * x + b)
+}
 
 operator fun Line.contains(p: Point): Boolean =
-    if (vertical) p.x == b else m * p.x + b == p.y
+    if (isVertical) p.x == b else m * p.x + b == p.y
 
 infix fun Line.intersect(line: Line): Point? {
     if (this == line) return null // the same line
-    if (this.vertical && line.vertical) return null // both vertical and not equal
+    if (this.isVertical && line.isVertical) return null // both vertical and not equal
 
     // If one line is vertical, intersection is easily calculated
-    if (this.vertical) return line.f(this.b)
-    if (line.vertical) return this.f(line.b)
+    if (this.isVertical) return line.intersectVertical(this.b)
+    if (line.isVertical) return this.intersectVertical(line.b)
 
     // y = m1 * x + b1
     // y = m2 * x + b2
     // m1 * x + b1 = m2 * x + b2
     // x = (b2 - b1) / (m1 - m2)
 
-    return this.f((line.b - b) / (m - line.m))
+    return this.intersectVertical((line.b - b) / (m - line.m))
 }

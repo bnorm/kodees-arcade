@@ -25,6 +25,7 @@ import dev.bnorm.arcade.rally.engine.ByteArrayRacer
 import dev.bnorm.arcade.rally.engine.Racer
 import dev.bnorm.arcade.rally.engine.RallyGameState
 import dev.bnorm.arcade.rally.engine.game
+import dev.bnorm.arcade.geometry.toRelative
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType

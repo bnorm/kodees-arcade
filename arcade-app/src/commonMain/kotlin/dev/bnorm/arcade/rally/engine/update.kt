@@ -1,14 +1,14 @@
 package dev.bnorm.arcade.rally.engine
 
-import dev.bnorm.arcade.rally.Angle
+import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.rally.Track
-import dev.bnorm.arcade.rally.atan2
-import dev.bnorm.arcade.rally.center
-import dev.bnorm.arcade.rally.cos
-import dev.bnorm.arcade.rally.length
+import dev.bnorm.arcade.geometry.atan2
+import dev.bnorm.arcade.geometry.center
+import dev.bnorm.arcade.geometry.cos
+import dev.bnorm.arcade.geometry.length
 import dev.bnorm.arcade.rally.simulateHeading
 import dev.bnorm.arcade.rally.simulateSpeed
-import dev.bnorm.arcade.rally.sin
+import dev.bnorm.arcade.geometry.sin
 import kotlin.math.sqrt
 
 val carWidth = 12.0

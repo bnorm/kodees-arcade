@@ -1,5 +1,8 @@
 package dev.bnorm.arcade.rally
 
+import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.Point
+import dev.bnorm.arcade.geometry.Segment
 import kotlinx.serialization.Serializable
 
 @Serializable

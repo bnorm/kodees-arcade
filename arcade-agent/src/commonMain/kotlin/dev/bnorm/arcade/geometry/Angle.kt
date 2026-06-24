@@ -1,9 +1,18 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.geometry
 
 import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.asin
+import kotlin.math.atan
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.roundToLong
+import kotlin.math.sign
+import kotlin.math.sin
+import kotlin.math.tan
 
 @Serializable
 @JvmInline
@@ -55,16 +64,16 @@ fun Angle.toRelative(): Angle {
     return Angle.ofRadians(if (normalized >= 0.0) normalized - PI else normalized + PI)
 }
 
-fun abs(angle: Angle) = Angle.ofRadians(kotlin.math.abs(angle.radians))
-fun sign(angle: Angle) = kotlin.math.sign(angle.radians)
+fun abs(angle: Angle) = Angle.ofRadians(abs(angle.radians))
+fun sign(angle: Angle) = sign(angle.radians)
 
-fun sin(angle: Angle) = kotlin.math.sin(angle.radians)
-fun cos(angle: Angle) = kotlin.math.cos(angle.radians)
-fun tan(angle: Angle) = kotlin.math.tan(angle.radians)
+fun sin(angle: Angle) = sin(angle.radians)
+fun cos(angle: Angle) = cos(angle.radians)
+fun tan(angle: Angle) = tan(angle.radians)
 
-fun asin(x: Double): Angle = Angle.ofRadians(kotlin.math.asin(x))
-fun acos(x: Double): Angle = Angle.ofRadians(kotlin.math.acos(x))
-fun atan(x: Double): Angle = Angle.ofRadians(kotlin.math.atan(x))
-fun atan2(y: Double, x: Double): Angle = Angle.ofRadians(kotlin.math.atan2(y, x))
+fun asin(x: Double): Angle = Angle.ofRadians(asin(x))
+fun acos(x: Double): Angle = Angle.ofRadians(acos(x))
+fun atan(x: Double): Angle = Angle.ofRadians(atan(x))
+fun atan2(y: Double, x: Double): Angle = Angle.ofRadians(atan2(y, x))
 
 operator fun Double.times(angle: Angle) = Angle.ofRadians(this * angle.radians)

@@ -1,5 +1,8 @@
 package dev.bnorm.arcade.rally
 
+import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.times
+import dev.bnorm.arcade.geometry.toAbsolute
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -89,7 +92,10 @@ fun getTurn(speed: Double, steering: Double, traction: Double): Angle {
     val maxTurn = (MAX_TURN_RATE - speedPenalty) * tractionPenalty
 
     // If the target turn is greater than the max turn => understeer.
-    val understeerPenalty = (targetTurn - maxTurn).coerceIn(Angle.ZERO, abs(targetTurn))
+    val understeerPenalty = (targetTurn - maxTurn).coerceIn(
+        Angle.ZERO,
+        dev.bnorm.arcade.geometry.abs(targetTurn)
+    )
     return sign(steering) * (targetTurn - understeerPenalty)
 }
 

@@ -1,5 +1,13 @@
 package dev.bnorm.arcade.rally.sample
 
+import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.Line
+import dev.bnorm.arcade.geometry.Point
+import dev.bnorm.arcade.geometry.Segment
+import dev.bnorm.arcade.geometry.abs
+import dev.bnorm.arcade.geometry.center
+import dev.bnorm.arcade.geometry.intersect
+import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.*
 
 /**
@@ -79,11 +87,7 @@ object Kodee : Racer() {
 }
 
 private fun Car.bearingTo(target: Point): Angle {
-    return (location.headingTo(target) - velocity.heading).toRelative()
-}
-
-private fun Point.headingTo(target: Point): Angle {
-    return atan2(target.y - y, target.x - x)
+    return (location.angleTo(target) - velocity.angle).toRelative()
 }
 
 private fun Line.findTarget(checkpoint: Segment): Point {
