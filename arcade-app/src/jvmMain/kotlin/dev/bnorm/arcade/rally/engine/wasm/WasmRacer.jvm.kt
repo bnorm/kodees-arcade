@@ -4,10 +4,10 @@ import ai.tegmentum.wasmtime4j.Engine
 import ai.tegmentum.wasmtime4j.Linker
 import ai.tegmentum.wasmtime4j.WasmValue
 import ai.tegmentum.wasmtime4j.WasmValueType
+import ai.tegmentum.wasmtime4j.factory.WasmRuntimeFactory.create
 import ai.tegmentum.wasmtime4j.func.HostFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
 import ai.tegmentum.wasmtime4j.wasi.WasiContext
-import ai.tegmentum.wasmtime4j.wasi.WasiLinkerUtils
 import dev.bnorm.arcade.rally.engine.RallyRacerState
 
 actual suspend fun WasmEngine.createWasmRacer(
@@ -36,8 +36,10 @@ private fun createRacerLinker(
     engine: Engine,
     racerState: RallyRacerState
 ): Linker<*> {
-    // TODO is it correct to use WasiContext here?
-    val linker: Linker<WasiContext> = WasiLinkerUtils.createLinker(engine)
+    val runtime = engine.runtime
+    val context = runtime.createWasiContext().inheritStdio()
+    val linker = runtime.createLinker<WasiContext?>(engine)
+    runtime.addWasiToLinker(linker, context)
 
     linker.defineHostFunction(
         "rally_api",
