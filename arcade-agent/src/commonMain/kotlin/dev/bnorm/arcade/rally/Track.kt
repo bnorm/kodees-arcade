@@ -10,7 +10,8 @@ class Track(
     val width: Double,
     val height: Double,
     val checkpoints: List<Segment>,
-    val positions: List<Position>
+    val positions: List<Position>,
+    val laps: Int,
 ) {
     @Serializable
     class Position(

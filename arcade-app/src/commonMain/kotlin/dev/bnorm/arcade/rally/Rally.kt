@@ -21,16 +21,19 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.arcade_app.generated.resources.*
 import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
+import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.engine.ByteArrayRacer
 import dev.bnorm.arcade.rally.engine.Racer
 import dev.bnorm.arcade.rally.engine.RallyGameState
 import dev.bnorm.arcade.rally.engine.game
-import dev.bnorm.arcade.geometry.toRelative
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.painterResource
 import kotlin.time.Duration
@@ -126,14 +129,12 @@ fun Rally(
                     enabled = canAddRacer(),
                     onClick = {
                         scope.launch {
-                            scope.launch {
-                                racers.add(
-                                    ByteArrayRacer(
-                                        name = pickRacerName(racer),
-                                        bytes = BundledRacers.readBytes("files/$racer.wasm")
-                                    )
+                            racers.add(
+                                ByteArrayRacer(
+                                    name = pickRacerName(racer),
+                                    bytes = BundledRacers.readBytes("files/$racer.wasm")
                                 )
-                            }
+                            )
                         }
                     }
                 ) {
@@ -186,7 +187,14 @@ fun Rally(
                 modifier = Modifier.fillMaxSize(),
             )
 
-            Game(game, desiredFps)
+            Game(
+                game,
+                desiredFps,
+                onComplete = {
+                    game = null
+                    // TODO popup with results.
+                }
+            )
         }
 
         Row(
@@ -212,7 +220,9 @@ fun Rally(
 @Composable
 private fun Game(
     game: ReceiveChannel<RallyGameState>?,
-    desiredFps: Float
+    desiredFps: Float,
+    onComplete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var state by remember { mutableStateOf<RallyGameState?>(null) }
 
@@ -229,7 +239,7 @@ private fun Game(
             val startTime = TimeSource.Monotonic.markNow()
             var targetTime = 0.seconds
 
-            while (isActive) {
+            while (state?.finished != true) {
                 val next = game.receive()
 
                 val currentTime = startTime.elapsedNow()
@@ -239,11 +249,18 @@ private fun Game(
 
                 state = next
             }
+
+            // One more tick to let the game finish.
+            val currentTime = startTime.elapsedNow()
+            val delay = targetTime - currentTime
+            if (delay > Duration.ZERO) delay(delay)
+
+            onComplete()
         }
     }
 
     val textMeasurer = rememberTextMeasurer()
-    Canvas(Modifier.fillMaxSize()) {
+    Canvas(modifier.fillMaxSize()) {
         for ((name, state) in state?.racers?.entries.orEmpty()) {
             val x = state.x.toFloat()
             val y = size.height - state.y.toFloat()

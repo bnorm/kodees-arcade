@@ -9,5 +9,6 @@ class Car(
     val time: Long,
     val location: Point,
     val velocity: Vector,
-    val nextCheckpoint: Int
+    val lap: Int,
+    val nextCheckpoint: Int,
 )

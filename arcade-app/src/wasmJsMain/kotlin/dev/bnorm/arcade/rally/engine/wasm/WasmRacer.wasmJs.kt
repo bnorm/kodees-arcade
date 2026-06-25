@@ -2,7 +2,8 @@
 
 package dev.bnorm.arcade.rally.engine.wasm
 
-import dev.bnorm.arcade.rally.engine.RallyRacerState
+import dev.bnorm.arcade.rally.engine.RacerControlState
+import dev.bnorm.arcade.rally.engine.RallyCarState
 import js.array.Tuple
 import js.buffer.DataView
 import js.buffer.toArrayBuffer
@@ -22,20 +23,20 @@ import web.encoding.TextDecoder
 import kotlin.random.Random
 
 actual suspend fun WasmEngine.createWasmRacer(
-    racerState: RallyRacerState,
+    controlState: RacerControlState,
     racer: ByteArray,
     name: String
 ): WasmRacer {
     lateinit var memory: Memory<*>
 
     val imports = Imports(
-        getThrottle = { racerState.throttle.toJsDouble() },
+        getThrottle = { controlState.throttle.toJsDouble() },
         setThrottle = { throttle ->
-            racerState.throttle = throttle.toDouble()
+            controlState.throttle = throttle.toDouble()
         },
-        getSteering = { racerState.steering.toJsDouble() },
+        getSteering = { controlState.steering.toJsDouble() },
         setSteering = { steering ->
-            racerState.steering = steering.toDouble()
+            controlState.steering = steering.toDouble()
         },
         fdWrite = { fd, iovs, iovs_len, nwritten ->
             fdWrite(name, memory, iovs_len.toInt(), iovs.toInt(), fd.toInt(), nwritten.toInt()).toJsInt()
@@ -53,6 +54,7 @@ actual suspend fun WasmEngine.createWasmRacer(
     val moveFunction = instance.exports["move"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
     val onRaceFunction = instance.exports["onRace"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
     val racer = WasmRacer(
+        name = name,
         memory = BrowserMemory(memory),
         moveFunction = { invoke(moveFunction) },
         onRaceFunction = { invoke(onRaceFunction) },

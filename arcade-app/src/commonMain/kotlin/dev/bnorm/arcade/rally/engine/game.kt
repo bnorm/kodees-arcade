@@ -17,7 +17,7 @@ fun CoroutineScope.game(
 ): ReceiveChannel<RallyGameState> = produce {
     val carImages = ArrayDeque(carImages.shuffled())
 
-    val gameState = RallyGameState(
+    var gameState = RallyGameState(
         trackWidth = track.width,
         trackHeight = track.height,
         finished = false,
@@ -27,7 +27,7 @@ fun CoroutineScope.game(
                 val position = track.positions[index]
                 put(
                     racer.name,
-                    RallyRacerState(
+                    RallyCarState(
                         image = carImages.removeFirst(),
                         x = position.location.x,
                         y = position.location.y,
@@ -37,14 +37,15 @@ fun CoroutineScope.game(
             }
         }
     )
+    val controls = racers.associate { it.name to RacerControlState() }
 
     withEngine { engine ->
         val racers = racers.map { racer ->
-            val racerState = gameState.racers.getValue(racer.name)
-            engine.createWasmRacer(racerState, racer.bytes, racer.name) to racerState
+            val controlsState = controls.getValue(racer.name)
+            engine.createWasmRacer(controlsState, racer.bytes, racer.name)
         }
 
-        for ((racer, _) in racers) {
+        for (racer in racers) {
             racer.onRace(track)
         }
 
@@ -52,12 +53,14 @@ fun CoroutineScope.game(
 
         while (!gameState.finished) {
             // Allow racers to manipulate controls.
-            for ((racer, racerState) in racers) {
-                racer.move(gameState, racerState)
+            for (racer in racers) {
+                // TODO stop calling when racer is finished.
+                //  - should they be removed from the game entirely when they finish?
+                racer.move(gameState)
             }
 
             // Update game state.
-            update(gameState, track)
+            gameState = update(gameState, controls, track)
             send(gameState)
         }
     }

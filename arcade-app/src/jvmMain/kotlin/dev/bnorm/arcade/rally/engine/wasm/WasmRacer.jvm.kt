@@ -4,18 +4,18 @@ import ai.tegmentum.wasmtime4j.Engine
 import ai.tegmentum.wasmtime4j.Linker
 import ai.tegmentum.wasmtime4j.WasmValue
 import ai.tegmentum.wasmtime4j.WasmValueType
-import ai.tegmentum.wasmtime4j.factory.WasmRuntimeFactory.create
 import ai.tegmentum.wasmtime4j.func.HostFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
 import ai.tegmentum.wasmtime4j.wasi.WasiContext
-import dev.bnorm.arcade.rally.engine.RallyRacerState
+import dev.bnorm.arcade.rally.engine.RacerControlState
+import dev.bnorm.arcade.rally.engine.RallyCarState
 
 actual suspend fun WasmEngine.createWasmRacer(
-    racerState: RallyRacerState,
+    controlState: RacerControlState,
     racer: ByteArray,
     name: String
 ): WasmRacer {
-    val linker = createRacerLinker(this, racerState)
+    val linker = createRacerLinker(this, controlState)
     val module = compileModule(racer)
     val store = createStore()
     val instance = linker.instantiate(store, module)
@@ -24,6 +24,7 @@ actual suspend fun WasmEngine.createWasmRacer(
     val moveFunction = instance.getFunction("move").orElseThrow()
     val onRaceFunction = instance.getFunction("onRace").orElseThrow()
     val racer = WasmRacer(
+        name = name,
         memory = memory,
         moveFunction = { moveFunction.callVoid() },
         onRaceFunction = { onRaceFunction.callVoid() },
@@ -34,7 +35,7 @@ actual suspend fun WasmEngine.createWasmRacer(
 
 private fun createRacerLinker(
     engine: Engine,
-    racerState: RallyRacerState
+    controlState: RacerControlState,
 ): Linker<*> {
     val runtime = engine.runtime
     val context = runtime.createWasiContext().inheritStdio()
@@ -45,28 +46,28 @@ private fun createRacerLinker(
         "rally_api",
         "controls_throttle_get",
         FunctionType(arrayOf(), arrayOf(WasmValueType.F64)),
-        HostFunction.singleValue { WasmValue.f64(racerState.throttle) },
+        HostFunction.singleValue { WasmValue.f64(controlState.throttle) },
     )
 
     linker.defineHostFunction(
         "rally_api",
         "controls_throttle_set",
         FunctionType(arrayOf(WasmValueType.F64), arrayOf()),
-        HostFunction.voidFunction { (throttle) -> racerState.throttle = throttle.asDouble() },
+        HostFunction.voidFunction { (throttle) -> controlState.throttle = throttle.asDouble() },
     )
 
     linker.defineHostFunction(
         "rally_api",
         "controls_steering_get",
         FunctionType(arrayOf(), arrayOf(WasmValueType.F64)),
-        HostFunction.singleValue { WasmValue.f64(racerState.steering) },
+        HostFunction.singleValue { WasmValue.f64(controlState.steering) },
     )
 
     linker.defineHostFunction(
         "rally_api",
         "controls_steering_set",
         FunctionType(arrayOf(WasmValueType.F64), arrayOf()),
-        HostFunction.voidFunction { (steering) -> racerState.steering = steering.asDouble() },
+        HostFunction.voidFunction { (steering) -> controlState.steering = steering.asDouble() },
     )
 
     return linker

@@ -17,13 +17,15 @@ val carHeight = 16.0
 val impactDist = (68.0 * 0.4f)
 val impactDistSq = impactDist * impactDist
 
-fun update(gameState: RallyGameState, track: Track) {
-    gameState.time++
+fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, track: Track): RallyGameState {
+    val racers = gameState.racers.mapValues { RallyCarState.Mutable(it.value) }
+    for ((name, racerState) in racers) {
+        // Skip updating racers which are finished.
+        if (racerState.lap >= track.laps) continue
 
-    val racers = gameState.racers.values.toList()
-    for (racerState in racers) {
-        val steering = racerState.steering
-        val throttle = racerState.throttle
+        val controls = controls.getValue(name)
+        val steering = controls.steering
+        val throttle = controls.throttle
 
         val oldHeading = racerState.heading
         val oldSpeed = racerState.speed
@@ -64,9 +66,16 @@ fun update(gameState: RallyGameState, track: Track) {
 
     // Only do a single pass...
     // TODO is a little bit of clipping okay?
-    for ((i, racer1) in racers.withIndex()) {
+
+    val racerList = racers.values.toList()
+    for ((i, racer1) in racerList.withIndex()) {
+        // Skip updating racers which are finished.
+        if (racer1.lap >= track.laps) continue
+
         for (j in (i + 1)..<racers.size) {
-            val racer2 = racers[j]
+            val racer2 = racerList[j]
+            // Skip updating racers which are finished.
+            if (racer2.lap >= track.laps) continue
 
             val dx = racer1.x - racer2.x
             val dy = racer1.y - racer2.y
@@ -84,26 +93,34 @@ fun update(gameState: RallyGameState, track: Track) {
             }
         }
     }
+
+    return RallyGameState(
+        trackWidth = gameState.trackWidth,
+        trackHeight = gameState.trackHeight,
+        finished = racers.all { it.value.lap >= track.laps },
+        time = gameState.time + 1,
+        racers = racers.mapValues { it.value.build() }
+    )
 }
 
 /** @return if impacted with a wall. */
 private fun updatePosition(
-    racerState: RallyRacerState,
+    state: RallyCarState.Mutable,
     magnitude: Double,
     heading: Angle,
     gameState: RallyGameState
 ): Boolean {
-    val newX = racerState.x + magnitude * cos(heading)
-    val newY = racerState.y + magnitude * sin(heading)
-    racerState.x = newX
-    racerState.y = newY
+    val newX = state.x + magnitude * cos(heading)
+    val newY = state.y + magnitude * sin(heading)
+    state.x = newX
+    state.y = newY
 
     if (
         newX !in impactDist..gameState.trackWidth - impactDist ||
         newY !in impactDist..gameState.trackHeight - impactDist
     ) {
-        racerState.x = newX.coerceIn(impactDist, gameState.trackWidth - impactDist)
-        racerState.y = newY.coerceIn(impactDist, gameState.trackHeight - impactDist)
+        state.x = newX.coerceIn(impactDist, gameState.trackWidth - impactDist)
+        state.y = newY.coerceIn(impactDist, gameState.trackHeight - impactDist)
         return true
     }
 

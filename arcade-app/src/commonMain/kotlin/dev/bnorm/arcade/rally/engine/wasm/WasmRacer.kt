@@ -4,25 +4,28 @@ import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.geometry.Vector
+import dev.bnorm.arcade.rally.engine.RacerControlState
 import dev.bnorm.arcade.rally.engine.RallyGameState
-import dev.bnorm.arcade.rally.engine.RallyRacerState
 
 expect suspend fun WasmEngine.createWasmRacer(
-    racerState: RallyRacerState,
+    controlState: RacerControlState,
     racer: ByteArray,
     name: String,
 ): WasmRacer
 
 class WasmRacer(
+    private val name: String,
     private val memory: WasmMemory,
     private val moveFunction: () -> Unit,
     private val onRaceFunction: () -> Unit,
 ) {
-    fun move(gameState: RallyGameState, carState: RallyRacerState) {
+    fun move(gameState: RallyGameState) {
+        val carState = gameState.racers.getValue(name)
         val car = Car(
             time = gameState.time,
             location = Point(carState.x, carState.y),
             velocity = Vector(carState.heading, carState.speed),
+            lap = carState.lap,
             nextCheckpoint = carState.checkpoint,
         )
 

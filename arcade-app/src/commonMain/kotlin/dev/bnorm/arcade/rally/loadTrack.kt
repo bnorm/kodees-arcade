@@ -24,6 +24,7 @@ suspend fun loadTrack(): Track {
                 location = Point(it.position.x, trackHeight - it.position.y),
                 heading = Angle.ofDegrees(it.rotation.degrees.toDouble())
             )
-        }
+        },
+        laps = 25,
     )
 }
