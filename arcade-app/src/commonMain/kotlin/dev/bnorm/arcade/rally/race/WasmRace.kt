@@ -10,7 +10,7 @@ import dev.bnorm.arcade.rally.engine.wasm.withEngine
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 
-class ActiveRace(
+class WasmRace(
     private val track: Track,
     private val racers: List<Racer>,
 ) : Race {

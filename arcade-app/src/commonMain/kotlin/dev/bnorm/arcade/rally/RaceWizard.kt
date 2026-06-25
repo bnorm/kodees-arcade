@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
-import dev.bnorm.arcade.rally.race.ActiveRace
+import dev.bnorm.arcade.rally.race.WasmRace
 import dev.bnorm.arcade.rally.race.Race
 import dev.bnorm.arcade.rally.race.Racer
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
@@ -112,7 +112,7 @@ fun RaceWizard(
         Button(
             enabled = racers.isNotEmpty(),
             onClick = {
-                onStart(ActiveRace(track, racers.toList()))
+                onStart(WasmRace(track, racers.toList()))
             }
         ) {
             Text("Start!")

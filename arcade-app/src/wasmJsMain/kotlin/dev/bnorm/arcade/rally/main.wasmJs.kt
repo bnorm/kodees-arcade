@@ -27,7 +27,6 @@ fun main() {
                 val recordingPicker = rememberFilePickerLauncher(
                     mode = PickerMode.Single,
                     type = PickerType.File(listOf("race")),
-                    initialDirectory = "../arcade-app",
                 ) { file ->
                     if (file != null) {
                         race = ReplayRace(file)
