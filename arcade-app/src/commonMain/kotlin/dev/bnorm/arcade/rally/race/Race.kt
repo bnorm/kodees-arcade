@@ -11,12 +11,15 @@ interface Race {
 
     @Serializable
     sealed interface Event {
+        @Serializable
         class Start(val track: Track) : Event
 
+        @Serializable
         class Update(
             val time: Long,
             val racers: Map<String, Racer>,
         ) : Event {
+            @Serializable
             class Racer(
                 val x: Double,
                 val y: Double,
@@ -24,6 +27,7 @@ interface Race {
             )
         }
 
+        @Serializable
         data object Complete : Event
 
     }

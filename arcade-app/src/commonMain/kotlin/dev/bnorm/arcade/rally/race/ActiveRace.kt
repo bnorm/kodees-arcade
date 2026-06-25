@@ -1,7 +1,10 @@
 package dev.bnorm.arcade.rally.race
 
 import dev.bnorm.arcade.rally.Track
-import dev.bnorm.arcade.rally.engine.*
+import dev.bnorm.arcade.rally.engine.RacerControlState
+import dev.bnorm.arcade.rally.engine.RallyCarState
+import dev.bnorm.arcade.rally.engine.RallyGameState
+import dev.bnorm.arcade.rally.engine.update
 import dev.bnorm.arcade.rally.engine.wasm.createWasmRacer
 import dev.bnorm.arcade.rally.engine.wasm.withEngine
 import kotlinx.coroutines.channels.Channel
@@ -15,58 +18,60 @@ class ActiveRace(
         field = Channel()
 
     override suspend fun start() {
-        events.send(Race.Event.Start(track))
+        try {
+            events.send(Race.Event.Start(track))
 
-        var gameState = RallyGameState(
-            trackWidth = track.width,
-            trackHeight = track.height,
-            finished = false,
-            time = 0,
-            racers = buildMap {
-                for ((index, racer) in racers.withIndex()) {
-                    val position = track.positions[index]
-                    put(
-                        racer.name,
-                        RallyCarState(
-                            x = position.location.x,
-                            y = position.location.y,
-                            heading = position.heading,
+            var gameState = RallyGameState(
+                trackWidth = track.width,
+                trackHeight = track.height,
+                finished = false,
+                time = 0,
+                racers = buildMap {
+                    for ((index, racer) in racers.withIndex()) {
+                        val position = track.positions[index]
+                        put(
+                            racer.name,
+                            RallyCarState(
+                                x = position.location.x,
+                                y = position.location.y,
+                                heading = position.heading,
+                            )
                         )
-                    )
+                    }
                 }
-            }
-        )
+            )
 
-        events.send(gameState.toUpdate())
+            events.send(gameState.toUpdate())
 
-        withEngine { engine ->
-            val controls = racers.associate { it.name to RacerControlState() }
-            val racers = racers.map { racer ->
-                val controlsState = controls.getValue(racer.name)
-                engine.createWasmRacer(controlsState, racer.bytes, racer.name)
-            }
+            withEngine { engine ->
+                val controls = racers.associate { it.name to RacerControlState() }
+                val racers = racers.map { racer ->
+                    val controlsState = controls.getValue(racer.name)
+                    engine.createWasmRacer(controlsState, racer.bytes, racer.name)
+                }
 
-            for (racer in racers) {
-                racer.onRace(track)
-            }
-
-            while (!gameState.finished) {
-                // Allow racers to manipulate controls.
                 for (racer in racers) {
-                    // TODO stop calling when racer is finished.
-                    //  - should they be removed from the game entirely when they finish?
-                    racer.move(gameState)
+                    racer.onRace(track)
                 }
 
-                // Update game state.
-                gameState = update(gameState, controls, track)
-                events.send(gameState.toUpdate())
+                while (!gameState.finished) {
+                    // Allow racers to manipulate controls.
+                    for (racer in racers) {
+                        // TODO stop calling when racer is finished.
+                        //  - should they be removed from the game entirely when they finish?
+                        racer.move(gameState)
+                    }
+
+                    // Update game state.
+                    gameState = update(gameState, controls, track)
+                    events.send(gameState.toUpdate())
+                }
+
+                events.send(Race.Event.Complete)
             }
-
-            events.send(Race.Event.Complete)
+        } finally {
+            events.close()
         }
-
-        events.close()
     }
 }
 
