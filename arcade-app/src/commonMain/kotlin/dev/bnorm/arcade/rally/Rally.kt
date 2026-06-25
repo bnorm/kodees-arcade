@@ -22,14 +22,13 @@ import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.arcade_app.generated.resources.*
 import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
 import dev.bnorm.arcade.geometry.toRelative
-import dev.bnorm.arcade.rally.engine.Racer
-import dev.bnorm.arcade.rally.engine.RallyGameState
-import dev.bnorm.arcade.rally.engine.game
+import dev.bnorm.arcade.rally.race.ActiveRace
+import dev.bnorm.arcade.rally.race.Race
+import dev.bnorm.arcade.rally.race.Racer
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -110,7 +109,14 @@ fun Rally(
         }
     }
 
-    var game by remember { mutableStateOf<ReceiveChannel<RallyGameState>?>(null) }
+    var race by remember { mutableStateOf<Race?>(null) }
+    LaunchedEffect(race) {
+        race?.also {
+            it.start()
+            // TODO show results
+            race = null
+        }
+    }
 
     Column {
         var desiredFps by remember { mutableFloatStateOf(60f) }
@@ -164,21 +170,16 @@ fun Rally(
             Button(
                 enabled = racers.isNotEmpty(),
                 onClick = {
-                    game?.cancel()
-                    game = scope.game(
-                        track = track,
-                        racers = racers,
-                    )
+                    race = ActiveRace(track, racers)
                 }
             ) {
                 Text("Start!")
             }
             Spacer(Modifier.width(8.dp))
             Button(
-                enabled = game != null,
+                enabled = race != null,
                 onClick = {
-                    game?.cancel()
-                    game = null
+                    race = null
                 },
             ) {
                 Text("Stop!")
@@ -199,12 +200,8 @@ fun Rally(
 
             Game(
                 racers.toList(),
-                game,
-                desiredFps,
-                onComplete = {
-                    game = null
-                    // TODO popup with results.
-                }
+                race,
+                desiredFps
             )
         }
 
@@ -231,44 +228,38 @@ fun Rally(
 @Composable
 private fun Game(
     racers: List<ImageRacer>,
-    game: ReceiveChannel<RallyGameState>?,
+    race: Race?,
     desiredFps: Float,
-    onComplete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val images = remember(racers) { racers.associate { racer -> racer.name to racer.image } }
-    var state by remember { mutableStateOf<RallyGameState?>(null) }
+    var state by remember { mutableStateOf<Race.Event.Update?>(null) }
 
-    LaunchedEffect(game, desiredFps) {
-        if (game == null) {
+    LaunchedEffect(race, desiredFps) {
+        if (race == null) {
             state = null
             return@LaunchedEffect
         }
 
         withContext(Dispatchers.Default) {
-            state = game.receive()
-
             val frameDelay = (1.0 / desiredFps).seconds
             val startTime = TimeSource.Monotonic.markNow()
             var targetTime = 0.seconds
 
-            while (state?.finished != true) {
-                val next = game.receive()
+            while (true) {
+                when (val next = race.events.receive()) {
+                    is Race.Event.Complete -> break
+                    is Race.Event.Start -> continue
+                    is Race.Event.Update -> {
+                        val currentTime = startTime.elapsedNow()
+                        val delay = targetTime - currentTime
+                        if (delay > Duration.ZERO) delay(delay)
+                        targetTime += frameDelay
 
-                val currentTime = startTime.elapsedNow()
-                val delay = targetTime - currentTime
-                if (delay > Duration.ZERO) delay(delay)
-                targetTime += frameDelay
-
-                state = next
+                        state = next
+                    }
+                }
             }
-
-            // One more tick to let the game finish.
-            val currentTime = startTime.elapsedNow()
-            val delay = targetTime - currentTime
-            if (delay > Duration.ZERO) delay(delay)
-
-            onComplete()
         }
     }
 
