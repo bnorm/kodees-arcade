@@ -21,7 +21,7 @@ class ActiveRace(
         try {
             events.send(Race.Event.Start(track))
 
-            var gameState = RallyGameState(
+            val gameState = RallyGameState(
                 trackWidth = track.width,
                 trackHeight = track.height,
                 finished = false,
@@ -63,7 +63,7 @@ class ActiveRace(
                     }
 
                     // Update game state.
-                    gameState = update(gameState, controls, track)
+                    update(gameState, controls, track)
                     events.send(gameState.toUpdate())
                 }
 

@@ -17,8 +17,10 @@ val carHeight = 16.0
 val impactDist = (68.0 * 0.4f)
 val impactDistSq = impactDist * impactDist
 
-fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, track: Track): RallyGameState {
-    val racers = gameState.racers.mapValues { RallyCarState.Mutable(it.value) }
+fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, track: Track) {
+    gameState.time++
+
+    val racers = gameState.racers
     for ((name, racerState) in racers) {
         // Skip updating racers which are finished.
         if (racerState.lap >= track.laps) continue
@@ -94,18 +96,12 @@ fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, 
         }
     }
 
-    return RallyGameState(
-        trackWidth = gameState.trackWidth,
-        trackHeight = gameState.trackHeight,
-        finished = racers.all { it.value.lap >= track.laps },
-        time = gameState.time + 1,
-        racers = racers.mapValues { it.value.build() }
-    )
+    gameState.finished = racers.all { it.value.lap >= track.laps }
 }
 
 /** @return if impacted with a wall. */
 private fun updatePosition(
-    state: RallyCarState.Mutable,
+    state: RallyCarState,
     magnitude: Double,
     heading: Angle,
     gameState: RallyGameState
