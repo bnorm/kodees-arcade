@@ -23,7 +23,6 @@ import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.race.Race
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.painterResource
@@ -35,7 +34,7 @@ import kotlin.time.TimeSource
 fun RaceTrack(
     track: Track,
     race: Race?,
-    onComplete: () -> Unit,
+    onComplete: (Race.Event.Complete) -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -90,7 +89,7 @@ fun RaceTrack(
 private fun Game(
     race: Race?,
     desiredFps: Float,
-    onComplete: () -> Unit,
+    onComplete: (Race.Event.Complete) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val images = remember {
@@ -118,24 +117,21 @@ private fun Game(
             val startTime = TimeSource.Monotonic.markNow()
             var targetTime = 0.seconds
 
-            while (isActive) {
-                val result = race.events.receiveCatching()
-
+            for (event in race.events) {
                 val currentTime = startTime.elapsedNow()
                 val delay = targetTime - currentTime
                 if (delay > Duration.ZERO) delay(delay)
                 targetTime = maxOf(targetTime + frameDelay, currentTime)
 
-                if (result.isClosed) break
-                when (val next = result.getOrThrow()) {
+                when (event) {
                     is Race.Event.Complete -> {
-                        onComplete()
+                        onComplete(event)
                         break
                     }
 
                     is Race.Event.Start -> continue
                     is Race.Event.Update -> {
-                        state = next
+                        state = event
                     }
                 }
             }

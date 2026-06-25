@@ -1,9 +1,11 @@
-@file:OptIn(ExperimentalComposeUiApi::class)
+@file:OptIn(ExperimentalMaterial3Api::class)
 
 package dev.bnorm.arcade.rally
 
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import dev.bnorm.arcade.rally.race.Race
@@ -41,10 +43,7 @@ fun main() {
         ) {
             var race by remember { mutableStateOf<Race?>(null) }
             LaunchedEffect(race) {
-                race?.let {
-                    it.start()
-                    race = null
-                }
+                race?.start()
             }
 
             var showWizard by remember { mutableStateOf(false) }
@@ -90,11 +89,27 @@ fun main() {
                     }
                 }
 
+                var complete by remember { mutableStateOf<Race.Event.Complete?>(null) }
+                complete?.let {
+                    BasicAlertDialog(
+                        onDismissRequest = { complete = null },
+                    ) {
+                        Surface {
+                            RaceResults(it)
+                        }
+                    }
+                }
+
                 RaceTrack(
                     track = track,
                     race = race,
-                    onComplete = { race = null },
-                    onStop = { race = null },
+                    onComplete = {
+                        complete = it
+                        race = null
+                    },
+                    onStop = {
+                        race = null
+                    },
                 )
             }
         }

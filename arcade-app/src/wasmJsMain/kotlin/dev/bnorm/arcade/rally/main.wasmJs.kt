@@ -1,8 +1,9 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package dev.bnorm.arcade.rally
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
@@ -20,10 +21,7 @@ fun main() {
             Column {
                 var race by remember { mutableStateOf<Race?>(null) }
                 LaunchedEffect(race) {
-                    race?.let {
-                        it.start()
-                        race = null
-                    }
+                    race?.start()
                 }
 
                 val recordingPicker = rememberFilePickerLauncher(
@@ -39,8 +37,31 @@ fun main() {
                 Button(onClick = { recordingPicker.launch() }) {
                     Text("Load Recording")
                 }
+
                 RaceWizard(track, onStart = { race = it })
-                RaceTrack(track, race, onComplete = { race = null }, onStop = { race = null })
+
+                var complete by remember { mutableStateOf<Race.Event.Complete?>(null) }
+                complete?.let {
+                    BasicAlertDialog(
+                        onDismissRequest = { complete = null },
+                    ) {
+                        Surface {
+                            RaceResults(it)
+                        }
+                    }
+                }
+
+                RaceTrack(
+                    track = track,
+                    race = race,
+                    onComplete = {
+                        complete = it
+                        race = null
+                    },
+                    onStop = {
+                        race = null
+                    },
+                )
             }
         }
     }

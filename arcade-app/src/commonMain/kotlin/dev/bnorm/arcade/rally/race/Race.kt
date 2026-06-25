@@ -28,7 +28,15 @@ interface Race {
         }
 
         @Serializable
-        data object Complete : Event
+        class Complete(
+            val results: Map<String, Result>
+        ) : Event {
+            @Serializable
+            class Result(
+                val place: Int,
+                val time: Long,
+            )
+        }
 
     }
 }

@@ -13,7 +13,7 @@ plugins {
 kotlin {
     jvm {
         mainRun {
-            mainClass = "dev.bnorm.arcade.rally.TestKt"
+            mainClass = "dev.bnorm.arcade.rally.Main_jvmKt"
         }
     }
 

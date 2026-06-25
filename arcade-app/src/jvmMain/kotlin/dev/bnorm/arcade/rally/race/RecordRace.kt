@@ -28,7 +28,7 @@ class RecordRace(
                         )
                     ).use { writer ->
                         for (event in race.events) {
-                            writer.appendLine(Json.encodeToString(event))
+                            writer.appendLine(Json.encodeToString(Race.Event.serializer(), event))
                             events.send(event)
                         }
                     }

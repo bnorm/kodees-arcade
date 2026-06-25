@@ -67,7 +67,13 @@ class ActiveRace(
                     events.send(gameState.toUpdate())
                 }
 
-                events.send(Race.Event.Complete)
+                val results = gameState.racers.entries
+                    .sortedBy { (_, v) -> v.finished }
+                    .map { it.key }.withIndex()
+                    .associate { (place, name) ->
+                        name to Race.Event.Complete.Result(place + 1, gameState.racers.getValue(name).finished!!)
+                    }
+                events.send(Race.Event.Complete(results))
             }
         } finally {
             events.close()

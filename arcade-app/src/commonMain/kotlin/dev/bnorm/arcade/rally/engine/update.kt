@@ -1,14 +1,9 @@
 package dev.bnorm.arcade.rally.engine
 
-import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.*
 import dev.bnorm.arcade.rally.Track
-import dev.bnorm.arcade.geometry.atan2
-import dev.bnorm.arcade.geometry.center
-import dev.bnorm.arcade.geometry.cos
-import dev.bnorm.arcade.geometry.length
 import dev.bnorm.arcade.rally.simulateHeading
 import dev.bnorm.arcade.rally.simulateSpeed
-import dev.bnorm.arcade.geometry.sin
 import kotlin.math.sqrt
 
 val carWidth = 12.0
@@ -23,7 +18,12 @@ fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, 
     val racers = gameState.racers
     for ((name, racerState) in racers) {
         // Skip updating racers which are finished.
-        if (racerState.lap >= track.laps) continue
+        if (racerState.lap >= track.laps) {
+            if (racerState.finished == null) {
+                racerState.finished = gameState.time
+            }
+            continue
+        }
 
         val controls = controls.getValue(name)
         val steering = controls.steering
@@ -96,7 +96,7 @@ fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, 
         }
     }
 
-    gameState.finished = racers.all { it.value.lap >= track.laps }
+    gameState.finished = racers.all { it.value.finished != null }
 }
 
 /** @return if impacted with a wall. */
