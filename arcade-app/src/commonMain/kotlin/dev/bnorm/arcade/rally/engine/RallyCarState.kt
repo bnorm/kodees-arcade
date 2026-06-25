@@ -1,10 +1,8 @@
 package dev.bnorm.arcade.rally.engine
 
-import androidx.compose.ui.graphics.ImageBitmap
 import dev.bnorm.arcade.geometry.Angle
 
 class RallyCarState(
-    val image: ImageBitmap,
     val x: Double,
     val y: Double,
     val heading: Angle,
@@ -12,7 +10,7 @@ class RallyCarState(
     val checkpoint: Int = 0,
     val lap: Int = 0,
 ) {
-    class Mutable(private val original: RallyCarState) {
+    class Mutable(original: RallyCarState) {
         var x: Double = original.x
         var y: Double = original.y
         var heading: Angle = original.heading
@@ -22,7 +20,6 @@ class RallyCarState(
 
         fun build(): RallyCarState {
             return RallyCarState(
-                image = original.image,
                 x = x,
                 y = y,
                 heading = heading,

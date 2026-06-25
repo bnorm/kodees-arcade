@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.arcade_app.generated.resources.*
 import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
 import dev.bnorm.arcade.geometry.toRelative
-import dev.bnorm.arcade.rally.engine.ByteArrayRacer
 import dev.bnorm.arcade.rally.engine.Racer
 import dev.bnorm.arcade.rally.engine.RallyGameState
 import dev.bnorm.arcade.rally.engine.game
@@ -64,6 +63,12 @@ fun SampleRally() {
 
 private val BUNDLED_RACERS = listOf("Kodee", "Snail")
 
+class ImageRacer(
+    override val name: String,
+    override val bytes: ByteArray,
+    val image: ImageBitmap,
+) : Racer
+
 @Composable
 fun Rally(
     carImages: List<ImageBitmap>,
@@ -71,7 +76,9 @@ fun Rally(
 ) {
     val scope = rememberCoroutineScope()
 
-    val racers = remember { mutableStateListOf<Racer>() }
+    val racers = remember { mutableStateListOf<ImageRacer>() }
+    val images = remember(carImages) { mutableStateListOf(*carImages.toTypedArray()) }
+
     fun pickRacerName(baseName: String): String {
         val existingNames = racers.mapTo(mutableSetOf()) { it.name }
         var name = baseName
@@ -93,9 +100,10 @@ fun Rally(
         if (file != null) {
             scope.launch {
                 racers.add(
-                    ByteArrayRacer(
+                    ImageRacer(
                         name = pickRacerName(file.name.substringBeforeLast(".")),
-                        bytes = file.readBytes()
+                        bytes = file.readBytes(),
+                        image = images.removeLast(),
                     )
                 )
             }
@@ -119,6 +127,8 @@ fun Rally(
                 enabled = racers.isNotEmpty(),
                 onClick = {
                     racers.clear()
+                    images.clear()
+                    images.addAll(carImages)
                 }
             ) {
                 Text("Clear")
@@ -130,9 +140,10 @@ fun Rally(
                     onClick = {
                         scope.launch {
                             racers.add(
-                                ByteArrayRacer(
+                                ImageRacer(
                                     name = pickRacerName(racer),
-                                    bytes = BundledRacers.readBytes("files/$racer.wasm")
+                                    bytes = BundledRacers.readBytes("files/$racer.wasm"),
+                                    image = images.removeLast(),
                                 )
                             )
                         }
@@ -157,7 +168,6 @@ fun Rally(
                     game = scope.game(
                         track = track,
                         racers = racers,
-                        carImages = carImages,
                     )
                 }
             ) {
@@ -188,6 +198,7 @@ fun Rally(
             )
 
             Game(
+                racers.toList(),
                 game,
                 desiredFps,
                 onComplete = {
@@ -219,11 +230,13 @@ fun Rally(
 
 @Composable
 private fun Game(
+    racers: List<ImageRacer>,
     game: ReceiveChannel<RallyGameState>?,
     desiredFps: Float,
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val images = remember(racers) { racers.associate { racer -> racer.name to racer.image } }
     var state by remember { mutableStateOf<RallyGameState?>(null) }
 
     LaunchedEffect(game, desiredFps) {
@@ -266,7 +279,7 @@ private fun Game(
             val y = size.height - state.y.toFloat()
             val center = Offset(x, y)
 
-            val image = state.image
+            val image = images.getValue(name)
 
             val result = textMeasurer.measure(name)
             val textOffset = Offset(
@@ -276,14 +289,14 @@ private fun Game(
             drawText(result, color = Color.Black, topLeft = center + textOffset)
         }
 
-        for ((_, state) in state?.racers?.entries.orEmpty()) {
+        for ((name, state) in state?.racers?.entries.orEmpty()) {
             val x = state.x.toFloat()
             val y = size.height - state.y.toFloat()
             val center = Offset(x, y)
 
             val heading = 90f - state.heading.toRelative().degrees.toFloat()
 
-            val image = state.image
+            val image = images.getValue(name)
             val imageSize = Offset(
                 x = image.width.toFloat(),
                 y = image.height.toFloat(),

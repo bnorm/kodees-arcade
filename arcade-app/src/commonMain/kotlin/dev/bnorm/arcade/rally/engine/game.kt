@@ -1,6 +1,5 @@
 package dev.bnorm.arcade.rally.engine
 
-import androidx.compose.ui.graphics.ImageBitmap
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.engine.wasm.createWasmRacer
 import dev.bnorm.arcade.rally.engine.wasm.withEngine
@@ -13,10 +12,7 @@ import kotlinx.coroutines.channels.produce
 fun CoroutineScope.game(
     track: Track,
     racers: List<Racer>,
-    carImages: List<ImageBitmap>,
 ): ReceiveChannel<RallyGameState> = produce {
-    val carImages = ArrayDeque(carImages.shuffled())
-
     var gameState = RallyGameState(
         trackWidth = track.width,
         trackHeight = track.height,
@@ -28,7 +24,6 @@ fun CoroutineScope.game(
                 put(
                     racer.name,
                     RallyCarState(
-                        image = carImages.removeFirst(),
                         x = position.location.x,
                         y = position.location.y,
                         heading = position.heading,
