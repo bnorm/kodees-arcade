@@ -1,5 +1,5 @@
 
-POST {{hostname}}/api/rally/race
+POST {{hostname}}/api/rally/races
 Accept: application/json
 Content-Type: application/json
 
@@ -15,14 +15,14 @@ Content-Type: application/json
 
 ###
 
-GET {{hostname}}/api/rally/race
+GET {{hostname}}/api/rally/races
 Accept: application/json
 
 ###
 
-GET {{hostname}}/api/rally/race/{{raceId}}
+GET {{hostname}}/api/rally/races/{{raceId}}
 Accept: application/json
 
 ###
 
-GET {{hostname}}/api/rally/race/{{raceId}}/download
+GET {{hostname}}/api/rally/races/{{raceId}}/download

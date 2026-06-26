@@ -1,6 +1,5 @@
 package dev.bnorm.arcade.service.repo
 
-import dev.bnorm.arcade.service.api.BlobId
 import dev.bnorm.arcade.service.api.RacerId
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.serialization.Serializable
@@ -16,6 +15,10 @@ class RacerRepository(
     private val blobs: BlobRepository
 ) {
     private val racers = mutableMapOf<RacerId, RacerEntity>()
+
+    fun getRacers(): List<RacerEntity> {
+        return racers.values.toList()
+    }
 
     suspend fun createRacer(name: String, channel: ByteReadChannel): RacerId {
         val blobId = blobs.upload(channel)

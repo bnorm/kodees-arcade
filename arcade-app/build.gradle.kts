@@ -28,9 +28,9 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":arcade-agent"))
             implementation(project(":arcade-engine"))
             implementation(project(":arcade-samples"))
+            implementation(project(":arcade-service:arcade-client"))
 
             implementation("org.jetbrains.compose.material3:material3:1.9.0")
             implementation("org.jetbrains.compose.components:components-resources:1.11.1")

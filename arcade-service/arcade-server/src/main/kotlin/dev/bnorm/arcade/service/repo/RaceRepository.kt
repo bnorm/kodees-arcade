@@ -1,6 +1,5 @@
 package dev.bnorm.arcade.service.repo
 
-import dev.bnorm.arcade.service.api.BlobId
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.TrackId

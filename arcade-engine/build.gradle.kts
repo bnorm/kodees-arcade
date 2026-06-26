@@ -15,7 +15,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":arcade-agent"))
+            api(project(":arcade-agent"))
 
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 

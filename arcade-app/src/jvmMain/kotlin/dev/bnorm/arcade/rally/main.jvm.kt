@@ -5,12 +5,21 @@ package dev.bnorm.arcade.rally
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.*
+import androidx.compose.ui.window.DialogWindow
+import androidx.compose.ui.window.MenuBar
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import dev.bnorm.arcade.rally.race.Race
 import dev.bnorm.arcade.rally.race.RecordRace
 import dev.bnorm.arcade.rally.race.ReplayRace
+import dev.bnorm.arcade.server.client.ArcadeClient
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
@@ -34,6 +43,7 @@ import java.nio.file.Paths
 
 fun main() {
     application {
+        val client = remember { ArcadeClient() }
         val track = rememberTrack()
 
         Window(
@@ -56,6 +66,8 @@ fun main() {
                 }
             }
 
+            var showDownloader by remember { mutableStateOf(false) }
+
             MenuBar {
                 Menu("Race") {
                     Item(
@@ -72,6 +84,13 @@ fun main() {
                             recordingPicker.launch()
                         }
                     )
+                    Item(
+                        text = "Download",
+                        onClick = {
+                            race = null
+                            showDownloader = true
+                        }
+                    )
                 }
             }
 
@@ -83,6 +102,18 @@ fun main() {
                             onStart = {
                                 race = RecordRace(it, Paths.get("./recording.race"))
                                 showWizard = false
+                            }
+                        )
+                    }
+                }
+
+                if (showDownloader) {
+                    DialogWindow(onCloseRequest = { showDownloader = false }) {
+                        RaceDownloader(
+                            client,
+                            onStart = {
+                                race = it
+                                showDownloader = false
                             }
                         )
                     }

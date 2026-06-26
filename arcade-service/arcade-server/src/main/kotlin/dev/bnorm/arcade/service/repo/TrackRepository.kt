@@ -1,6 +1,5 @@
 package dev.bnorm.arcade.service.repo
 
-import dev.bnorm.arcade.service.api.BlobId
 import dev.bnorm.arcade.service.api.TrackId
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import kotlinx.serialization.Serializable
@@ -15,6 +14,10 @@ class TrackRepository(
     private val blobs: BlobRepository,
 ) {
     private val tracks = mutableMapOf<TrackId, TrackEntity>()
+
+    fun getTracks(): List<TrackEntity> {
+        return tracks.values.toList()
+    }
 
     suspend fun createTrack(json: String): TrackId {
         val blobId = blobs.upload(json.byteInputStream().toByteReadChannel())

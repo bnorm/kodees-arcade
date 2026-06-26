@@ -5,11 +5,15 @@ import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.RacerId
+import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.TrackId
+import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.repo.BlobRepository
 import dev.bnorm.arcade.service.repo.RaceEntity
 import dev.bnorm.arcade.service.repo.RaceRepository
+import dev.bnorm.arcade.service.repo.RacerEntity
 import dev.bnorm.arcade.service.repo.RacerRepository
+import dev.bnorm.arcade.service.repo.TrackEntity
 import dev.bnorm.arcade.service.repo.TrackRepository
 import io.ktor.http.ContentDisposition
 import io.ktor.http.HttpHeaders
@@ -69,7 +73,19 @@ private fun RaceEntity.toResponse(): RaceResponse {
         id = this.id,
         trackId = this.trackId,
         racers = this.racers.toList(),
-        blobId = this.blobId,
+    )
+}
+
+private fun RacerEntity.toResponse(): RacerResponse {
+    return RacerResponse(
+        id = this.id,
+        name = this.name,
+    )
+}
+
+private fun TrackEntity.toResponse(): TrackResponse {
+    return TrackResponse(
+        id = this.id,
     )
 }
 
@@ -141,18 +157,17 @@ private suspend fun Application.module() {
 
     routing {
         route("/api/rally") {
-            route("/race") {
+            route("/races") {
                 get {
-                    call.respond(races.getRaces())
+                    call.respond(races.getRaces().map { it.toResponse() })
                 }
 
                 post {
                     val request = call.receive<RaceCreateRequest>()
                     val race = races.createRace(request.trackId, request.racers)
                     scope.launch { runner.start(race.id) }
-                    call.respond(race)
+                    call.respond(race.toResponse())
                 }
-
 
                 get("/{raceId}") {
                     val raceId = call.parameters.raceId
@@ -174,6 +189,18 @@ private suspend fun Application.module() {
                     } else {
                         call.respond(HttpStatusCode.NoContent)
                     }
+                }
+            }
+
+            route("/racers") {
+                get {
+                    call.respond(racers.getRacers().map { it.toResponse() })
+                }
+            }
+
+            route("/tracks") {
+                get {
+                    call.respond(tracks.getTracks().map { it.toResponse() })
                 }
             }
         }
