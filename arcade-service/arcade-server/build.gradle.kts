@@ -27,13 +27,9 @@ dependencies {
 
     val exposed_version = "1.3.0"
     implementation("org.jetbrains.exposed:exposed-core:${exposed_version}")
-    implementation("org.jetbrains.exposed:exposed-jdbc:${exposed_version}")
-    implementation("org.jetbrains.exposed:exposed-dao:${exposed_version}")
-    implementation("org.jetbrains.exposed:exposed-kotlin-datetime:${exposed_version}")
-    implementation("org.jetbrains.exposed:exposed-json:${exposed_version}")
+    implementation("org.jetbrains.exposed:exposed-r2dbc:${exposed_version}")
 
-    implementation("org.postgresql:postgresql:42.7.11")
-    implementation("com.h2database:h2:2.4.240")
+    implementation("io.r2dbc:r2dbc-h2:1.1.0.RELEASE")
 
     implementation("ch.qos.logback:logback-classic:1.5.35")
 }

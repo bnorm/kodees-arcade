@@ -64,11 +64,13 @@ fun main() {
                     Button(onClick = { recordingPicker.launch() }) {
                         Text("Load")
                     }
-                    Button(onClick = { race = null; showSubmitter = true }) {
-                        Text("Submit")
-                    }
-                    Button(onClick = { race = null; showDownloader = true }) {
-                        Text("Download")
+                    if (client != null) {
+                        Button(onClick = { race = null; showSubmitter = true }) {
+                            Text("Submit")
+                        }
+                        Button(onClick = { race = null; showDownloader = true }) {
+                            Text("Download")
+                        }
                     }
                 }
 

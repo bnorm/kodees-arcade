@@ -7,7 +7,17 @@ import io.ktor.utils.io.copyAndClose
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.uuid.Uuid
+import kotlinx.coroutines.flow.singleOrNull
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
+import org.jetbrains.exposed.v1.core.dao.id.IdTable
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.insert
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 
 @Serializable
 @JvmInline
@@ -17,21 +27,49 @@ value class BlobId(val uuid: Uuid) {
     }
 }
 
+object BlobTable : IdTable<BlobId>("blobs") {
+    override val id: Column<EntityID<BlobId>> = blobId("id").entityId()
+    val path = nioPath("path")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+data class BlobEntity(
+    val id: BlobId,
+    val path: Path,
+)
+
+fun ResultRow.toBlobEntity(): BlobEntity {
+    return BlobEntity(
+        id = this[BlobTable.id].value,
+        path = this[BlobTable.path],
+    )
+}
+
 class BlobRepository(
+    private val database: R2dbcDatabase,
     private val directory: Path = Files.createTempDirectory("blobs"),
 ) {
-    private val blobs = mutableMapOf<BlobId, Path>()
+    suspend fun upload(channel: ByteReadChannel): BlobEntity {
+        return suspendTransaction(database) {
+            val id = BlobId.generate()
+            val path = directory.resolve(id.uuid.toString())
+            BlobTable.insert {
+                it[this.id] = id
+                it[this.path] = path
+            }
 
-    suspend fun upload(channel: ByteReadChannel): BlobId {
-        val id = BlobId.generate()
-        val path = directory.resolve(id.uuid.toString())
-        channel.copyAndClose(path.toFile().writeChannel())
+            channel.copyAndClose(path.toFile().writeChannel())
 
-        blobs[id] = path
-        return id
+            BlobEntity(id, path)
+        }
     }
 
-    fun download(id: BlobId): ByteReadChannel? {
-        return blobs[id]?.readChannel()
+    suspend fun download(id: BlobId): ByteReadChannel? {
+        return suspendTransaction(database) {
+            val blob = BlobTable.selectAll().where(BlobTable.id eq id)
+                .singleOrNull()?.toBlobEntity()
+            blob?.path?.readChannel()
+        }
     }
 }

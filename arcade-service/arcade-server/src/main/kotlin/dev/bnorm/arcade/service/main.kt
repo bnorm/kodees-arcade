@@ -9,12 +9,17 @@ import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.repo.BlobRepository
+import dev.bnorm.arcade.service.repo.BlobTable
 import dev.bnorm.arcade.service.repo.RaceEntity
+import dev.bnorm.arcade.service.repo.RaceRacerTable
 import dev.bnorm.arcade.service.repo.RaceRepository
+import dev.bnorm.arcade.service.repo.RaceTable
 import dev.bnorm.arcade.service.repo.RacerEntity
 import dev.bnorm.arcade.service.repo.RacerRepository
+import dev.bnorm.arcade.service.repo.RacerTable
 import dev.bnorm.arcade.service.repo.TrackEntity
 import dev.bnorm.arcade.service.repo.TrackRepository
+import dev.bnorm.arcade.service.repo.TrackTable
 import io.ktor.http.ContentDisposition
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -57,9 +62,15 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.v1.core.Slf4jSqlDebugLogger
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabaseConfig
+import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
+import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 import dev.bnorm.arcade.rally.Track as RallyTrack
 
 fun main() {
+    System.setProperty("kotlinx.coroutines.debug", "on") // Enable Kotlin coroutines debugging.
     embeddedServer(Netty, port = 8080) {
         module()
     }.start(wait = true)
@@ -98,38 +109,34 @@ private suspend fun Application.module() {
     val directory = Paths.get(".blobs")
     directory.deleteRecursively()
     directory.createDirectories()
-    val blobs = BlobRepository(directory)
 
-    val racers = RacerRepository(blobs)
-    val races = RaceRepository(blobs)
-    val tracks = TrackRepository(blobs)
+    val database = R2dbcDatabase.connect(
+        url = "r2dbc:h2:mem:///test;DB_CLOSE_DELAY=-1",
+        databaseConfig = R2dbcDatabaseConfig {
+            sqlLogger = Slf4jSqlDebugLogger
+        }
+    )
+
+    suspendTransaction(database) {
+        SchemaUtils.create(
+            BlobTable,
+            TrackTable,
+            RaceTable,
+            RacerTable,
+            RaceRacerTable,
+        )
+    }
+
+    val blobs = BlobRepository(database, directory)
+    val racers = RacerRepository(database, blobs)
+    val races = RaceRepository(database, blobs)
+    val tracks = TrackRepository(database, blobs)
     val runner = RaceRunner(tracks, races, racers, blobs)
     val scope = CoroutineScope(Dispatchers.Default)
 
-    val trackId = tracks.createTrack(
-        Json.encodeToString(
-            RallyTrack.serializer(),
-            loadTrack(ClassLoader.getSystemResource("track.json").readText())
-        )
-    )
-    val kodeeId = racers.addRacer("Kodee")
-    val snailId = racers.addRacer("Snail")
-
-    println("trackId = $trackId")
-    println("kodeeId = $kodeeId")
-    println("snailId = $snailId")
-
-    println(
-        """
-        {
-          "trackId": "${trackId.uuid}",
-          "racers": [
-            "${snailId.uuid}",
-            "${kodeeId.uuid}"
-          ]
-        }
-        """.trimIndent()
-    )
+    tracks.addTrack("track.json")
+    racers.addRacer("Kodee")
+    racers.addRacer("Snail")
 
     install(CallId) {
         retrieveFromHeader(HttpHeaders.XRequestId)
@@ -229,6 +236,19 @@ private suspend fun Application.module() {
     }
 }
 
-private suspend fun RacerRepository.addRacer(name: String): RacerId {
-    return createRacer(name, ClassLoader.getSystemResource("racers/files/$name.wasm").toURI().toPath().readChannel())
+private suspend fun TrackRepository.addTrack(resource: String): TrackEntity {
+    return createTrack(
+        Json.encodeToString(
+            RallyTrack.serializer(),
+            loadTrack(ClassLoader.getSystemResource(resource).readText())
+        )
+    )
+}
+
+private suspend fun RacerRepository.addRacer(name: String): RacerEntity {
+    return createRacer(
+        name = name,
+        channel = ClassLoader.getSystemResource("racers/files/$name.wasm")
+            .toURI().toPath().readChannel()
+    )
 }
