@@ -1,14 +1,20 @@
-package dev.bnorm.arcade.server.rally
+package dev.bnorm.arcade.service
 
-import dev.bnorm.arcade.rally.BlobRepository
 import dev.bnorm.arcade.rally.race.WasmRace
-import io.ktor.util.cio.*
-import io.ktor.utils.io.*
+import dev.bnorm.arcade.service.api.RaceId
+import dev.bnorm.arcade.service.repo.BlobRepository
+import dev.bnorm.arcade.service.repo.RaceEntity
+import dev.bnorm.arcade.service.repo.RaceRepository
+import dev.bnorm.arcade.service.repo.RacerRepository
+import dev.bnorm.arcade.service.repo.TrackRepository
+import io.ktor.util.cio.use
+import io.ktor.utils.io.ByteChannel
+import io.ktor.utils.io.toByteArray
+import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import org.slf4j.LoggerFactory
 import dev.bnorm.arcade.rally.Track as RallyTrack
 import dev.bnorm.arcade.rally.race.Race as RallyRace
 import dev.bnorm.arcade.rally.race.Racer as RallyRacer
@@ -20,10 +26,10 @@ class RaceRunner(
     val blobs: BlobRepository,
 ) {
     companion object {
-        val log = LoggerFactory.getLogger(RaceRunner::class.java)
+        private val log = logger<RaceRunner>()
     }
 
-    suspend fun start(id: RaceId): Race? {
+    suspend fun start(id: RaceId): RaceEntity? {
         val race = races.getRace(id) ?: return null
         val track = tracks.getTrack(race.trackId) ?: return null
         val trackBlob = blobs.download(track.blobId) ?: return null

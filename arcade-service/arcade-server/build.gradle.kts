@@ -6,22 +6,24 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":arcade-service:arcade-api"))
+
     implementation(project(":arcade-agent"))
     implementation(project(":arcade-engine"))
 
-    val ktor_version = "3.5.0"
-    implementation("io.ktor:ktor-server-core:$ktor_version")
-    implementation("io.ktor:ktor-server-call-logging:$ktor_version")
-    implementation("io.ktor:ktor-server-call-id:$ktor_version")
-    implementation("io.ktor:ktor-server-netty:$ktor_version")
-    implementation("io.ktor:ktor-server-status-pages:$ktor_version")
+    implementation(dependencies.platform("io.ktor:ktor-bom:3.5.0"))
+    implementation("io.ktor:ktor-server-core")
+    implementation("io.ktor:ktor-server-call-logging")
+    implementation("io.ktor:ktor-server-call-id")
+    implementation("io.ktor:ktor-server-netty")
+    implementation("io.ktor:ktor-server-status-pages")
     implementation("io.ktor:ktor-server-cors")
-    implementation("io.ktor:ktor-server-sse:$ktor_version")
-    implementation("io.ktor:ktor-server-auth:$ktor_version")
-    implementation("io.ktor:ktor-server-auth-jwt:$ktor_version")
-    implementation("io.ktor:ktor-server-content-negotiation:$ktor_version")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
-    implementation("io.ktor:ktor-server-config-yaml:$ktor_version")
+    implementation("io.ktor:ktor-server-sse")
+    implementation("io.ktor:ktor-server-auth")
+    implementation("io.ktor:ktor-server-auth-jwt")
+    implementation("io.ktor:ktor-server-content-negotiation")
+    implementation("io.ktor:ktor-serialization-kotlinx-json")
+    implementation("io.ktor:ktor-server-config-yaml")
 
     val exposed_version = "1.3.0"
     implementation("org.jetbrains.exposed:exposed-core:${exposed_version}")

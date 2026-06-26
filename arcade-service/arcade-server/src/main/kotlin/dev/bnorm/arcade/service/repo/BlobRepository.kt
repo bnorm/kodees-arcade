@@ -1,19 +1,12 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.service.repo
 
-import io.ktor.util.cio.*
-import io.ktor.utils.io.*
-import kotlinx.serialization.Serializable
+import dev.bnorm.arcade.service.api.BlobId
+import io.ktor.util.cio.readChannel
+import io.ktor.util.cio.writeChannel
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.copyAndClose
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.uuid.Uuid
-
-@Serializable
-@JvmInline
-value class BlobId(val uuid: Uuid) {
-    companion object {
-        fun generate(): BlobId = BlobId(Uuid.generateV7())
-    }
-}
 
 class BlobRepository(
     private val directory: Path = Files.createTempDirectory("blobs"),

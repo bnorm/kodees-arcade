@@ -1,33 +1,53 @@
-package dev.bnorm.arcade.server
+package dev.bnorm.arcade.service
 
-import dev.bnorm.arcade.rally.BlobRepository
 import dev.bnorm.arcade.rally.loadTrack
-import dev.bnorm.arcade.server.rally.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.plugins.*
-import io.ktor.server.plugins.callid.*
-import io.ktor.server.plugins.calllogging.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.plugins.statuspages.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import io.ktor.util.cio.*
-import io.ktor.utils.io.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import dev.bnorm.arcade.service.api.RaceCreateRequest
+import dev.bnorm.arcade.service.api.RaceId
+import dev.bnorm.arcade.service.api.RaceResponse
+import dev.bnorm.arcade.service.api.RacerId
+import dev.bnorm.arcade.service.api.TrackId
+import dev.bnorm.arcade.service.repo.BlobRepository
+import dev.bnorm.arcade.service.repo.RaceEntity
+import dev.bnorm.arcade.service.repo.RaceRepository
+import dev.bnorm.arcade.service.repo.RacerRepository
+import dev.bnorm.arcade.service.repo.TrackRepository
+import io.ktor.http.ContentDisposition
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.MissingRequestParameterException
+import io.ktor.server.plugins.NotFoundException
+import io.ktor.server.plugins.callid.CallId
+import io.ktor.server.plugins.callid.callIdMdc
+import io.ktor.server.plugins.callid.generate
+import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.request.receive
+import io.ktor.server.response.header
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytesWriter
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
+import io.ktor.util.cio.readChannel
+import io.ktor.utils.io.copyAndClose
 import java.nio.file.Paths
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.toPath
 import kotlin.uuid.Uuid
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import dev.bnorm.arcade.rally.Track as RallyTrack
 
 fun main() {
@@ -44,11 +64,14 @@ private val Parameters.raceId: RaceId get() = RaceId(getUuid("raceId"))
 private val Parameters.racerId: RacerId get() = RacerId(getUuid("racerId"))
 private val Parameters.trackId: TrackId get() = TrackId(getUuid("trackId"))
 
-@Serializable
-class RaceCreateRequest(
-    val trackId: TrackId,
-    val racers: List<RacerId>,
-)
+private fun RaceEntity.toResponse(): RaceResponse {
+    return RaceResponse(
+        id = this.id,
+        trackId = this.trackId,
+        racers = this.racers.toList(),
+        blobId = this.blobId,
+    )
+}
 
 private suspend fun Application.module() {
     val directory = Paths.get(".blobs")
@@ -134,7 +157,7 @@ private suspend fun Application.module() {
                 get("/{raceId}") {
                     val raceId = call.parameters.raceId
                     val race = races.getRace(raceId) ?: throw NotFoundException()
-                    call.respond(race)
+                    call.respond(race.toResponse())
                 }
 
                 get("/{raceId}/download") {
