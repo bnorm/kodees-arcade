@@ -1,25 +1,14 @@
 package dev.bnorm.arcade.rally
 
-import androidx.compose.runtime.*
-import dev.bnorm.arcade.arcade_app.generated.resources.Res
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Segment
 import kotlinx.serialization.json.Json
 
-@Composable
-fun rememberTrack(): Track? {
-    var track by remember { mutableStateOf<Track?>(null) }
-    LaunchedEffect(Unit) {
-        track = loadTrack()
-    }
-    return track
-}
-
-suspend fun loadTrack(): Track {
+fun loadTrack(json: String): Track {
     val trackWidth = 1024.0
     val trackHeight = 768.0
-    val jsonTrack = Json.decodeFromString<JsonTrack>(Res.readBytes("files/track.json").decodeToString())
+    val jsonTrack = Json.decodeFromString<JsonTrack>(json)
     return Track(
         width = trackWidth,
         height = trackHeight,

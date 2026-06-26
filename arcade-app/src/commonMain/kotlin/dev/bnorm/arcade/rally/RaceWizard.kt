@@ -11,20 +11,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
-import dev.bnorm.arcade.rally.race.WasmRace
 import dev.bnorm.arcade.rally.race.Race
 import dev.bnorm.arcade.rally.race.Racer
+import dev.bnorm.arcade.rally.race.WasmRace
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
 import kotlinx.coroutines.launch
 
 private val BUNDLED_RACERS = listOf("Kodee", "Snail")
-
-private class WasmRacer(
-    override val name: String,
-    override val bytes: ByteArray,
-) : Racer
 
 @Composable
 fun RaceWizard(
@@ -33,7 +28,7 @@ fun RaceWizard(
 ) {
     val scope = rememberCoroutineScope()
 
-    val racers = remember { mutableStateListOf<WasmRacer>() }
+    val racers = remember { mutableStateListOf<Racer>() }
 
     fun pickRacerName(baseName: String): String {
         val existingNames = racers.mapTo(mutableSetOf()) { it.name }
@@ -56,7 +51,7 @@ fun RaceWizard(
         if (file != null) {
             scope.launch {
                 racers.add(
-                    WasmRacer(
+                    Racer(
                         name = pickRacerName(file.name.substringBeforeLast(".")),
                         bytes = file.readBytes(),
                     )
@@ -90,7 +85,7 @@ fun RaceWizard(
                     onClick = {
                         scope.launch {
                             racers.add(
-                                WasmRacer(
+                                Racer(
                                     name = pickRacerName(racer),
                                     bytes = BundledRacers.readBytes("files/$racer.wasm"),
                                 )

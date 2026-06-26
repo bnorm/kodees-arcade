@@ -9,10 +9,11 @@ pluginManagement {
         val kotlinVersion = "2.4.0"
 
         kotlin("multiplatform") version kotlinVersion
+        kotlin("jvm") version kotlinVersion
         kotlin("plugin.serialization") version kotlinVersion
         kotlin("plugin.compose") version kotlinVersion
         id("org.jetbrains.compose") version "1.11.1"
-        id("com.gradleup.shadow") version "8.3.5"
+        id("io.ktor.plugin") version "3.5.0"
     }
 }
 
@@ -33,6 +34,7 @@ include(":arcade-agent")
 include(":arcade-app")
 include(":arcade-engine")
 include(":arcade-samples")
+include(":arcade-server")
 include(":arcade-samples:shared")
 include(":arcade-samples:kodee")
 include(":arcade-samples:snail")

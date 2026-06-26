@@ -1,0 +1,28 @@
+
+POST {{hostname}}/api/rally/race
+Accept: application/json
+Content-Type: application/json
+
+{
+  "trackId": "019f01d9-5451-75a6-b99d-5c47f2e1170e",
+  "racers": [
+    "019f01d9-5456-73fe-aad1-65f70def1daf",
+    "019f01d9-5454-712d-8168-8be1e34b3aab"
+  ]
+}
+
+> {% client.global.set("raceId", response.body.id); %}
+
+###
+
+GET {{hostname}}/api/rally/race
+Accept: application/json
+
+###
+
+GET {{hostname}}/api/rally/race/{{raceId}}
+Accept: application/json
+
+###
+
+GET {{hostname}}/api/rally/race/{{raceId}}/download
