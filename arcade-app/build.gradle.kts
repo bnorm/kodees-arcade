@@ -2,6 +2,7 @@
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     kotlin("multiplatform")
@@ -22,6 +23,16 @@ kotlin {
         browser {
             commonWebpackConfig {
                 outputFileName = "arcade.js"
+
+                val proxy = KotlinWebpackConfig.DevServer.Proxy(
+                    context = mutableListOf("/api/**"),
+                    target = "http://localhost:8080",
+                )
+
+                // TODO: use dsl after KT-32016 will be fixed
+                devServer = devServer?.copy(
+                    proxy = (devServer?.proxy.orEmpty() + proxy).toMutableList(),
+                )
             }
         }
     }
