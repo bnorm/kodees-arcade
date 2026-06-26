@@ -1,6 +1,5 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.rally.race
 
-import dev.bnorm.arcade.rally.race.Race
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import kotlinx.coroutines.channels.Channel

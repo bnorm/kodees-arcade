@@ -14,6 +14,9 @@ interface ArcadeClient : AutoCloseable {
     suspend fun getRace(id: RaceId): RaceResponse
     suspend fun createRace(request: RaceCreateRequest): RaceResponse
 
+    // TODO find the best way to deal with the first event being the RaceResponse
+    fun streamRace(request: RaceCreateRequest): Flow<String>
+
     // TODO find the best way to deal directly with bytes without exposing ktor
     fun downloadRace(id: RaceId): Flow<String>
 

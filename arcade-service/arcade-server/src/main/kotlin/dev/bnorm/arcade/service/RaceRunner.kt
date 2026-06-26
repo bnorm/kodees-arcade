@@ -11,7 +11,9 @@ import io.ktor.util.cio.use
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.toByteArray
 import io.ktor.utils.io.writeStringUtf8
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -29,7 +31,7 @@ class RaceRunner(
         private val log = logger<RaceRunner>()
     }
 
-    suspend fun start(id: RaceId): RaceEntity? {
+    suspend fun start(id: RaceId, consumer: SendChannel<String>? = null): RaceEntity? {
         val race = races.getRace(id) ?: return null
         val track = tracks.getTrack(race.trackId) ?: return null
         val trackBlob = blobs.download(track.blobId) ?: return null
@@ -50,7 +52,7 @@ class RaceRunner(
             log.info("Starting race: $id")
             val rallyRace = WasmRace(rallyTrack, rallyRacers)
             launch { rallyRace.start() }
-            writeEvents(rallyRace, channel)
+            writeEvents(rallyRace, channel, consumer)
 
             updated.await().also {
                 log.info("Finished race: $id")
@@ -58,12 +60,33 @@ class RaceRunner(
         }
     }
 
-    private suspend fun writeEvents(rallyRace: WasmRace, channel: ByteChannel) {
-        channel.use {
-            for (event in rallyRace.events) {
-                channel.writeStringUtf8(Json.encodeToString(RallyRace.Event.serializer(), event))
-                channel.writeStringUtf8("\n")
+    private suspend fun writeEvents(
+        rallyRace: WasmRace,
+        channel: ByteChannel,
+        consumer: SendChannel<String>?
+    ) {
+        try {
+            channel.use {
+                var clearableConsumer = consumer
+                for (event in rallyRace.events) {
+                    val json = Json.encodeToString(RallyRace.Event.serializer(), event)
+                    channel.writeStringUtf8(json)
+                    channel.writeStringUtf8("\n")
+                    try {
+                        clearableConsumer?.send(json)
+                    } catch (e: Throwable) {
+                        // Clear the consumer to not repeat exception.
+                        clearableConsumer = null
+                        if (e !is CancellationException) {
+                            // CancellationException is normal when consumer cancels channel.
+                            // Anything else is abnormal so log it.
+                            log.warn("error consuming race events", e)
+                        }
+                    }
+                }
             }
+        } finally {
+            consumer?.close()
         }
     }
 }

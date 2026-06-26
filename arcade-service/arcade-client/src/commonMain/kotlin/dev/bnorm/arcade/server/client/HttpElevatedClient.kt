@@ -8,11 +8,14 @@ import dev.bnorm.arcade.service.api.TrackResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.sse.SSE
+import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
+import io.ktor.http.HttpMethod
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
 import io.ktor.http.appendPathSegments
@@ -24,6 +27,7 @@ import io.ktor.serialization.kotlinx.json.DefaultJson
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readLineStrict
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.Json
 
@@ -50,6 +54,8 @@ internal class HttpArcadeClient(
             json(json)
         }
 
+        install(SSE)
+
         expectSuccess = true
     }
 
@@ -73,19 +79,35 @@ internal class HttpArcadeClient(
         return httpClient.get(apiPath("races/${id.uuid}")).body()
     }
 
+    override suspend fun createRace(request: RaceCreateRequest): RaceResponse {
+        return httpClient.post(apiPath("races")) {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
+
+    override fun streamRace(request: RaceCreateRequest): Flow<String> = channelFlow {
+        httpClient.sse(
+            request = {
+                method = HttpMethod.Post
+                url.takeFrom(apiPath("races/stream"))
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        ) {
+            incoming.collect {
+                val data = it.data ?: return@collect
+                this@channelFlow.send(data)
+            }
+        }
+    }
+
     override fun downloadRace(id: RaceId): Flow<String> = flow {
         val response = httpClient.get(apiPath("races/${id.uuid}/download"))
         val channel = response.bodyAsChannel()
         while (!channel.isClosedForRead) {
             emit(channel.readLineStrict() ?: break)
         }
-    }
-
-    override suspend fun createRace(request: RaceCreateRequest): RaceResponse {
-        return httpClient.post(apiPath("races")) {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
     }
 
     override suspend fun getRacers(): List<RacerResponse> {

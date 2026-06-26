@@ -17,6 +17,7 @@ import dev.bnorm.arcade.service.repo.TrackEntity
 import dev.bnorm.arcade.service.repo.TrackRepository
 import io.ktor.http.ContentDisposition
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.serialization.kotlinx.json.json
@@ -41,6 +42,8 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import io.ktor.server.sse.SSE
+import io.ktor.server.sse.sse
 import io.ktor.util.cio.readChannel
 import io.ktor.utils.io.copyAndClose
 import java.nio.file.Paths
@@ -50,6 +53,8 @@ import kotlin.io.path.toPath
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import dev.bnorm.arcade.rally.Track as RallyTrack
@@ -155,6 +160,8 @@ private suspend fun Application.module() {
         json()
     }
 
+    install(SSE)
+
     routing {
         route("/api/rally") {
             route("/races") {
@@ -167,6 +174,21 @@ private suspend fun Application.module() {
                     val race = races.createRace(request.trackId, request.racers)
                     scope.launch { runner.start(race.id) }
                     call.respond(race.toResponse())
+                }
+
+                route("/stream", HttpMethod.Post) {
+                    sse {
+                        val request = call.receive<RaceCreateRequest>()
+                        val race = races.createRace(request.trackId, request.racers)
+
+                        // TODO stream through blob instead?
+                        //  - larger buffer
+                        //  - doesn't delay completion of the race
+                        val consumer = Channel<String>(1_000)
+                        scope.launch { runner.start(race.id, consumer) }
+                        send(Json.encodeToString(race.toResponse()))
+                        consumer.consumeEach { send(it) }
+                    }
                 }
 
                 get("/{raceId}") {

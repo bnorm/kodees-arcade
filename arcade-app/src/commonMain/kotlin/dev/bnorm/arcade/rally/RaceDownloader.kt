@@ -3,6 +3,7 @@ package dev.bnorm.arcade.rally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import dev.bnorm.arcade.rally.race.DownloadRace
 import dev.bnorm.arcade.rally.race.Race
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
@@ -46,7 +48,10 @@ fun RaceDownloader(
 
     var selectedRace by remember { mutableStateOf<RaceId?>(null) }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxSize()
+    ) {
         LazyColumn(Modifier.weight(1f)) {
             items(races) { race ->
                 val isSelected = selectedRace == race.id
