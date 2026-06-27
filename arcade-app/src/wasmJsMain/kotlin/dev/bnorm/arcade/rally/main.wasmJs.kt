@@ -98,7 +98,7 @@ fun main() {
                     }
                 }
 
-                RaceWizard(track, onStart = { race = it })
+                RaceWizard(client, track, onStart = { race = it })
 
                 var complete by remember { mutableStateOf<Race.Event.Complete?>(null) }
                 complete?.let {

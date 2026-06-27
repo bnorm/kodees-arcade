@@ -106,6 +106,7 @@ fun main() {
                 if (showWizard) {
                     DialogWindow(onCloseRequest = { showWizard = false }) {
                         RaceWizard(
+                            client,
                             track,
                             onStart = {
                                 race = RecordRace(it, Paths.get("./recording.race"))
