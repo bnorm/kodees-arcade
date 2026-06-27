@@ -30,8 +30,7 @@ import io.ktor.http.Parameters
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
+import io.ktor.server.netty.EngineMain
 import io.ktor.server.plugins.MissingRequestParameterException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.callid.CallId
@@ -72,11 +71,9 @@ import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 import dev.bnorm.arcade.rally.Track as RallyTrack
 
-fun main() {
+fun main(args: Array<String>) {
     System.setProperty("kotlinx.coroutines.debug", "on") // Enable Kotlin coroutines debugging.
-    embeddedServer(Netty, port = 8080) {
-        module()
-    }.start(wait = true)
+    EngineMain.main(args)
 }
 
 private fun Parameters.getUuid(name: String): Uuid {
@@ -113,7 +110,8 @@ private fun TrackEntity.toResponse(): TrackResponse {
     )
 }
 
-private suspend fun Application.module() {
+@Suppress("unused") // Loaded by Ktor
+suspend fun Application.module() {
     val directory = Paths.get(".blobs")
     directory.deleteRecursively()
     directory.createDirectories()

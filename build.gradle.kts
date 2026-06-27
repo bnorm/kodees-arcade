@@ -47,9 +47,11 @@ allprojects {
         }
     }
 
-    tasks.withType<JavaCompile>().configureEach {
-        sourceCompatibility = javaVersion.toString()
-        targetCompatibility = javaVersion.toString()
+    plugins.withType<JavaPlugin> {
+        extensions.configure<JavaPluginExtension> {
+            sourceCompatibility = javaVersion
+            targetCompatibility = javaVersion
+        }
     }
 
     tasks.withType<Test>().configureEach {

@@ -1,3 +1,5 @@
+import io.ktor.plugin.features.DockerImageRegistry
+
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
@@ -35,11 +37,26 @@ dependencies {
 }
 
 application {
-    mainClass.set("dev.bnorm.arcade.rally.MainKt")
+    mainClass.set("dev.bnorm.arcade.service.MainKt")
 }
 
 tasks.processResources.configure {
     from(project(":arcade-samples").tasks.getByName("racers")) {
         into("racers")
+    }
+}
+
+ktor {
+    docker {
+        jreVersion = JavaVersion.VERSION_21
+        localImageName = "arcade-server"
+
+        externalRegistry = DockerImageRegistry.externalRegistry(
+            username = providers.environmentVariable("GITHUB_USERNAME"),
+            password = providers.environmentVariable("GITHUB_PASSWORD"),
+            hostname = provider { "ghcr.io" },
+            namespace = provider { "bnorm" },
+            project = provider { "arcade-server" },
+        )
     }
 }

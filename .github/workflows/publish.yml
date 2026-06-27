@@ -1,4 +1,4 @@
-name: Publish Application on GitHub Pages
+name: Project Publish
 
 on:
   push:
@@ -9,8 +9,13 @@ env:
 
 jobs:
   build:
-    name: Build Kotlin/Wasm
+    name: Assemble packages
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      checks: write
+      packages: write
 
     steps:
       - name: Set up JDK
@@ -24,9 +29,16 @@ jobs:
 
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          build-scan-publish: true
+          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          build-scan-terms-of-use-agree: "yes"
 
       - name: Run Gradle Tasks
-        run: ./gradlew site
+        run: ./gradlew site publishImage --parallel
+        env:
+          GITHUB_USERNAME: ${{ github.actor }}
+          GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fix permissions
         run: |
@@ -39,7 +51,7 @@ jobs:
         with:
           path: build/_site
 
-  deploy:
+  deploy-pages:
     name: Deploy to GitHub Pages
     needs: build
 
