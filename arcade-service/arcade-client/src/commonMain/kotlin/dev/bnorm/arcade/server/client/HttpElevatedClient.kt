@@ -3,8 +3,10 @@ package dev.bnorm.arcade.server.client
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
+import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.TrackResponse
+import dev.bnorm.arcade.service.api.Version
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -13,6 +15,7 @@ import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
@@ -112,6 +115,10 @@ internal class HttpArcadeClient(
 
     override suspend fun getRacers(): List<RacerResponse> {
         return httpClient.get(apiPath("racers")).body()
+    }
+
+    override suspend fun downloadRacer(id: RacerId, version: Version): ByteArray {
+        return httpClient.get(apiPath("racers/${id.uuid}/download/${version}")).bodyAsBytes()
     }
 
     override suspend fun getTracks(): List<TrackResponse> {

@@ -47,7 +47,7 @@ fun RaceSubmitter(
 
     LaunchedEffect(client) {
         val foundTracks = async { client.getTracks() }
-        val foundRacers = client.getRacers()
+        val foundRacers = client.getRacers().filter { it.versions.isNotEmpty() }
         foundTracks.await() // Force wait.
         tracks.clear()
         tracks.addAll(foundTracks.await())
@@ -76,7 +76,7 @@ fun RaceSubmitter(
                             text = track.id.uuid.toString(),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(if (isSelected) Color.Gray else Color.White)
+                                .background(if (isSelected) Color.Gray else Color.Transparent)
                                 .clickable { selectedTrack = track.id }
                                 .padding(4.dp)
                         )
@@ -94,10 +94,10 @@ fun RaceSubmitter(
                         val isSelected = selectedRacers.contains(racer.id)
 
                         Text(
-                            text = racer.name,
+                            text = "${racer.name} ${racer.versions.last()}",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(if (isSelected) Color.Gray else Color.White)
+                                .background(if (isSelected) Color.Gray else Color.Transparent)
                                 .clickable {
                                     when (isSelected) {
                                         true -> selectedRacers.remove(racer.id)

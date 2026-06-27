@@ -6,4 +6,5 @@ import kotlinx.serialization.Serializable
 class RacerResponse(
     val id: RacerId,
     val name: String,
+    val versions: List<Version>
 )

@@ -8,6 +8,7 @@ import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
+import dev.bnorm.arcade.service.api.Version
 import dev.bnorm.arcade.service.repo.BlobRepository
 import dev.bnorm.arcade.service.repo.BlobTable
 import dev.bnorm.arcade.service.repo.RaceEntity
@@ -17,6 +18,7 @@ import dev.bnorm.arcade.service.repo.RaceTable
 import dev.bnorm.arcade.service.repo.RacerEntity
 import dev.bnorm.arcade.service.repo.RacerRepository
 import dev.bnorm.arcade.service.repo.RacerTable
+import dev.bnorm.arcade.service.repo.RacerVersionTable
 import dev.bnorm.arcade.service.repo.TrackEntity
 import dev.bnorm.arcade.service.repo.TrackRepository
 import dev.bnorm.arcade.service.repo.TrackTable
@@ -39,6 +41,7 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.receive
+ import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytesWriter
@@ -83,6 +86,10 @@ private fun Parameters.getUuid(name: String): Uuid {
 private val Parameters.raceId: RaceId get() = RaceId(getUuid("raceId"))
 private val Parameters.racerId: RacerId get() = RacerId(getUuid("racerId"))
 private val Parameters.trackId: TrackId get() = TrackId(getUuid("trackId"))
+private val Parameters.version: Version
+    get() = Version.parse(
+        this["version"] ?: throw MissingRequestParameterException("version")
+    )
 
 private fun RaceEntity.toResponse(): RaceResponse {
     return RaceResponse(
@@ -96,6 +103,7 @@ private fun RacerEntity.toResponse(): RacerResponse {
     return RacerResponse(
         id = this.id,
         name = this.name,
+        versions = this.versions.navigableKeySet().toList(),
     )
 }
 
@@ -120,9 +128,10 @@ private suspend fun Application.module() {
     suspendTransaction(database) {
         SchemaUtils.create(
             BlobTable,
+            RacerTable,
+            RacerVersionTable,
             TrackTable,
             RaceTable,
-            RacerTable,
             RaceRacerTable,
         )
     }
@@ -208,11 +217,13 @@ private suspend fun Application.module() {
                     val raceId = call.parameters.raceId
                     val race = races.getRace(raceId) ?: throw NotFoundException()
                     if (race.blobId != null) {
-                        val download = blobs.download(race.blobId) ?: throw NotFoundException()
+                        val download = blobs.download(race.blobId) ?: error("should be impossible")
 
                         call.response.header(
                             HttpHeaders.ContentDisposition,
-                            ContentDisposition.Attachment.withParameter("filename", "${raceId.uuid}.race").toString()
+                            ContentDisposition.Attachment
+                                .withParameter("filename", "${raceId.uuid}.race")
+                                .toString()
                         )
                         call.respondBytesWriter { download.copyAndClose(this) }
                     } else {
@@ -224,6 +235,38 @@ private suspend fun Application.module() {
             route("/racers") {
                 get {
                     call.respond(racers.getRacers().map { it.toResponse() })
+                }
+
+                get("/{racerId}") {
+                    val racerId = call.parameters.racerId
+                    val racer = racers.getRacer(racerId) ?: throw NotFoundException()
+                    call.respond(racer.toResponse())
+                }
+
+                get("/{racerId}/download/{version}") {
+                    val racerId = call.parameters.racerId
+                    val version = call.parameters.version
+                    val racer = racers.getRacer(racerId) ?: throw NotFoundException()
+                    val blobId = racer.versions[version] ?: throw NotFoundException()
+                    val download = blobs.download(blobId) ?: error("should be impossible")
+
+                    call.response.header(
+                        HttpHeaders.ContentDisposition,
+                        ContentDisposition.Attachment
+                            .withParameter("filename", "${racer.name}-${version}.wasm")
+                            .toString()
+                    )
+                    call.respondBytesWriter { download.copyAndClose(this) }
+                }
+
+                post("/{racerId}/upload/{version}") {
+                    val racerId = call.parameters.racerId
+                    val version = call.parameters.version
+
+                    val racer = racers.uploadVersion(racerId, version, call.receiveChannel())
+                        ?: throw NotFoundException()
+
+                    call.respond(racer)
                 }
             }
 
@@ -246,9 +289,11 @@ private suspend fun TrackRepository.addTrack(resource: String): TrackEntity {
 }
 
 private suspend fun RacerRepository.addRacer(name: String): RacerEntity {
-    return createRacer(
-        name = name,
+    val racer = createRacer(name = name)
+    return uploadVersion(
+        id = racer.id,
+        version = Version.parse("0.1.0"),
         channel = ClassLoader.getSystemResource("racers/files/$name.wasm")
             .toURI().toPath().readChannel()
-    )
+    ) ?: racer
 }

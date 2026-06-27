@@ -40,8 +40,9 @@ class RaceRunner(
         val rallyRacers = buildList {
             for (id in race.racers) {
                 val racer = racers.getRacer(id) ?: return null
-                val racerBlob = blobs.download(racer.blobId) ?: return null
-                add(RallyRacer(racer.name, racerBlob.toByteArray()))
+                val (_, blobId) = racer.versions.lastEntry() ?: return null
+                val blob = blobs.download(blobId) ?: return null
+                add(RallyRacer(racer.name, blob.toByteArray()))
             }
         }
 
