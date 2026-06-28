@@ -13,6 +13,7 @@ pluginManagement {
         kotlin("plugin.serialization") version kotlinVersion
         kotlin("plugin.compose") version kotlinVersion
         id("org.jetbrains.compose") version "1.11.1"
+        id("dev.zacsweers.metro") version "1.2.1"
         id("io.ktor.plugin") version "3.5.0"
     }
 }
@@ -34,9 +35,10 @@ include(":arcade-agent")
 include(":arcade-app")
 include(":arcade-engine")
 include(":arcade-samples")
-include(":arcade-service:arcade-api")
-include(":arcade-service:arcade-client")
-include(":arcade-service:arcade-server")
 include(":arcade-samples:shared")
 include(":arcade-samples:kodee")
 include(":arcade-samples:snail")
+include(":arcade-service:arcade-api")
+include(":arcade-service:arcade-client")
+include(":arcade-service:arcade-server")
+include(":arcade-service:arcade-webapp")

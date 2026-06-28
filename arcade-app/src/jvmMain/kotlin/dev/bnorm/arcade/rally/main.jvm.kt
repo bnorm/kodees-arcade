@@ -25,10 +25,6 @@ import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
 import java.nio.file.Paths
 
-// !!!
-// This whole file is me just messing around to get something working that I can test.
-// !!!
-
 // TODO support team racing?
 //  could be cool for racers to try and assist each other
 

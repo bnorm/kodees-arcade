@@ -3,6 +3,7 @@ package dev.bnorm.arcade.server.client
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
+import dev.bnorm.arcade.service.api.RacerCreateRequest
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.TrackResponse
@@ -18,6 +19,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
+import io.ktor.http.DEFAULT_PORT
 import io.ktor.http.HttpMethod
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
@@ -34,12 +36,12 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.Json
 
-internal fun HttpArcadeClient(host: String, port: Int, baseHttpClient: HttpClient): ArcadeClient {
+internal fun HttpArcadeClient(host: String, port: Int? = null, baseHttpClient: HttpClient): ArcadeClient {
     return HttpArcadeClient(
         hostUrl = buildUrl {
             this.protocol = if (host == "localhost") URLProtocol.HTTP else URLProtocol.HTTPS
             this.host = host
-            this.port = port
+            this.port = port ?: if (host == "localhost") 8080 else DEFAULT_PORT
         },
         baseHttpClient = baseHttpClient,
         json = DefaultJson,
@@ -117,8 +119,22 @@ internal class HttpArcadeClient(
         return httpClient.get(apiPath("racers")).body()
     }
 
-    override suspend fun downloadRacer(id: RacerId, version: Version): ByteArray {
+    override suspend fun createRacer(request: RacerCreateRequest): RacerResponse {
+        return httpClient.post(apiPath("racers")) {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
+
+    override suspend fun downloadRacerVersion(id: RacerId, version: Version): ByteArray {
         return httpClient.get(apiPath("racers/${id.uuid}/download/${version}")).bodyAsBytes()
+    }
+
+    override suspend fun uploadRacerVersion(id: RacerId, version: Version, bytes: ByteArray): RacerResponse {
+        return httpClient.post(apiPath("racers/${id.uuid}/upload/${version}")) {
+            contentType(ContentType.Application.OctetStream)
+            setBody(bytes)
+        }.body()
     }
 
     override suspend fun getTracks(): List<TrackResponse> {

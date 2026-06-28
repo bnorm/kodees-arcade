@@ -3,13 +3,14 @@ package dev.bnorm.arcade.server.client
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
+import dev.bnorm.arcade.service.api.RacerCreateRequest
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
 import kotlinx.coroutines.flow.Flow
 
-expect fun ArcadeClient(host: String = "localhost", port: Int = 8080): ArcadeClient
+expect fun ArcadeClient(host: String = "localhost", port: Int? = null): ArcadeClient
 
 interface ArcadeClient : AutoCloseable {
     suspend fun getRaces(): List<RaceResponse>
@@ -23,8 +24,9 @@ interface ArcadeClient : AutoCloseable {
     fun downloadRace(id: RaceId): Flow<String>
 
     suspend fun getRacers(): List<RacerResponse>
-
-    suspend fun downloadRacer(id: RacerId, version: Version): ByteArray
+    suspend fun createRacer(request: RacerCreateRequest): RacerResponse
+    suspend fun downloadRacerVersion(id: RacerId, version: Version): ByteArray
+    suspend fun uploadRacerVersion(id: RacerId, version: Version, bytes: ByteArray): RacerResponse
 
     suspend fun getTracks(): List<TrackResponse>
 }

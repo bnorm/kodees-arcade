@@ -41,6 +41,11 @@ application {
 }
 
 tasks.processResources.configure {
+    if (System.getenv("CI") == "true") {
+        from(project(":arcade-service:arcade-webapp").tasks.named("wasmJsBrowserDistribution")) {
+            into("webapp")
+        }
+    }
     from(project(":arcade-samples").tasks.getByName("racers")) {
         into("racers")
     }

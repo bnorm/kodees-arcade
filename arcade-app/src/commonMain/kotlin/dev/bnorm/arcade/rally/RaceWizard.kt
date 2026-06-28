@@ -103,7 +103,7 @@ fun RaceWizard(
                                     .fillMaxWidth()
                                     .clickable {
                                         scope.launch {
-                                            val wasm = client.downloadRacer(racer.id, version)
+                                            val wasm = client.downloadRacerVersion(racer.id, version)
                                             racers.add(Racer(pickRacerName(name), wasm))
                                             showDownloader = false
                                         }

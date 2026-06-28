@@ -21,6 +21,9 @@ allprojects {
         compilerOptions {
             optIn.add("kotlin.io.path.ExperimentalPathApi")
             optIn.add("kotlin.uuid.ExperimentalUuidApi")
+
+            optIn.add("androidx.compose.ui.ExperimentalComposeUiApi")
+            optIn.add("androidx.compose.material3.ExperimentalMaterial3Api")
         }
     }
 

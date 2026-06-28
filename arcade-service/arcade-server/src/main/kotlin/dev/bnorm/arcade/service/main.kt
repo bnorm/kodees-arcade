@@ -4,6 +4,7 @@ import dev.bnorm.arcade.rally.loadTrack
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
+import dev.bnorm.arcade.service.api.RacerCreateRequest
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.TrackId
@@ -30,6 +31,7 @@ import io.ktor.http.Parameters
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.netty.EngineMain
 import io.ktor.server.plugins.MissingRequestParameterException
 import io.ktor.server.plugins.NotFoundException
@@ -177,6 +179,8 @@ suspend fun Application.module() {
     install(SSE)
 
     routing {
+        staticResources("/", basePackage = "webapp")
+
         route("/api/rally") {
             route("/races") {
                 get {
@@ -235,6 +239,11 @@ suspend fun Application.module() {
                     call.respond(racers.getRacers().map { it.toResponse() })
                 }
 
+                post {
+                    val request = call.receive<RacerCreateRequest>()
+                    call.respond(racers.createRacer(request.name).toResponse())
+                }
+
                 get("/{racerId}") {
                     val racerId = call.parameters.racerId
                     val racer = racers.getRacer(racerId) ?: throw NotFoundException()
@@ -264,7 +273,7 @@ suspend fun Application.module() {
                     val racer = racers.uploadVersion(racerId, version, call.receiveChannel())
                         ?: throw NotFoundException()
 
-                    call.respond(racer)
+                    call.respond(racer.toResponse())
                 }
             }
 
