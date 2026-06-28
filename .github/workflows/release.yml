@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-packages:
-    name: Release for ${{ matrix.os }}
+    name: Assemble package for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
     permissions:

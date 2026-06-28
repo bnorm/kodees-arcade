@@ -1,4 +1,4 @@
-name: Project Publish
+name: Project Deploy
 
 on:
   push:
@@ -79,7 +79,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   deploy-server:
-    name: Deploy Server
+    name: Deploy server
     needs: build
     runs-on: ubuntu-latest
 
