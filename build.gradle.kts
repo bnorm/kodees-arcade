@@ -13,7 +13,7 @@ plugins {
 
 allprojects {
     group = "dev.bnorm.arcade"
-    version = "1.0-SNAPSHOT"
+    version = "1.0.0"
 
     val javaVersion = JavaVersion.VERSION_21
 

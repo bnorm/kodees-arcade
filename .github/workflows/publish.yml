@@ -51,6 +51,15 @@ jobs:
         with:
           path: build/_site
 
+      - name: (Fail-only) Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports-core
+          path: |
+            **/build/reports/**
+            **/build/compose/logs/**
+
   deploy-pages:
     name: Deploy to GitHub Pages
     needs: build

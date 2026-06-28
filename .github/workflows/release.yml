@@ -1,0 +1,63 @@
+name: Project Release
+
+on:
+  push:
+    tags: [ "v*.*.*" ]
+
+jobs:
+  build-packages:
+    name: Release for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: write
+
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            gradle_task: packageDmg
+            artifact_extension: dmg
+          - os: windows-latest
+            gradle_task: packageMsi
+            artifact_extension: msi
+          - os: ubuntu-latest
+            gradle_task: packageDeb
+            artifact_extension: deb
+
+    steps:
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-scan-publish: true
+          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          build-scan-terms-of-use-agree: "yes"
+
+      - name: Run Gradle Tasks
+        run: ./gradlew ${{ matrix.gradle_task }}
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: arcade-app/build/compose/binaries/main/${{ matrix.artifact_extension }}/*.${{ matrix.artifact_extension }}
+          draft: true
+
+      - name: (Fail-only) Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports-core-${{ matrix.os }}
+          path: |
+            **/build/reports/**
+            **/build/compose/logs/**
+
+# TODO add a dependent job which publishes the draft release
