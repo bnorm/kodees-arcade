@@ -50,21 +50,27 @@ class WasmRace(
                     engine.createWasmRacer(controlsState, racer.bytes, racer.name)
                 }
 
-                for (racer in racers) {
-                    racer.onRace(track)
-                }
-
-                while (!gameState.finished) {
-                    // Allow racers to manipulate controls.
+                try {
                     for (racer in racers) {
-                        // TODO stop calling when racer is finished.
-                        //  - should they be removed from the game entirely when they finish?
-                        racer.move(gameState)
+                        racer.onRace(track)
                     }
 
-                    // Update game state.
-                    update(gameState, controls, track)
-                    events.send(gameState.toUpdate())
+                    while (!gameState.finished) {
+                        // Allow racers to manipulate controls.
+                        for (racer in racers) {
+                            // TODO stop calling when racer is finished.
+                            //  - should they be removed from the game entirely when they finish?
+                            racer.move(gameState)
+                        }
+
+                        // Update game state.
+                        update(gameState, controls, track)
+                        events.send(gameState.toUpdate())
+                    }
+                } finally {
+                    for (racer in racers) {
+                        racer.close()
+                    }
                 }
 
                 val results = gameState.racers.entries

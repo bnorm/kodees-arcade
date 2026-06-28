@@ -3,7 +3,6 @@
 package dev.bnorm.arcade.rally.engine.wasm
 
 import dev.bnorm.arcade.rally.engine.RacerControlState
-import dev.bnorm.arcade.rally.engine.RallyCarState
 import js.array.Tuple
 import js.buffer.DataView
 import js.buffer.toArrayBuffer
@@ -15,12 +14,12 @@ import js.numbers.JsNumbers.toJsInt
 import js.objects.get
 import js.typedarrays.Uint8Array
 import js.typedarrays.toUint8Array
+import kotlin.random.Random
 import web.assembly.Imports
 import web.assembly.Memory
 import web.assembly.compile
 import web.assembly.instantiate
 import web.encoding.TextDecoder
-import kotlin.random.Random
 
 actual suspend fun WasmEngine.createWasmRacer(
     controlState: RacerControlState,
@@ -58,6 +57,7 @@ actual suspend fun WasmEngine.createWasmRacer(
         memory = BrowserMemory(memory),
         moveFunction = { invoke(moveFunction) },
         onRaceFunction = { invoke(onRaceFunction) },
+        onClose = {},
     )
 
     return racer

@@ -1,9 +1,9 @@
 package dev.bnorm.arcade.rally.engine.wasm
 
-import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.geometry.Point
-import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.geometry.Vector
+import dev.bnorm.arcade.rally.Car
+import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.engine.RacerControlState
 import dev.bnorm.arcade.rally.engine.RallyGameState
 
@@ -18,7 +18,8 @@ class WasmRacer(
     private val memory: WasmMemory,
     private val moveFunction: () -> Unit,
     private val onRaceFunction: () -> Unit,
-) {
+    private val onClose: () -> Unit,
+) : AutoCloseable {
     fun move(gameState: RallyGameState) {
         val carState = gameState.racers.getValue(name)
         val car = Car(
@@ -37,5 +38,9 @@ class WasmRacer(
     fun onRace(track: Track) {
         memory.writeProto(0, Track.serializer(), track)
         onRaceFunction.invoke()
+    }
+
+    override fun close() {
+        onClose.invoke()
     }
 }

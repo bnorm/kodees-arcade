@@ -6,16 +6,18 @@ import ai.tegmentum.wasmtime4j.factory.WasmRuntimeFactory
 
 actual typealias WasmEngine = Engine
 
+@PublishedApi
+internal val runtime = WasmRuntimeFactory.create()
+
+@PublishedApi
+internal val engine = runtime.createEngine(
+    EngineConfig.forSize()
+        .wasmFunctionReferences(true)
+        .wasmGc(true)
+        .wasmExceptions(true)
+        .wasmComponentModel(true)
+)
+
 actual inline fun withEngine(block: (WasmEngine) -> Unit) {
-    WasmRuntimeFactory.create().use { runtime ->
-        runtime.createEngine(
-            EngineConfig.forSize()
-                .wasmFunctionReferences(true)
-                .wasmGc(true)
-                .wasmExceptions(true)
-                .wasmComponentModel(true)
-        ).use { engine ->
-            block(engine)
-        }
-    }
+    block(engine)
 }

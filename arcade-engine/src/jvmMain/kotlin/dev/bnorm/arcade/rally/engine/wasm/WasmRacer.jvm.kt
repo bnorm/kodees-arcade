@@ -8,7 +8,6 @@ import ai.tegmentum.wasmtime4j.func.HostFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
 import ai.tegmentum.wasmtime4j.wasi.WasiContext
 import dev.bnorm.arcade.rally.engine.RacerControlState
-import dev.bnorm.arcade.rally.engine.RallyCarState
 
 actual suspend fun WasmEngine.createWasmRacer(
     controlState: RacerControlState,
@@ -28,6 +27,12 @@ actual suspend fun WasmEngine.createWasmRacer(
         memory = memory,
         moveFunction = { moveFunction.callVoid() },
         onRaceFunction = { onRaceFunction.callVoid() },
+        onClose = {
+            instance.close()
+            store.close()
+            module.close()
+            linker.close()
+        }
     )
 
     return racer
