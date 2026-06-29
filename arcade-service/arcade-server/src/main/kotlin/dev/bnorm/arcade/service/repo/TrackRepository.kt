@@ -1,6 +1,10 @@
 package dev.bnorm.arcade.service.repo
 
 import dev.bnorm.arcade.service.api.TrackId
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.singleOrNull
@@ -12,6 +16,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
 import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
@@ -35,10 +40,19 @@ fun ResultRow.toTrackEntity(): TrackEntity {
     )
 }
 
+@ContributesIntoSet(AppScope::class)
+@SingleIn(AppScope::class)
+@Inject
 class TrackRepository(
     private val database: R2dbcDatabase,
     private val blobs: BlobRepository,
-) {
+) : Repository {
+    override suspend fun migrate() {
+        suspendTransaction(database) {
+            SchemaUtils.create(TrackTable)
+        }
+    }
+
     suspend fun getTracks(): List<TrackEntity> {
         return suspendTransaction(database) {
             TrackTable.selectAll().map { it.toTrackEntity() }.toList()
@@ -51,7 +65,7 @@ class TrackRepository(
             val id = TrackTable.insert {
                 it[blobId] = blob.id
             } get TrackTable.id
-            getTrack(id.value)!!
+            TrackEntity(id.value, blob.id)
         }
     }
 

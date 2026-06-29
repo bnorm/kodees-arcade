@@ -7,6 +7,9 @@ import dev.bnorm.arcade.service.repo.RaceEntity
 import dev.bnorm.arcade.service.repo.RaceRepository
 import dev.bnorm.arcade.service.repo.RacerRepository
 import dev.bnorm.arcade.service.repo.TrackRepository
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import io.ktor.util.cio.use
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.toByteArray
@@ -21,6 +24,8 @@ import dev.bnorm.arcade.rally.Track as RallyTrack
 import dev.bnorm.arcade.rally.race.Race as RallyRace
 import dev.bnorm.arcade.rally.race.Racer as RallyRacer
 
+@SingleIn(AppScope::class)
+@Inject
 class RaceRunner(
     val tracks: TrackRepository,
     val races: RaceRepository,

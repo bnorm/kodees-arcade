@@ -3,6 +3,10 @@ package dev.bnorm.arcade.service.repo
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.TrackId
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.flow.groupBy
 import kotlinx.coroutines.flow.map
@@ -17,6 +21,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
 import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
@@ -53,10 +58,19 @@ fun ResultRow.toRaceEntity(racers: List<RacerId>): RaceEntity {
     )
 }
 
+@ContributesIntoSet(AppScope::class)
+@SingleIn(AppScope::class)
+@Inject
 class RaceRepository(
     private val database: R2dbcDatabase,
     private val blobs: BlobRepository,
-) {
+) : Repository {
+    override suspend fun migrate() {
+        suspendTransaction(database) {
+            SchemaUtils.create(RaceTable, RaceRacerTable,)
+        }
+    }
+
     suspend fun getRaces(): List<RaceEntity> {
         return suspendTransaction(database) {
             val racerIds = RaceRacerTable.selectAll().groupBy(

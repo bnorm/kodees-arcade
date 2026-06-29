@@ -2,6 +2,10 @@ package dev.bnorm.arcade.service.repo
 
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.Version
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import io.ktor.utils.io.ByteReadChannel
 import java.util.NavigableMap
 import java.util.TreeMap
@@ -17,6 +21,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
 import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
@@ -50,10 +55,19 @@ fun ResultRow.toRacerEntity(versions: NavigableMap<Version, BlobId>): RacerEntit
     )
 }
 
+@ContributesIntoSet(AppScope::class)
+@SingleIn(AppScope::class)
+@Inject
 class RacerRepository(
     private val database: R2dbcDatabase,
-    private val blobs: BlobRepository
-) {
+    private val blobs: BlobRepository,
+) : Repository {
+    override suspend fun migrate() {
+        suspendTransaction(database) {
+            SchemaUtils.create(RacerTable, RacerVersionTable)
+        }
+    }
+
     suspend fun getRacers(): List<RacerEntity> {
         return suspendTransaction(database) {
             val racerVersions = RacerVersionTable.selectAll().groupBy(

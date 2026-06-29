@@ -1,5 +1,10 @@
 package dev.bnorm.arcade.service.repo
 
+import dev.bnorm.arcade.service.BlobDirectory
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import io.ktor.util.cio.readChannel
 import io.ktor.util.cio.writeChannel
 import io.ktor.utils.io.ByteReadChannel
@@ -15,6 +20,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
 import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
@@ -46,10 +52,19 @@ fun ResultRow.toBlobEntity(): BlobEntity {
     )
 }
 
+@ContributesIntoSet(AppScope::class)
+@SingleIn(AppScope::class)
+@Inject
 class BlobRepository(
     private val database: R2dbcDatabase,
-    private val directory: Path = Files.createTempDirectory("blobs"),
-) {
+    @BlobDirectory private val directory: Path = Files.createTempDirectory("blobs"),
+) : Repository {
+    override suspend fun migrate() {
+        suspendTransaction(database) {
+            SchemaUtils.create(BlobTable)
+        }
+    }
+
     suspend fun upload(channel: ByteReadChannel): BlobEntity {
         return suspendTransaction(database) {
             val id = BlobId.generate()
