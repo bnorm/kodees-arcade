@@ -49,5 +49,6 @@ private fun Content() {
     ) {
         Text(text = "Kodee's Arcade", style = MaterialTheme.typography.displayLarge)
         Image(painterResource(Res.drawable.icon), contentDescription = "Kodee's Arcade icon")
+        Text(text = "(Coming Soon)", style = MaterialTheme.typography.displaySmall)
     }
 }

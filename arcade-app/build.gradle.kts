@@ -41,15 +41,12 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":arcade-engine"))
-            implementation(project(":arcade-samples"))
+            implementation(project(":arcade-ui"))
             implementation(project(":arcade-service:arcade-client"))
 
             implementation(libs.compose.material3)
             implementation(libs.compose.resources)
             implementation(libs.filekit.compose)
-
-            implementation(libs.kotlinx.serialization.json)
-            implementation(libs.kotlinx.serialization.protobuf)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

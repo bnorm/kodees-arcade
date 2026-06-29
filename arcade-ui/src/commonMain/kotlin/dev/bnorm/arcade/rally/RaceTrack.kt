@@ -2,11 +2,25 @@ package dev.bnorm.arcade.rally
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -18,17 +32,25 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import dev.bnorm.arcade.arcade_app.generated.resources.*
+import dev.bnorm.arcade.arcade_ui.generated.resources.Res
+import dev.bnorm.arcade.arcade_ui.generated.resources.car_blue
+import dev.bnorm.arcade.arcade_ui.generated.resources.car_grey
+import dev.bnorm.arcade.arcade_ui.generated.resources.car_orange
+import dev.bnorm.arcade.arcade_ui.generated.resources.car_purple
+import dev.bnorm.arcade.arcade_ui.generated.resources.car_red
+import dev.bnorm.arcade.arcade_ui.generated.resources.car_teal
+import dev.bnorm.arcade.arcade_ui.generated.resources.car_yellow
+import dev.bnorm.arcade.arcade_ui.generated.resources.track
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.race.Race
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.painterResource
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.TimeSource
 
 @Composable
 fun RaceTrack(
@@ -40,7 +62,10 @@ fun RaceTrack(
 ) {
     var desiredFps by remember { mutableFloatStateOf(60f) }
 
-    Column(modifier) {
+    Column(
+        modifier
+            .height(IntrinsicSize.Min)
+    ) {
         FixedSize(
             size = IntSize(track.width.toInt(), track.height.toInt()),
             density = Density(1f),

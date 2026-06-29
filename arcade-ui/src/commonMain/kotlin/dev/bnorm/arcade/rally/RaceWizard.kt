@@ -125,7 +125,7 @@ fun RaceWizard(
                     racersLauncher.launch()
                 }
             ) {
-                Text("Load")
+                Text("Load Racer")
             }
             if (client != null) {
                 Button(

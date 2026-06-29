@@ -40,7 +40,7 @@ fun main() {
             }
         }
 
-        val track = rememberTrack()
+        val track = rememberDeskTrack()
         if (track != null) {
             Column {
                 var race by remember { mutableStateOf<Race?>(null) }
@@ -62,7 +62,7 @@ fun main() {
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { recordingPicker.launch() }) {
-                        Text("Load")
+                        Text("Load Recording")
                     }
                     if (client != null) {
                         Button(onClick = { race = null; showSubmitter = true }) {
