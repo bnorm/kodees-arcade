@@ -48,7 +48,7 @@ ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
 ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
 ktor-server-sse = { module = "io.ktor:ktor-server-sse", version.ref = "ktor" }
 ktor-server-statusPages = { module = "io.ktor:ktor-server-status-pages", version.ref = "ktor" }
-logback = { module = "ch.qos.logback:logback-classic", version = "1.5.35" }
+logback = { module = "ch.qos.logback:logback-classic", version = "1.5.37" }
 r2dbc-h2 = { module = "io.r2dbc:r2dbc-h2", version = "1.1.0.RELEASE" }
 routing-compose = { module = "app.softwork:routing-compose", version = "0.5.0" }
 wasmtime4j-jni = { module = "ai.tegmentum:wasmtime4j-jni", version = "45.0.1-1.1.5" }
