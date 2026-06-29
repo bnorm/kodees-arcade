@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.route
+package dev.bnorm.arcade.web.route
 
 import androidx.compose.runtime.Composable
 

@@ -2,8 +2,8 @@ package dev.bnorm.arcade.web
 
 import androidx.compose.ui.window.ComposeViewport
 import app.softwork.routingcompose.HashRouter
-import dev.bnorm.arcade.route.Route
 import dev.bnorm.arcade.server.client.ArcadeClient
+import dev.bnorm.arcade.web.route.Route
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Multibinds
@@ -40,4 +40,3 @@ fun main() {
         }
     }
 }
-

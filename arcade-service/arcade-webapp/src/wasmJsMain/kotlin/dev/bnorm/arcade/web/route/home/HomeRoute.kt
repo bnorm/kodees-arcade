@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.web.route.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -14,13 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.arcade_webapp.generated.resources.Res
 import dev.bnorm.arcade.arcade_webapp.generated.resources.icon
-import dev.bnorm.arcade.route.Route
+import dev.bnorm.arcade.web.route.Route
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import org.jetbrains.compose.resources.painterResource
 
 @ContributesIntoSet(AppScope::class)
-class AppRoute : Route {
+class HomeRoute : Route {
     override val path: String get() = "/"
 
     @Composable
