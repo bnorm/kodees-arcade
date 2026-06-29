@@ -3,8 +3,8 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.plugin.serialization)
 }
 
 kotlin {
@@ -17,19 +17,19 @@ kotlin {
         commonMain.dependencies {
             api(project(":arcade-agent"))
 
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+            implementation(libs.kotlinx.coroutines.core)
 
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.11.0")
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.serialization.protobuf)
 
-            implementation("io.github.vinceglb:filekit-core:0.8.7")
+            implementation(libs.filekit.core)
         }
         jvmMain.dependencies {
-            implementation("ai.tegmentum:wasmtime4j-jni:45.0.1-1.1.5")
+            implementation(libs.wasmtime4j.jni)
         }
         wasmJsMain.dependencies {
-            implementation("org.jetbrains.kotlinx:kotlinx-browser:0.5.0")
-            implementation("org.jetbrains.kotlin-wrappers:kotlin-browser:2026.6.5")
+            implementation(libs.kotlinx.browser)
+            implementation(libs.kotlin.wrappers.browser)
         }
     }
 }

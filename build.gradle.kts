@@ -4,11 +4,12 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPluginWrapper
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
 plugins {
-    kotlin("multiplatform") apply false
-    kotlin("plugin.serialization") apply false
-    kotlin("plugin.compose") apply false
-    id("org.jetbrains.compose") apply false
-    id("io.ktor.plugin") apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.plugin.serialization) apply false
+    alias(libs.plugins.kotlin.plugin.compose) apply false
+    alias(libs.plugins.compose) apply false
+    alias(libs.plugins.ktor) apply false
 }
 
 allprojects {

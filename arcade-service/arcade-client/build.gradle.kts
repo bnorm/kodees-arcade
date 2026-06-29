@@ -3,8 +3,8 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.plugin.serialization)
 }
 
 kotlin {
@@ -16,20 +16,21 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":arcade-service:arcade-api"))
-            api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+            api(libs.kotlinx.coroutines.core)
 
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-            implementation(dependencies.platform("io.ktor:ktor-bom:3.5.0"))
-            implementation("io.ktor:ktor-client-core")
-            implementation("io.ktor:ktor-client-content-negotiation")
-            implementation("io.ktor:ktor-serialization-kotlinx-json")
+            implementation(libs.kotlinx.serialization.json)
+
+            implementation(dependencies.platform(libs.ktor.bom))
+            implementation(libs.ktor.client)
+            implementation(libs.ktor.client.contentNegotiation)
+            implementation(libs.ktor.serialization.json)
         }
         wasmJsMain.dependencies {
-            implementation("io.ktor:ktor-client-js")
-            implementation("org.jetbrains.kotlinx:kotlinx-browser:0.5.0")
+            implementation(libs.ktor.client.engine.js)
+            implementation(libs.kotlinx.browser)
         }
         jvmMain.dependencies {
-            implementation("io.ktor:ktor-client-okhttp")
+            implementation(libs.ktor.client.engine.okhttp)
         }
     }
 }

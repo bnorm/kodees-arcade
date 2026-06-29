@@ -4,18 +4,6 @@ pluginManagement {
         google()
         gradlePluginPortal()
     }
-
-    plugins {
-        val kotlinVersion = "2.4.0"
-
-        kotlin("multiplatform") version kotlinVersion
-        kotlin("jvm") version kotlinVersion
-        kotlin("plugin.serialization") version kotlinVersion
-        kotlin("plugin.compose") version kotlinVersion
-        id("org.jetbrains.compose") version "1.11.1"
-        id("dev.zacsweers.metro") version "1.2.1"
-        id("io.ktor.plugin") version "3.5.0"
-    }
 }
 
 dependencyResolutionManagement {

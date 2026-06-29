@@ -4,11 +4,11 @@ import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
-    kotlin("plugin.compose")
-    id("org.jetbrains.compose")
-    id("dev.zacsweers.metro")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.plugin.serialization)
+    alias(libs.plugins.kotlin.plugin.compose)
+    alias(libs.plugins.compose)
+    alias(libs.plugins.metro)
 }
 
 kotlin {
@@ -35,13 +35,11 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":arcade-service:arcade-client"))
 
-            implementation("org.jetbrains.compose.material3:material3:1.9.0")
-            implementation("org.jetbrains.compose.components:components-resources:1.11.1")
-            implementation("io.github.vinceglb:filekit-compose:0.8.7")
-
-            implementation("app.softwork:routing-compose:0.5.0")
-
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+            implementation(libs.compose.material3)
+            implementation(libs.compose.resources)
+            implementation(libs.filekit.compose)
+            implementation(libs.routing.compose)
+            implementation(libs.kotlinx.serialization.json)
         }
     }
 }

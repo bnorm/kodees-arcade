@@ -3,9 +3,9 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.compose")
-    id("org.jetbrains.compose")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.plugin.compose)
+    alias(libs.plugins.compose)
 }
 
 kotlin {
@@ -16,8 +16,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation("org.jetbrains.compose.runtime:runtime:1.11.1")
-            implementation("org.jetbrains.compose.components:components-resources:1.11.1")
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.resources)
         }
     }
 }
