@@ -10,4 +10,8 @@ value class RaceId(val uuid: Uuid) {
     companion object {
         fun generate(): RaceId = RaceId(Uuid.generateV7())
     }
+
+    override fun toString(): String {
+        return uuid.toString()
+    }
 }

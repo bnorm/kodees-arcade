@@ -100,6 +100,8 @@ class RaceRouter(
         return RaceResponse(
             id = this.id,
             trackId = this.trackId,
+            startTime = this.startTime,
+            endTime = this.endTime,
             racers = this.racers.toList(),
         )
     }

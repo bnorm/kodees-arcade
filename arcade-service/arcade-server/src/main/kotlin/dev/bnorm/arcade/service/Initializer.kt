@@ -28,7 +28,8 @@ class Initializer(
 
     private suspend fun TrackRepository.addTrack(resource: String): TrackEntity {
         return createTrack(
-            Json.encodeToString(
+            name = "Desk",
+            json = Json.encodeToString(
                 Track.serializer(),
                 loadTrack(ClassLoader.getSystemResource(resource).readText())
             )

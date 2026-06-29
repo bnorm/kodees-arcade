@@ -28,7 +28,7 @@ import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 
 object RacerTable : IdTable<RacerId>("racers") {
     override val id: Column<EntityID<RacerId>> = racerId("id").clientDefault { RacerId.generate() }.entityId()
-    val name = text("name")
+    val name = text("name").uniqueIndex()
 
     override val primaryKey = PrimaryKey(id)
 }

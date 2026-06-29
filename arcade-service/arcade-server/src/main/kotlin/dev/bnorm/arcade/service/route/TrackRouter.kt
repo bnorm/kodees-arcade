@@ -7,6 +7,7 @@ import dev.bnorm.arcade.service.repo.TrackRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import io.ktor.http.Parameters
+import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
@@ -22,12 +23,19 @@ class TrackRouter(
             get {
                 call.respond(tracks.getTracks().map { it.toResponse() })
             }
+
+            get("/{trackId}") {
+                val trackId = call.parameters.trackId
+                val track = tracks.getTrack(trackId) ?: throw NotFoundException()
+                call.respond(track.toResponse())
+            }
         }
     }
 
     private fun TrackEntity.toResponse(): TrackResponse {
         return TrackResponse(
             id = this.id,
+            name = this.name,
         )
     }
 

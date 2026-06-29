@@ -7,7 +7,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import io.ktor.utils.io.ByteReadChannel
+import kotlin.time.Instant
 import kotlinx.coroutines.flow.groupBy
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.single
@@ -20,6 +20,7 @@ import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.datetime.timestamp
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
 import org.jetbrains.exposed.v1.r2dbc.insert
@@ -30,6 +31,8 @@ import org.jetbrains.exposed.v1.r2dbc.update
 object RaceTable : IdTable<RaceId>("races") {
     override val id: Column<EntityID<RaceId>> = raceId("id").clientDefault { RaceId.generate() }.entityId()
     val trackId = reference("track_id", TrackTable)
+    val startTime = timestamp("start_time").nullable()
+    val endTime = timestamp("end_time").nullable()
     val blobId = reference("blob_id", BlobTable, onDelete = ReferenceOption.RESTRICT).nullable()
 
     override val primaryKey = PrimaryKey(id)
@@ -46,6 +49,8 @@ data class RaceEntity(
     val id: RaceId,
     val trackId: TrackId,
     val racers: List<RacerId>,
+    val startTime: Instant? = null,
+    val endTime: Instant? = null,
     val blobId: BlobId? = null,
 )
 
@@ -54,6 +59,8 @@ fun ResultRow.toRaceEntity(racers: List<RacerId>): RaceEntity {
         id = this[RaceTable.id].value,
         trackId = this[RaceTable.trackId].value,
         racers = racers,
+        startTime = this[RaceTable.startTime],
+        endTime = this[RaceTable.endTime],
         blobId = this[RaceTable.blobId]?.value,
     )
 }
@@ -103,14 +110,24 @@ class RaceRepository(
         }
     }
 
-    suspend fun finishRace(id: RaceId, channel: ByteReadChannel): RaceEntity? {
+    suspend fun startRace(id: RaceId, startTime: Instant): RaceEntity? {
         return suspendTransaction(database) {
             val race = getRace(id) ?: return@suspendTransaction null
-            val blob = blobs.upload(channel)
             RaceTable.update({ RaceTable.id eq id }) {
-                it[RaceTable.blobId] = blob.id
+                it[RaceTable.startTime] = startTime
             }
-            race.copy(blobId = blob.id)
+            race.copy(startTime = startTime)
+        }
+    }
+
+    suspend fun finishRace(id: RaceId, endTime: Instant, blobId: BlobId): RaceEntity? {
+        return suspendTransaction(database) {
+            val race = getRace(id) ?: return@suspendTransaction null
+            RaceTable.update({ RaceTable.id eq id }) {
+                it[RaceTable.endTime] = endTime
+                it[RaceTable.blobId] = blobId
+            }
+            race.copy(endTime = endTime, blobId = blobId)
         }
     }
 

@@ -15,6 +15,7 @@ import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.toByteArray
 import io.ktor.utils.io.writeStringUtf8
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Clock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.coroutineScope
@@ -27,17 +28,18 @@ import dev.bnorm.arcade.rally.race.Racer as RallyRacer
 @SingleIn(AppScope::class)
 @Inject
 class RaceRunner(
-    val tracks: TrackRepository,
-    val races: RaceRepository,
-    val racers: RacerRepository,
     val blobs: BlobRepository,
+    val tracks: TrackRepository,
+    val racers: RacerRepository,
+    val races: RaceRepository,
+    val clock: Clock = Clock.System
 ) {
     companion object {
         private val log = logger<RaceRunner>()
     }
 
     suspend fun start(id: RaceId, consumer: SendChannel<String>? = null): RaceEntity? {
-        val race = races.getRace(id) ?: return null
+        val race = races.getRace(id) ?: return null // TODO error?
         val track = tracks.getTrack(race.trackId) ?: return null
         val trackBlob = blobs.download(track.blobId) ?: return null
 
@@ -52,16 +54,19 @@ class RaceRunner(
         }
 
         return coroutineScope {
-            val channel = ByteChannel()
-            val updated = async { races.finishRace(id, channel)!! }
-
+            races.startRace(id, startTime = clock.now())
             log.info("Starting race: $id")
+
+            val channel = ByteChannel()
+            val deferredBlobId = async { blobs.upload(channel).id }
+
             val rallyRace = WasmRace(rallyTrack, rallyRacers)
             launch { rallyRace.start() }
             writeEvents(rallyRace, channel, consumer)
 
-            updated.await().also {
+            deferredBlobId.await().let { blobId ->
                 log.info("Finished race: $id")
+                races.finishRace(id, endTime = clock.now(), blobId)
             }
         }
     }
