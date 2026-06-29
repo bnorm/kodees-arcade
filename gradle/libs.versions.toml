@@ -51,4 +51,4 @@ ktor-server-statusPages = { module = "io.ktor:ktor-server-status-pages", version
 logback = { module = "ch.qos.logback:logback-classic", version = "1.5.35" }
 r2dbc-h2 = { module = "io.r2dbc:r2dbc-h2", version = "1.1.0.RELEASE" }
 routing-compose = { module = "app.softwork:routing-compose", version = "0.5.0" }
-wasmtime4j-jni = { module = "ai.tegmentum:wasmtime4j-jni", version = "45.0.1-1.1.5" }
+wasmtime4j-jni = { module = "ai.tegmentum:wasmtime4j-jni", version = "45.0.2-1.1.6" }
