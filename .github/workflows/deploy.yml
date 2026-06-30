@@ -25,7 +25,7 @@ jobs:
           java-version: 21
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -87,7 +87,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Copy deployment configuration files
         uses: appleboy/scp-action@master
