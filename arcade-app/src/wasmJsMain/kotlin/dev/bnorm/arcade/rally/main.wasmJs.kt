@@ -19,8 +19,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.rally.race.Race
-import dev.bnorm.arcade.rally.race.ReplayRace
+import dev.bnorm.arcade.machine.Race
+import dev.bnorm.arcade.machine.ReplayRace
 import dev.bnorm.arcade.server.client.ArcadeClient
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode

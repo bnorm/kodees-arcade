@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import dev.bnorm.arcade.rally.race.Race
+import dev.bnorm.arcade.machine.Race
 
 @Composable
 fun RaceResults(event: Race.Event.Complete) {

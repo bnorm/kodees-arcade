@@ -16,17 +16,12 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":arcade-agent"))
-            api(project(":arcade-machine"))
 
             implementation(libs.kotlinx.coroutines.core)
 
             implementation(libs.kotlinx.serialization.json)
-            implementation(libs.kotlinx.serialization.protobuf)
 
             implementation(libs.filekit.core)
-        }
-        jvmMain.dependencies {
-            implementation(libs.wasmtime4j.jni)
         }
         wasmJsMain.dependencies {
             implementation(libs.kotlinx.browser)

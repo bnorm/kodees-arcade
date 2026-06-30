@@ -42,7 +42,7 @@ import dev.bnorm.arcade.arcade_ui.generated.resources.car_teal
 import dev.bnorm.arcade.arcade_ui.generated.resources.car_yellow
 import dev.bnorm.arcade.arcade_ui.generated.resources.track
 import dev.bnorm.arcade.geometry.toRelative
-import dev.bnorm.arcade.rally.race.Race
+import dev.bnorm.arcade.machine.Race
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource

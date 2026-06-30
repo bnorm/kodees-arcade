@@ -22,8 +22,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import dev.bnorm.arcade.rally.Track as RallyTrack
-import dev.bnorm.arcade.rally.race.Race as RallyRace
-import dev.bnorm.arcade.rally.race.Racer as RallyRacer
+import dev.bnorm.arcade.machine.Race as RallyRace
+import dev.bnorm.arcade.rally.race.WasmRacer as RallyRacer
 
 @SingleIn(AppScope::class)
 @Inject

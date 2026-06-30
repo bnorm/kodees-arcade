@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.race
+package dev.bnorm.arcade.machine
 
 import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.channels.Channel

@@ -1,10 +1,10 @@
-package dev.bnorm.arcade.rally.race
+package dev.bnorm.arcade.machine
 
 import io.github.vinceglb.filekit.core.PlatformFile
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.bufferedReader
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 actual fun PlatformFile.lineFlow(): Flow<String> = flow {
     file.toPath().bufferedReader(

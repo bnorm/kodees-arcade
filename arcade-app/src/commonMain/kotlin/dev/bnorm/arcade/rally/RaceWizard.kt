@@ -28,8 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
-import dev.bnorm.arcade.rally.race.Race
-import dev.bnorm.arcade.rally.race.Racer
+import dev.bnorm.arcade.machine.Race
+import dev.bnorm.arcade.rally.race.WasmRacer
 import dev.bnorm.arcade.rally.race.WasmRace
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RacerResponse
@@ -48,7 +48,7 @@ fun RaceWizard(
 ) {
     val scope = rememberCoroutineScope()
 
-    val racers = remember { mutableStateListOf<Racer>() }
+    val racers = remember { mutableStateListOf<WasmRacer>() }
 
     fun pickRacerName(baseName: String): String {
         val existingNames = racers.mapTo(mutableSetOf()) { it.name }
@@ -71,7 +71,7 @@ fun RaceWizard(
         if (file != null) {
             scope.launch {
                 racers.add(
-                    Racer(
+                    WasmRacer(
                         name = pickRacerName(file.name.substringBeforeLast(".")),
                         bytes = file.readBytes(),
                     )
@@ -104,7 +104,7 @@ fun RaceWizard(
                                     .clickable {
                                         scope.launch {
                                             val wasm = client.downloadRacerVersion(racer.id, version)
-                                            racers.add(Racer(pickRacerName(name), wasm))
+                                            racers.add(WasmRacer(pickRacerName(name), wasm))
                                             showDownloader = false
                                         }
                                     }
@@ -154,7 +154,7 @@ fun RaceWizard(
                     onClick = {
                         scope.launch {
                             racers.add(
-                                Racer(
+                                WasmRacer(
                                     name = pickRacerName(racer),
                                     bytes = BundledRacers.readBytes("files/$racer.wasm"),
                                 )

@@ -1,6 +1,6 @@
 package dev.bnorm.arcade.rally.race
 
-class Racer(
+class WasmRacer(
     val name: String,
     val bytes: ByteArray,
 )

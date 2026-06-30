@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.race
+package dev.bnorm.arcade.machine
 
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.rally.Track

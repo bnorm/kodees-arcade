@@ -17,10 +17,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            api(project(":arcade-engine"))
+            api(project(":arcade-machine"))
             api(project(":arcade-service:arcade-client"))
-
-            implementation(project(":arcade-samples"))
 
             implementation(libs.compose.material3)
             implementation(libs.compose.resources)

@@ -1,7 +1,7 @@
 package dev.bnorm.arcade.rally
 
-import kotlinx.serialization.Serializable
 import kotlin.math.sqrt
+import kotlinx.serialization.Serializable
 
 @Serializable
 class JsonTrack(

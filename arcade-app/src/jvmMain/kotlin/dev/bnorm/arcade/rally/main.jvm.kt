@@ -18,9 +18,9 @@ import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import dev.bnorm.arcade.rally.race.Race
-import dev.bnorm.arcade.rally.race.RecordRace
-import dev.bnorm.arcade.rally.race.ReplayRace
+import dev.bnorm.arcade.machine.Race
+import dev.bnorm.arcade.machine.RecordRace
+import dev.bnorm.arcade.machine.ReplayRace
 import dev.bnorm.arcade.server.client.ArcadeClient
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode

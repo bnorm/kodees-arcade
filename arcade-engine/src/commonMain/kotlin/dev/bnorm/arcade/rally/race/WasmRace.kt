@@ -1,5 +1,6 @@
 package dev.bnorm.arcade.rally.race
 
+import dev.bnorm.arcade.machine.Race
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.engine.RacerControlState
 import dev.bnorm.arcade.rally.engine.RallyCarState
@@ -12,7 +13,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 
 class WasmRace(
     private val track: Track,
-    private val racers: List<Racer>,
+    private val racers: List<WasmRacer>,
 ) : Race {
     override val events: ReceiveChannel<Race.Event>
         field = Channel()
