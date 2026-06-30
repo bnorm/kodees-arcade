@@ -1,7 +1,7 @@
 package dev.bnorm.arcade.rally
 
 import androidx.compose.runtime.*
-import dev.bnorm.arcade.arcade_ui.generated.resources.Res
+import dev.bnorm.arcade.arcade_display.generated.resources.Res
 
 @Composable
 fun rememberDeskTrack(): Track? {

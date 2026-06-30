@@ -15,8 +15,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            api(project(":arcade-agent"))
-            api(project(":arcade-machine"))
+            api(project(":arcade-machine:arcade-multicade"))
+            api(project(":arcade-player"))
 
             implementation(libs.kotlinx.coroutines.core)
 

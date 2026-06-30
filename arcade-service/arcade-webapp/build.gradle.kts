@@ -34,7 +34,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":arcade-service:arcade-client"))
-            implementation(project(":arcade-ui")) // TODO remove transitive dependency on engine
+            implementation(project(":arcade-machine:arcade-display"))
 
             implementation(libs.compose.material3)
             implementation(libs.compose.resources)

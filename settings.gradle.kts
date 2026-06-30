@@ -19,10 +19,11 @@ plugins {
 
 rootProject.name = "kodees-arcade"
 
-include(":arcade-agent")
-include(":arcade-app")
-include(":arcade-engine")
-include(":arcade-machine")
+include(":arcade-machine:arcade-app")
+include(":arcade-machine:arcade-display")
+include(":arcade-machine:arcade-engine")
+include(":arcade-machine:arcade-multicade")
+include(":arcade-player")
 include(":arcade-samples")
 include(":arcade-samples:shared")
 include(":arcade-samples:kodee")
@@ -31,4 +32,3 @@ include(":arcade-service:arcade-api")
 include(":arcade-service:arcade-client")
 include(":arcade-service:arcade-server")
 include(":arcade-service:arcade-webapp")
-include(":arcade-ui")

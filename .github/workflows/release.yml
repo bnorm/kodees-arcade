@@ -51,7 +51,7 @@ jobs:
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: arcade-app/build/compose/binaries/main/${{ matrix.artifact_extension }}/*.${{ matrix.artifact_extension }}
+          files: arcade-machine/arcade-app/build/compose/binaries/main/${{ matrix.artifact_extension }}/*.${{ matrix.artifact_extension }}
           draft: true
 
       - name: (Fail-only) Upload reports

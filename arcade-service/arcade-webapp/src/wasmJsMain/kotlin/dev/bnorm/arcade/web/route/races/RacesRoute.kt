@@ -125,6 +125,7 @@ private fun WatchRaceDialog(client: ArcadeClient, raceId: RaceId?, onDismiss: ()
             onDismiss()
         }) {
             Card {
+                // TODO download this from the server
                 val track = rememberDeskTrack()
                 if (track != null) {
                     RaceTrack(track, race, onComplete = {}, onStop = {}, modifier = Modifier.padding(16.dp))
