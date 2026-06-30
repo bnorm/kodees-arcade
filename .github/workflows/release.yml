@@ -36,7 +36,7 @@ jobs:
           java-version: 21
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@v4
