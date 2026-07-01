@@ -27,7 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
+import dev.bnorm.arcade.arcade_player_samples.generated.resources.BundledRacers
 import dev.bnorm.arcade.machine.Race
 import dev.bnorm.arcade.rally.race.WasmRace
 import dev.bnorm.arcade.rally.race.WasmRacer
@@ -68,7 +68,7 @@ fun RaceWizard(
     val racersLauncher = rememberFilePickerLauncher(
         mode = FileKitMode.Single,
         type = FileKitType.File("wasm"),
-//        directory = PlatformFile("../arcade-samples/build/racers/files"),
+//        directory = PlatformFile("../arcade-player-samples/build/racers/files"),
     ) { file ->
         if (file != null) {
             scope.launch {

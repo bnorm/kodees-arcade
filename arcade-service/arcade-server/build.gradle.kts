@@ -46,7 +46,7 @@ tasks.processResources.configure {
             into("webapp")
         }
     }
-    from(project(":arcade-samples").tasks.getByName("racers")) {
+    from(project(":arcade-player-samples").tasks.getByName("racers")) {
         into("racers")
     }
 }

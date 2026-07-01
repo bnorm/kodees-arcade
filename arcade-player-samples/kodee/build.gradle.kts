@@ -13,7 +13,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":arcade-samples:shared"))
+            implementation(project(":arcade-player-samples:shared"))
         }
     }
 }
