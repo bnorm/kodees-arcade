@@ -1,5 +1,6 @@
 package dev.bnorm.arcade.service.repo
 
+import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.TrackId
@@ -31,4 +32,8 @@ fun Table.racerId(name: String): Column<RacerId> {
 
 fun Table.trackId(name: String): Column<TrackId> {
     return uuid(name).transform(::TrackId, TrackId::uuid)
+}
+
+fun Table.nonce(name: String): Column<Nonce> {
+    return uuid(name).transform(::Nonce, Nonce::uuid)
 }

@@ -1,11 +1,14 @@
 package dev.bnorm.arcade.server.client
 
+import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
+import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.RacerCreateRequest
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
 import io.ktor.client.HttpClient
@@ -14,13 +17,13 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.DEFAULT_PORT
-import io.ktor.http.HttpMethod
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
 import io.ktor.http.appendPathSegments
@@ -30,10 +33,17 @@ import io.ktor.http.path
 import io.ktor.http.takeFrom
 import io.ktor.serialization.kotlinx.json.DefaultJson
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.util.cio.use
+import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.readLineStrict
+import io.ktor.utils.io.writeString
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 internal fun HttpArcadeClient(host: String, port: Int? = null, baseHttpClient: HttpClient): ArcadeClient {
@@ -47,7 +57,6 @@ internal fun HttpArcadeClient(host: String, port: Int? = null, baseHttpClient: H
         json = DefaultJson,
     )
 }
-
 
 internal class HttpArcadeClient(
     private val hostUrl: Url,
@@ -81,7 +90,7 @@ internal class HttpArcadeClient(
     }
 
     override suspend fun getRace(id: RaceId): RaceResponse {
-        return httpClient.get(apiPath("races/${id.uuid}")).body()
+        return httpClient.get(apiPath("races/$id")).body()
     }
 
     override suspend fun createRace(request: RaceCreateRequest): RaceResponse {
@@ -91,24 +100,8 @@ internal class HttpArcadeClient(
         }.body()
     }
 
-    override fun streamRace(request: RaceCreateRequest): Flow<String> = channelFlow {
-        httpClient.sse(
-            request = {
-                method = HttpMethod.Post
-                url.takeFrom(apiPath("races/stream"))
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-        ) {
-            incoming.collect {
-                val data = it.data ?: return@collect
-                this@channelFlow.send(data)
-            }
-        }
-    }
-
     override fun downloadRace(id: RaceId): Flow<String> = flow {
-        val response = httpClient.get(apiPath("races/${id.uuid}/download"))
+        val response = httpClient.get(apiPath("races/$id/download"))
         val channel = response.bodyAsChannel()
         while (!channel.isClosedForRead) {
             emit(channel.readLineStrict() ?: break)
@@ -126,12 +119,16 @@ internal class HttpArcadeClient(
         }.body()
     }
 
+    override suspend fun getRacer(id: RacerId): RacerResponse {
+        return httpClient.get(apiPath("racers/$id")).body()
+    }
+
     override suspend fun downloadRacerVersion(id: RacerId, version: Version): ByteArray {
-        return httpClient.get(apiPath("racers/${id.uuid}/download/${version}")).bodyAsBytes()
+        return httpClient.get(apiPath("racers/$id/download/${version}")).bodyAsBytes()
     }
 
     override suspend fun uploadRacerVersion(id: RacerId, version: Version, bytes: ByteArray): RacerResponse {
-        return httpClient.post(apiPath("racers/${id.uuid}/upload/${version}")) {
+        return httpClient.post(apiPath("racers/$id/upload/${version}")) {
             contentType(ContentType.Application.OctetStream)
             setBody(bytes)
         }.body()
@@ -140,6 +137,50 @@ internal class HttpArcadeClient(
     override suspend fun getTracks(): List<TrackResponse> {
         return httpClient.get(apiPath("tracks")).body()
     }
+
+    override suspend fun getTrack(id: TrackId): TrackResponse {
+        return httpClient.get(apiPath("tracks/$id")).body()
+    }
+
+    override suspend fun downloadTrack(id: TrackId): ByteArray {
+        return httpClient.get(apiPath("tracks/$id/download")).body()
+    }
+
+    override fun listen(): Flow<RaceProcessEvent> = channelFlow {
+        httpClient.sse(
+            request = {
+                url.takeFrom(apiPath("races/listen"))
+            }
+        ) {
+            incoming.collect {
+                val data = it.data ?: return@collect
+                this@channelFlow.send(json.decodeFromString(RaceProcessEvent.serializer(), data))
+            }
+        }
+    }
+
+    override suspend fun upload(
+        id: RaceId,
+        nonce: Nonce,
+        events: ReceiveChannel<String>
+    ): RaceResponse = coroutineScope {
+        val channel = ByteChannel()
+        launch {
+            channel.use {
+                events.consumeEach {
+                    channel.writeString(it)
+                    channel.writeString("\n")
+                }
+            }
+        }
+
+        httpClient.post(apiPath("races/$id/upload")) {
+            contentType(ContentType.Application.OctetStream)
+            parameter("nonce", nonce)
+            setBody(channel)
+        }.body()
+    }
+
 
     override fun close() {
         httpClient.close()

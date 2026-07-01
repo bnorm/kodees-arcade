@@ -42,7 +42,7 @@ annotation class BlobDirectory
 interface ServerGraph {
     val routers: Set<Router>
     val repositories: Set<Repository>
-    val initializer: Initializer
+    val services: Set<Service>
 
     @Provides
     @BlobDirectory
@@ -70,7 +70,9 @@ suspend fun Application.module() {
     for (repository in graph.repositories) {
         repository.migrate()
     }
-    graph.initializer()
+    for (service in graph.services) {
+        service.initialize()
+    }
 
     install(CallId) {
         retrieveFromHeader(HttpHeaders.XRequestId)
