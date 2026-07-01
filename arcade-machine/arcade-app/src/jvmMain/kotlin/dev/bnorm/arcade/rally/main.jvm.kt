@@ -22,9 +22,9 @@ import dev.bnorm.arcade.machine.Race
 import dev.bnorm.arcade.machine.RecordRace
 import dev.bnorm.arcade.machine.ReplayRace
 import dev.bnorm.arcade.server.client.ArcadeClient
-import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import java.nio.file.Paths
 
 // TODO support team racing?
@@ -56,8 +56,8 @@ fun main() {
 
             var showWizard by remember { mutableStateOf(false) }
             val recordingPicker = rememberFilePickerLauncher(
-                mode = PickerMode.Single,
-                type = PickerType.File(listOf("race")),
+                mode = FileKitMode.Single,
+                type = FileKitType.File("race"),
             ) { file ->
                 if (file != null) {
                     race = ReplayRace(file)

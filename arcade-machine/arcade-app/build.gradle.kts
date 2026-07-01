@@ -47,7 +47,7 @@ kotlin {
 
             implementation(libs.compose.material3)
             implementation(libs.compose.resources)
-            implementation(libs.filekit.compose)
+            implementation(libs.filekit.dialogs.compose)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

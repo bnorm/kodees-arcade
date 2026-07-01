@@ -37,11 +37,13 @@ import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.Version
-import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.compose.rememberFileSaverLauncher
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.download
+import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.launch
 
 @Composable
@@ -152,8 +154,8 @@ private fun UploadRacerDialog(client: ArcadeClient, id: RacerId, onDismissReques
         val state = rememberTextFieldState()
         var file by remember { mutableStateOf<PlatformFile?>(null) }
         val launcher = rememberFilePickerLauncher(
-            mode = PickerMode.Single,
-            type = PickerType.File(listOf("wasm")),
+            mode = FileKitMode.Single,
+            type = FileKitType.File("wasm"),
         ) { file = it }
 
 
@@ -199,7 +201,6 @@ private fun DownloadRacerButton(
     modifier: Modifier = Modifier.Companion
 ) {
     val scope = rememberCoroutineScope()
-    val launcher = rememberFileSaverLauncher { }
 
     Box(
         contentAlignment = Alignment.Center,
@@ -209,10 +210,9 @@ private fun DownloadRacerButton(
                 interactionSource = remember { MutableInteractionSource() }
             ) {
                 scope.launch {
-                    launcher.launch(
+                    FileKit.download(
                         bytes = client.downloadRacerVersion(racer.id, version),
-                        baseName = "${racer.name} $version",
-                        extension = "wasm"
+                        fileName = "${racer.name} $version.wasm"
                     )
                 }
             }
