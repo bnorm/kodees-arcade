@@ -29,13 +29,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.bnorm.arcade.arcade_samples.generated.resources.BundledRacers
 import dev.bnorm.arcade.machine.Race
-import dev.bnorm.arcade.rally.race.WasmRacer
 import dev.bnorm.arcade.rally.race.WasmRace
+import dev.bnorm.arcade.rally.race.WasmRacer
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RacerResponse
-import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.launch
 
 private val BUNDLED_RACERS = listOf("Kodee", "Snail")
@@ -64,9 +66,9 @@ fun RaceWizard(
     fun canAddRacer(): Boolean = racers.size < 6
 
     val racersLauncher = rememberFilePickerLauncher(
-        mode = PickerMode.Single,
-        type = PickerType.File(listOf("wasm")),
-        initialDirectory = "../arcade-samples/build/racers/files",
+        mode = FileKitMode.Single,
+        type = FileKitType.File("wasm"),
+//        directory = PlatformFile("../arcade-samples/build/racers/files"),
     ) { file ->
         if (file != null) {
             scope.launch {

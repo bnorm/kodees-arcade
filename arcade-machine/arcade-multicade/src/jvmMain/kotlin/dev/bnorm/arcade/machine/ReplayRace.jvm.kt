@@ -1,6 +1,6 @@
 package dev.bnorm.arcade.machine
 
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.bufferedReader
 import kotlinx.coroutines.flow.Flow
