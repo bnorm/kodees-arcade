@@ -18,14 +18,14 @@ jobs:
       packages: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
           distribution: zulu
-          java-version: 21
-
-      - name: Checkout code
-        uses: actions/checkout@v7
+          java-version-file: .github/workflows/.java-version
 
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@v6
