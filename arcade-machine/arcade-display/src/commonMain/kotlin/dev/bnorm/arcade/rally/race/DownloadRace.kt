@@ -5,7 +5,7 @@ import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
 
 class DownloadRace(
     private val client: ArcadeClient,
@@ -17,7 +17,7 @@ class DownloadRace(
     override suspend fun start() {
         try {
             client.downloadRace(raceId).collect { line ->
-                events.send(Json.decodeFromString(Race.Event.serializer(), line))
+                events.send(ProtoBuf.decodeFromByteArray(Race.Event.serializer(), line))
             }
         } finally {
             events.close()

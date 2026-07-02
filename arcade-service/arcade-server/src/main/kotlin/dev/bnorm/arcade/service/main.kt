@@ -17,6 +17,8 @@ import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.callid.generate
 import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.compression.Compression
+import io.ktor.server.plugins.compression.zstd.zstdStandard
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respondText
@@ -42,7 +44,7 @@ annotation class BlobDirectory
 interface ServerGraph {
     val routers: Set<Router>
     val repositories: Set<Repository>
-    val initializer: Initializer
+    val services: Set<Service>
 
     @Provides
     @BlobDirectory
@@ -70,7 +72,9 @@ suspend fun Application.module() {
     for (repository in graph.repositories) {
         repository.migrate()
     }
-    graph.initializer()
+    for (service in graph.services) {
+        service.initialize()
+    }
 
     install(CallId) {
         retrieveFromHeader(HttpHeaders.XRequestId)
@@ -99,6 +103,10 @@ suspend fun Application.module() {
 
     install(ContentNegotiation) {
         json()
+    }
+
+    install(Compression) {
+        zstdStandard()
     }
 
     install(SSE)

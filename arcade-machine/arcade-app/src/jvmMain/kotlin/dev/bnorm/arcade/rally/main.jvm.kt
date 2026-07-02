@@ -64,7 +64,6 @@ fun main() {
                 }
             }
 
-            var showSubmitter by remember { mutableStateOf(false) }
             var showDownloader by remember { mutableStateOf(false) }
 
             MenuBar {
@@ -81,13 +80,6 @@ fun main() {
                         onClick = {
                             race = null
                             recordingPicker.launch()
-                        }
-                    )
-                    Item(
-                        text = "Submit",
-                        onClick = {
-                            race = null
-                            showSubmitter = true
                         }
                     )
                     Item(
@@ -109,18 +101,6 @@ fun main() {
                             onStart = {
                                 race = RecordRace(it, Paths.get("./recording.race"))
                                 showWizard = false
-                            }
-                        )
-                    }
-                }
-
-                if (showSubmitter) {
-                    DialogWindow(onCloseRequest = { showSubmitter = false }) {
-                        RaceSubmitter(
-                            client,
-                            onStart = {
-                                race = it
-                                showSubmitter = false
                             }
                         )
                     }
