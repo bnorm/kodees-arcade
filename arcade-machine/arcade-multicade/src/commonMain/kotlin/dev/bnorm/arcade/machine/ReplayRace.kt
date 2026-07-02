@@ -1,10 +1,12 @@
 package dev.bnorm.arcade.machine
 
 import io.github.vinceglb.filekit.PlatformFile
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readByteArray
+import io.ktor.utils.io.readInt
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
 
 class ReplayRace(
     private val path: PlatformFile
@@ -14,8 +16,10 @@ class ReplayRace(
 
     override suspend fun start() {
         try {
-            path.lineFlow().collect { line ->
-                events.send(Json.decodeFromString(Race.Event.serializer(), line))
+            val channel = path.readChannel()
+            while (channel.awaitContent()) {
+                val size = channel.readInt()
+                events.send(ProtoBuf.decodeFromByteArray(Race.Event.serializer(), channel.readByteArray(size)))
             }
         } finally {
             events.close()
@@ -23,4 +27,4 @@ class ReplayRace(
     }
 }
 
-expect fun PlatformFile.lineFlow(): Flow<String>
+internal expect fun PlatformFile.readChannel(): ByteReadChannel

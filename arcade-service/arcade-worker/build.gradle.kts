@@ -10,8 +10,9 @@ dependencies {
 
     implementation(project(":arcade-machine:arcade-engine"))
     runtimeOnly(libs.slf4j.nop)
-    implementation(libs.ktor.serialization.json)
-    
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.protobuf)
+
     implementation(libs.clikt)
     implementation(libs.clikt.markdown)
     implementation(libs.mosaic.runtime)

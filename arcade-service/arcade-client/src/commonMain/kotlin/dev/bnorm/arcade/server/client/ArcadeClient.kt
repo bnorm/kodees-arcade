@@ -23,7 +23,7 @@ interface ArcadeClient : AutoCloseable {
     suspend fun resetRace(id: RaceId): RaceResponse
 
     // TODO find the best way to deal directly with bytes without exposing ktor
-    fun downloadRace(id: RaceId): Flow<String>
+    fun downloadRace(id: RaceId): Flow<ByteArray>
 
     suspend fun getRacers(): List<RacerResponse>
     suspend fun createRacer(request: RacerCreateRequest): RacerResponse
@@ -38,5 +38,5 @@ interface ArcadeClient : AutoCloseable {
     fun listen(): Flow<RaceProcessEvent>
 
     // TODO is this the best way to upload bytes?
-    suspend fun upload(id: RaceId, nonce: Nonce, events: ReceiveChannel<String>): RaceResponse
+    suspend fun upload(id: RaceId, nonce: Nonce, events: ReceiveChannel<ByteArray>): RaceResponse
 }

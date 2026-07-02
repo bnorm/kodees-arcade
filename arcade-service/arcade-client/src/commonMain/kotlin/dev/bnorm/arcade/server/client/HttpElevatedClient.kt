@@ -36,8 +36,10 @@ import io.ktor.serialization.kotlinx.json.DefaultJson
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.cio.use
 import io.ktor.utils.io.ByteChannel
-import io.ktor.utils.io.readLineStrict
-import io.ktor.utils.io.writeString
+import io.ktor.utils.io.readByteArray
+import io.ktor.utils.io.readInt
+import io.ktor.utils.io.writeByteArray
+import io.ktor.utils.io.writeInt
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.coroutineScope
@@ -105,11 +107,12 @@ internal class HttpArcadeClient(
         return httpClient.put(apiPath("races/$id/reset")).body()
     }
 
-    override fun downloadRace(id: RaceId): Flow<String> = flow {
+    override fun downloadRace(id: RaceId): Flow<ByteArray> = flow {
         val response = httpClient.get(apiPath("races/$id/download"))
         val channel = response.bodyAsChannel()
-        while (!channel.isClosedForRead) {
-            emit(channel.readLineStrict() ?: break)
+        while (channel.awaitContent()) {
+            val size = channel.readInt()
+            emit(channel.readByteArray(size))
         }
     }
 
@@ -167,14 +170,14 @@ internal class HttpArcadeClient(
     override suspend fun upload(
         id: RaceId,
         nonce: Nonce,
-        events: ReceiveChannel<String>
+        events: ReceiveChannel<ByteArray>
     ): RaceResponse = coroutineScope {
         val channel = ByteChannel()
         launch {
             channel.use {
                 events.consumeEach {
-                    channel.writeString(it)
-                    channel.writeString("\n")
+                    channel.writeInt(it.size)
+                    channel.writeByteArray(it)
                 }
             }
         }

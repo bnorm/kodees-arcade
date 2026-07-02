@@ -43,7 +43,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
 import dev.bnorm.arcade.machine.Race as RallyRace
 
 sealed class ServerConnection {
@@ -246,7 +246,7 @@ suspend fun process(
                     }
                 }
             }
-            .map { Json.encodeToString(RallyRace.Event.serializer(), it) }
+            .map { ProtoBuf.encodeToByteArray(RallyRace.Event.serializer(), it) }
             .produceIn(this)
 
         try {

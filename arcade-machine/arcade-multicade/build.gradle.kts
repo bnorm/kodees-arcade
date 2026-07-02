@@ -19,7 +19,10 @@ kotlin {
 
             implementation(libs.kotlinx.coroutines.core)
 
+            implementation(libs.ktor.io)
+            implementation(libs.ktor.utils)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.serialization.protobuf)
 
             implementation(libs.filekit.core)
         }

@@ -1,13 +1,15 @@
 package dev.bnorm.arcade.machine
 
+import io.ktor.util.cio.use
+import io.ktor.util.cio.writeChannel
+import io.ktor.utils.io.writeByteArray
+import io.ktor.utils.io.writeInt
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
-import kotlin.io.path.bufferedWriter
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
 
 // TODO is there a way to create this with JS as well?
 //  - filekit is great for desktop
@@ -23,17 +25,13 @@ class RecordRace(
         try {
             coroutineScope {
                 launch {
-                    path.bufferedWriter(
-                        options = arrayOf(
-                            StandardOpenOption.TRUNCATE_EXISTING,
-                            StandardOpenOption.CREATE,
-                            StandardOpenOption.WRITE,
-                        )
-                    ).use { writer ->
-                        for (event in race.events) {
-                            writer.appendLine(Json.encodeToString(Race.Event.serializer(), event))
-                            events.send(event)
-                        }
+                    path.toFile().writeChannel().use {
+
+                            for (event in race.events) {
+                                val bytes = ProtoBuf.encodeToByteArray(Race.Event.serializer(), event)
+                                writeInt(bytes.size)
+                                writeByteArray(bytes)
+                            }
                     }
                 }
 

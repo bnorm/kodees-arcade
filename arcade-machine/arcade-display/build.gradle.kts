@@ -24,7 +24,7 @@ kotlin {
             implementation(libs.compose.resources)
             implementation(libs.filekit.dialogs.compose)
 
-            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.serialization.protobuf)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
