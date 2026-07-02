@@ -8,15 +8,14 @@ import dev.bnorm.arcade.service.repo.RacerRepository
 import dev.bnorm.arcade.service.repo.TrackEntity
 import dev.bnorm.arcade.service.repo.TrackRepository
 import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.ContributesBinding
-import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
 import io.ktor.util.cio.readChannel
 import kotlin.io.path.toPath
 import kotlinx.serialization.json.Json
 
 @SingleIn(AppScope::class)
-@ContributesBinding(AppScope::class)
+@ContributesIntoSet(AppScope::class)
 class Initializer(
     private val tracks: TrackRepository,
     private val racers: RacerRepository,

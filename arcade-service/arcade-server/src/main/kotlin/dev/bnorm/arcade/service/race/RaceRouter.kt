@@ -1,14 +1,13 @@
-package dev.bnorm.arcade.service.route
+package dev.bnorm.arcade.service.race
 
 import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
-import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.race.RaceService
-import dev.bnorm.arcade.service.repo.RaceEntity
+import dev.bnorm.arcade.service.route.Router
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.SingleIn
 import io.ktor.http.ContentDisposition
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -22,12 +21,14 @@ import io.ktor.server.response.respondBytesWriter
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.sse.heartbeat
 import io.ktor.server.sse.sse
 import io.ktor.utils.io.copyAndClose
 import kotlinx.serialization.json.Json
 
+@SingleIn(AppScope::class)
 @ContributesIntoSet(AppScope::class)
 class RaceRouter(
     private val races: RaceService,
@@ -54,6 +55,12 @@ class RaceRouter(
             get("/{raceId}") {
                 val raceId = call.parameters.raceId
                 val race = races.getRace(raceId) ?: throw NotFoundException()
+                call.respond(race)
+            }
+
+            put("/{raceId}/reset") {
+                val raceId = call.parameters.raceId
+                val race =  races.resetRace(raceId) ?: throw NotFoundException()
                 call.respond(race)
             }
 
@@ -86,20 +93,6 @@ class RaceRouter(
                 call.respond(race)
             }
         }
-
-        suspend fun process() {
-            // TODO reset nonce and reprocess
-        }
-    }
-
-    private fun RaceEntity.toResponse(): RaceResponse {
-        return RaceResponse(
-            id = this.id,
-            trackId = this.trackId,
-            startTime = this.startTime,
-            endTime = this.endTime,
-            racers = this.racers.toList(),
-        )
     }
 
     private val Parameters.raceId: RaceId get() = RaceId(getUuid("raceId"))

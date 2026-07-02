@@ -19,6 +19,7 @@ import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsChannel
@@ -98,6 +99,10 @@ internal class HttpArcadeClient(
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
+    }
+
+    override suspend fun resetRace(id: RaceId): RaceResponse {
+        return httpClient.put(apiPath("races/$id/reset")).body()
     }
 
     override fun downloadRace(id: RaceId): Flow<String> = flow {

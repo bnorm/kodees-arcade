@@ -20,6 +20,7 @@ interface ArcadeClient : AutoCloseable {
     suspend fun getRaces(): List<RaceResponse>
     suspend fun getRace(id: RaceId): RaceResponse
     suspend fun createRace(request: RaceCreateRequest): RaceResponse
+    suspend fun resetRace(id: RaceId): RaceResponse
 
     // TODO find the best way to deal directly with bytes without exposing ktor
     fun downloadRace(id: RaceId): Flow<String>

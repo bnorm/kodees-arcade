@@ -1,21 +1,27 @@
-package dev.bnorm.arcade.service.repo
+package dev.bnorm.arcade.service.race
 
 import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.TrackId
+import dev.bnorm.arcade.service.repo.BlobId
+import dev.bnorm.arcade.service.repo.BlobTable
+import dev.bnorm.arcade.service.repo.RacerTable
+import dev.bnorm.arcade.service.repo.Repository
+import dev.bnorm.arcade.service.repo.TrackTable
+import dev.bnorm.arcade.service.repo.nonce
+import dev.bnorm.arcade.service.repo.raceId
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
-import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlin.time.Instant
-import kotlinx.coroutines.flow.associateBy
 import kotlinx.coroutines.flow.groupBy
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.flow.singleOrNull
 import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Table
@@ -26,6 +32,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.datetime.timestamp
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
+import org.jetbrains.exposed.v1.r2dbc.batchInsert
 import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
@@ -45,6 +52,7 @@ object RaceRacerTable : Table("race_racers") {
     override val primaryKey = PrimaryKey(raceId, racerId)
 }
 
+// TODO does this really need to be another table?
 object RaceResultTable : Table("race_results") {
     val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
     val nonce = nonce("nonce")
@@ -56,6 +64,11 @@ object RaceResultTable : Table("race_results") {
 
     override val primaryKey = PrimaryKey(raceId)
 }
+
+val RaceResultsJoin = RaceTable.join(
+    RaceResultTable,
+    JoinType.LEFT,
+)
 
 data class RaceEntity(
     val id: RaceId,
@@ -69,22 +82,20 @@ data class RaceEntity(
 
 fun ResultRow.toRaceEntity(
     racers: List<RacerId>,
-    resultRow: ResultRow,
 ): RaceEntity {
     return RaceEntity(
         id = this[RaceTable.id].value,
         trackId = this[RaceTable.trackId].value,
         racers = racers,
-        nonce = resultRow[RaceResultTable.nonce],
-        startTime = resultRow[RaceResultTable.startTime],
-        endTime = resultRow[RaceResultTable.endTime],
-        blobId = resultRow[RaceResultTable.blobId]?.value,
+        nonce = this[RaceResultTable.nonce],
+        startTime = this[RaceResultTable.startTime],
+        endTime = this[RaceResultTable.endTime],
+        blobId = this[RaceResultTable.blobId]?.value,
     )
 }
 
-@ContributesIntoSet(AppScope::class)
 @SingleIn(AppScope::class)
-@Inject
+@ContributesIntoSet(AppScope::class)
 class RaceRepository(
     private val database: R2dbcDatabase,
 ) : Repository {
@@ -102,14 +113,27 @@ class RaceRepository(
                 valueTransform = { it[RaceRacerTable.racerId].value },
             )
 
-            val results = RaceResultTable.selectAll().associateBy {
-                it[RaceResultTable.raceId].value
-            }
+            // TODO array_agg?
+            // RaceRacerTable.join(RaceResultsJoin, JoinType.RIGHT, RaceTable.id)
+            //     .select(RaceRacerTable.racerId.function("ARRAY_AGG"), *RaceResultsJoin.columns.toTypedArray())
 
-            RaceTable.selectAll().map {
+            RaceResultsJoin.selectAll().map {
                 val id = it[RaceTable.id].value
-                it.toRaceEntity(racerIds[id].orEmpty(), results.getValue(id))
+                it.toRaceEntity(racerIds[id].orEmpty())
             }.toList()
+        }
+    }
+
+    /**
+     * Specialized query to get only incomplete races.
+     * Race entities are created without associated racer IDs to limit data.
+     */
+    suspend fun getIncompleteRaces(): List<RaceEntity> {
+        // TODO paginate somehow?
+        return suspendTransaction(database) {
+            RaceResultsJoin.selectAll()
+                .where { RaceResultTable.endTime eq null }
+                .map { it.toRaceEntity(emptyList()) }.toList()
         }
     }
 
@@ -124,26 +148,27 @@ class RaceRepository(
                 it[this.nonce] = Nonce.generate()
             }
 
-            val racerIds = racers.map { racerId ->
-                (RaceRacerTable.insert {
-                    it[RaceRacerTable.raceId] = raceId
-                    it[RaceRacerTable.racerId] = racerId
-                } get RaceRacerTable.racerId).value
-            }
+            val racerIds = RaceRacerTable.batchInsert(racers) {
+                this[RaceRacerTable.raceId] = raceId
+                this[RaceRacerTable.racerId] = it
+            }.map { it[RaceRacerTable.racerId].value }
 
-            RaceTable.selectAll().where(RaceTable.id eq raceId)
-                .single().toRaceEntity(racerIds, getRaceResult(raceId.value)!!)
+            RaceResultsJoin.selectAll().where(RaceTable.id eq raceId)
+                .single().toRaceEntity(racerIds)
         }
     }
 
     suspend fun getRace(id: RaceId): RaceEntity? {
-        // TODO implement as join?
         return suspendTransaction(database) {
-            val result = RaceTable.selectAll()
-                .where(RaceTable.id eq id)
-                .singleOrNull() ?: return@suspendTransaction null
+            val row = RaceResultsJoin
+                .selectAll()
+                .where { RaceTable.id eq id }
+                .singleOrNull()
+
+            row ?: return@suspendTransaction null
+
             val racerIds = getRacerIds(id)
-            result.toRaceEntity(racerIds, getRaceResult(id)!!)
+            row.toRaceEntity(racerIds)
         }
     }
 
@@ -168,7 +193,6 @@ class RaceRepository(
                         (RaceResultTable.nonce eq nonce)
                 }
             ) {
-                it[RaceResultTable.startTime] = startTime
                 it[RaceResultTable.endTime] = endTime
                 it[RaceResultTable.blobId] = blobId
             } == 1
@@ -178,9 +202,13 @@ class RaceRepository(
     suspend fun resetRace(id: RaceId): RaceEntity? {
         return suspendTransaction(database) {
             val rows = RaceResultTable.update(
-                where = { RaceResultTable.raceId eq id }
+                where = {
+                    (RaceResultTable.raceId eq id) and
+                        (RaceResultTable.blobId eq null)
+                }
             ) {
                 it[RaceResultTable.nonce] = Nonce.generate()
+                it[RaceResultTable.startTime] = null
             }
             if (rows != 1) return@suspendTransaction null
 
@@ -191,11 +219,5 @@ class RaceRepository(
     private suspend fun getRacerIds(id: RaceId): List<RacerId> {
         return RaceRacerTable.selectAll().where(RaceRacerTable.raceId eq id)
             .map { it[RaceRacerTable.racerId].value }.toList()
-    }
-
-    private suspend fun getRaceResult(id: RaceId): ResultRow? {
-        return RaceResultTable.selectAll()
-            .where(RaceResultTable.raceId eq id)
-            .singleOrNull()
     }
 }
