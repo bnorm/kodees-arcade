@@ -17,6 +17,8 @@ import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.callid.generate
 import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.compression.Compression
+import io.ktor.server.plugins.compression.zstd.zstdStandard
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respondText
@@ -101,6 +103,10 @@ suspend fun Application.module() {
 
     install(ContentNegotiation) {
         json()
+    }
+
+    install(Compression) {
+        zstdStandard()
     }
 
     install(SSE)
