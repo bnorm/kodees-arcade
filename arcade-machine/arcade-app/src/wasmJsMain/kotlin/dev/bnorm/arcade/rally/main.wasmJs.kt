@@ -57,7 +57,6 @@ fun main() {
                     }
                 }
 
-                var showSubmitter by remember { mutableStateOf(false) }
                 var showDownloader by remember { mutableStateOf(false) }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -65,24 +64,9 @@ fun main() {
                         Text("Load Recording")
                     }
                     if (client != null) {
-                        Button(onClick = { race = null; showSubmitter = true }) {
-                            Text("Submit")
-                        }
                         Button(onClick = { race = null; showDownloader = true }) {
                             Text("Download")
                         }
-                    }
-                }
-
-                if (showSubmitter && client != null) {
-                    Dialog(onDismissRequest = { showSubmitter = false }) {
-                        RaceSubmitter(
-                            client,
-                            onStart = {
-                                race = it
-                                showSubmitter = false
-                            }
-                        )
                     }
                 }
 

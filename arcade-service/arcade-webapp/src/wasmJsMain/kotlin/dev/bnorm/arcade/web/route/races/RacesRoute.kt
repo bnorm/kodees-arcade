@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.bnorm.arcade.icons.play_arrow
+import dev.bnorm.arcade.icons.replay
 import dev.bnorm.arcade.icons.sports_motorsports
 import dev.bnorm.arcade.rally.RaceTrack
 import dev.bnorm.arcade.rally.race.DownloadRace
@@ -54,6 +57,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlinx.coroutines.launch
 
 @ContributesIntoSet(AppScope::class)
 class RacesRoute(
@@ -104,7 +108,7 @@ class RacesRoute(
                     .width(IntrinsicSize.Max)
             ) {
                 for (race in races) {
-                    RaceCard(race, racers, tracks, onWatch = {
+                    RaceCard(client, race, racers, tracks, onWatch = {
                         watchRaceId = race.id
                     })
                 }
@@ -166,6 +170,7 @@ private fun RaceCreateButton(client: ArcadeClient, onCreate: (RaceResponse) -> U
 
 @Composable
 private fun RaceCard(
+    client: ArcadeClient,
     race: RaceResponse,
     racers: SnapshotStateMap<RacerId, RacerResponse>,
     tracks: SnapshotStateMap<TrackId, TrackResponse>,
@@ -187,20 +192,11 @@ private fun RaceCard(
             Row {
                 Text(track.name, style = MaterialTheme.typography.titleLarge)
                 if (endTime != null) {
-                    Spacer(Modifier.width(8.dp))
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .clickable(
-                                indication = ripple(bounded = false, radius = 24.dp),
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) {
-                                onWatch()
-                            }
-                    ) {
-                        // TODO this doesn't look truly centered...
-                        Icon(play_arrow, contentDescription = "Play race")
-                    }
+                    Spacer(Modifier.weight(1f).widthIn(min = 32.dp))
+                    PlayRaceButton(onWatch)
+                } else {
+                    Spacer(Modifier.weight(1f).widthIn(min = 32.dp))
+                    ResetRaceButton(client, race.id)
                 }
             }
 
@@ -254,6 +250,47 @@ private fun RaceCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PlayRaceButton(onWatch: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .clickable(
+                indication = ripple(bounded = false, radius = 24.dp),
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                onWatch()
+            }
+    ) {
+        // TODO this doesn't look truly centered...
+        Icon(play_arrow, contentDescription = "Play race")
+    }
+}
+
+@Composable
+private fun ResetRaceButton(
+    client: ArcadeClient,
+    id: RaceId,
+    modifier: Modifier = Modifier
+) {
+    val scope = rememberCoroutineScope()
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .clickable(
+                indication = ripple(bounded = false, radius = 24.dp),
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                scope.launch {
+                    client.resetRace(id)
+                }
+            }
+    ) {
+        // TODO this doesn't look truly centered...
+        Icon(replay, contentDescription = "Reset race")
     }
 }
 

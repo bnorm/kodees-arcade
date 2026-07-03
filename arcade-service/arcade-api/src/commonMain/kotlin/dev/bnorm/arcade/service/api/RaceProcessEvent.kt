@@ -3,7 +3,7 @@ package dev.bnorm.arcade.service.api
 import kotlinx.serialization.Serializable
 
 @Serializable
-class RaceCreateRequest(
-    val trackId: TrackId,
-    val racerIds: List<RacerId>,
+class RaceProcessEvent(
+    val id: RaceId,
+    val nonce: Nonce,
 )

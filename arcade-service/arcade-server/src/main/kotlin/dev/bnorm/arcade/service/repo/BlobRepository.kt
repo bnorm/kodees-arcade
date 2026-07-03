@@ -5,6 +5,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import io.ktor.encoding.zstd.ZstdEncoder
 import io.ktor.util.cio.readChannel
 import io.ktor.util.cio.writeChannel
 import io.ktor.utils.io.ByteReadChannel
@@ -59,6 +60,8 @@ class BlobRepository(
     private val database: R2dbcDatabase,
     @BlobDirectory private val directory: Path = Files.createTempDirectory("blobs"),
 ) : Repository {
+    private val encoder = ZstdEncoder()
+
     override suspend fun migrate() {
         suspendTransaction(database) {
             SchemaUtils.create(BlobTable)
@@ -74,7 +77,7 @@ class BlobRepository(
                 it[this.path] = path
             }
 
-            channel.copyAndClose(path.toFile().writeChannel())
+            encoder.encode(channel).copyAndClose(path.toFile().writeChannel())
 
             BlobEntity(id, path)
         }
@@ -84,7 +87,7 @@ class BlobRepository(
         return suspendTransaction(database) {
             val blob = BlobTable.selectAll().where(BlobTable.id eq id)
                 .singleOrNull()?.toBlobEntity()
-            blob?.path?.readChannel()
+            blob?.path?.readChannel()?.let { encoder.decode(it) }
         }
     }
 }

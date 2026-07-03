@@ -39,7 +39,6 @@ import dev.bnorm.arcade.service.api.TrackResponse
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
-// TODO share this with app
 @Composable
 fun RaceSubmitter(
     client: ArcadeClient,

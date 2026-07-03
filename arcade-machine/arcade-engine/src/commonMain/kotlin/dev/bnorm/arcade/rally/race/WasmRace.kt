@@ -82,6 +82,8 @@ class WasmRace(
                     }
                 events.send(Race.Event.Complete(results))
             }
+        } catch (t: Throwable) {
+            events.close(t)
         } finally {
             events.close()
         }
