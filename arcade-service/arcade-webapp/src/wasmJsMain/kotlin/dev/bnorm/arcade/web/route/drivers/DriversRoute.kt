@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.web.route.racers
+package dev.bnorm.arcade.web.route.drivers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +40,7 @@ import dev.zacsweers.metro.ContributesIntoSet
 import kotlinx.coroutines.launch
 
 @ContributesIntoSet(AppScope::class)
-class RacersRoute(
+class DriversRoute(
     private val client: ArcadeClient
 ) : Route {
     override val path: String get() = "/drivers"

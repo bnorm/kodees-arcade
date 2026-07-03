@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.web.route.racers
+package dev.bnorm.arcade.web.route.drivers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
