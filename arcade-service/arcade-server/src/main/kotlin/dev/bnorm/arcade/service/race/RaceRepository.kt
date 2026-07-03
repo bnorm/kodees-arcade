@@ -4,9 +4,12 @@ import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.TrackId
+import dev.bnorm.arcade.service.api.Version
 import dev.bnorm.arcade.service.repo.BlobId
 import dev.bnorm.arcade.service.repo.BlobTable
 import dev.bnorm.arcade.service.repo.RacerTable
+import dev.bnorm.arcade.service.repo.RacerVersionId
+import dev.bnorm.arcade.service.repo.RacerVersionTable
 import dev.bnorm.arcade.service.repo.Repository
 import dev.bnorm.arcade.service.repo.TrackTable
 import dev.bnorm.arcade.service.repo.nonce
@@ -17,7 +20,6 @@ import dev.zacsweers.metro.SingleIn
 import kotlin.time.Instant
 import kotlinx.coroutines.flow.groupBy
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.flow.singleOrNull
 import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.Column
@@ -45,13 +47,6 @@ object RaceTable : IdTable<RaceId>("races") {
     override val primaryKey = PrimaryKey(id)
 }
 
-object RaceRacerTable : Table("race_racers") {
-    val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
-    val racerId = reference("racer_id", RacerTable, onDelete = ReferenceOption.RESTRICT)
-
-    override val primaryKey = PrimaryKey(raceId, racerId)
-}
-
 // TODO does this really need to be another table?
 object RaceResultTable : Table("race_results") {
     val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
@@ -70,27 +65,64 @@ val RaceResultsJoin = RaceTable.join(
     JoinType.LEFT,
 )
 
+object RaceRacerTable : Table("race_racers") {
+    val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
+    val racerVersionId = reference("racer_version_id", RacerVersionTable, onDelete = ReferenceOption.RESTRICT)
+
+    override val primaryKey = PrimaryKey(raceId, racerVersionId)
+}
+
+val RaceRacerVersionJoin = RaceRacerTable
+    .join(
+        RacerVersionTable,
+        JoinType.INNER,
+    )
+    .join(
+        RacerTable,
+        JoinType.INNER,
+        onColumn = RacerTable.id,
+        otherColumn = RacerVersionTable.racerId,
+    )
+
 data class RaceEntity(
     val id: RaceId,
     val trackId: TrackId,
-    val racers: List<RacerId>,
+    val versionedRacers: List<VersionedRacerEntity>,
     val nonce: Nonce,
     val startTime: Instant? = null,
     val endTime: Instant? = null,
     val blobId: BlobId? = null,
 )
 
+class VersionedRacerEntity(
+    val racerId: RacerId,
+    val racerVersionId: RacerVersionId,
+    val name: String,
+    val version: Version,
+    val blobId: BlobId,
+)
+
 fun ResultRow.toRaceEntity(
-    racers: List<RacerId>,
+    versionedRacers: List<VersionedRacerEntity>,
 ): RaceEntity {
     return RaceEntity(
         id = this[RaceTable.id].value,
         trackId = this[RaceTable.trackId].value,
-        racers = racers,
+        versionedRacers = versionedRacers,
         nonce = this[RaceResultTable.nonce],
         startTime = this[RaceResultTable.startTime],
         endTime = this[RaceResultTable.endTime],
         blobId = this[RaceResultTable.blobId]?.value,
+    )
+}
+
+fun ResultRow.toVersionedRacerEntity(): VersionedRacerEntity {
+    return VersionedRacerEntity(
+        racerId = this[RacerTable.id].value,
+        racerVersionId = this[RacerVersionTable.id].value,
+        name = this[RacerTable.name],
+        version = this[RacerVersionTable.version],
+        blobId = this[RacerVersionTable.blobId].value,
     )
 }
 
@@ -108,9 +140,9 @@ class RaceRepository(
     suspend fun getRaces(): List<RaceEntity> {
         // TODO paginate somehow
         return suspendTransaction(database) {
-            val racerIds = RaceRacerTable.selectAll().groupBy(
+            val racerVersionIds = RaceRacerVersionJoin.selectAll().groupBy(
                 keySelector = { it[RaceRacerTable.raceId].value },
-                valueTransform = { it[RaceRacerTable.racerId].value },
+                valueTransform = { it.toVersionedRacerEntity() },
             )
 
             // TODO array_agg?
@@ -119,7 +151,7 @@ class RaceRepository(
 
             RaceResultsJoin.selectAll().map {
                 val id = it[RaceTable.id].value
-                it.toRaceEntity(racerIds[id].orEmpty())
+                it.toRaceEntity(racerVersionIds[id].orEmpty())
             }.toList()
         }
     }
@@ -137,24 +169,29 @@ class RaceRepository(
         }
     }
 
-    suspend fun createRace(trackId: TrackId, racers: List<RacerId>): RaceEntity {
+    suspend fun createRace(trackId: TrackId, racerVersionIds: List<RacerVersionId>): RaceEntity {
         return suspendTransaction(database) {
-            val raceId = RaceTable.insert {
+            val raceId = (RaceTable.insert {
                 it[this.trackId] = trackId
-            } get RaceTable.id
+            } get RaceTable.id).value
 
+            val nonce = Nonce.generate()
             RaceResultTable.insert {
-                it[this.raceId] = raceId.value
-                it[this.nonce] = Nonce.generate()
+                it[this.raceId] = raceId
+                it[this.nonce] = nonce
             }
 
-            val racerIds = RaceRacerTable.batchInsert(racers) {
+            RaceRacerTable.batchInsert(racerVersionIds) {
                 this[RaceRacerTable.raceId] = raceId
-                this[RaceRacerTable.racerId] = it
-            }.map { it[RaceRacerTable.racerId].value }
+                this[RaceRacerTable.racerVersionId] = it
+            }
 
-            RaceResultsJoin.selectAll().where(RaceTable.id eq raceId)
-                .single().toRaceEntity(racerIds)
+            RaceEntity(
+                id = raceId,
+                trackId = trackId,
+                versionedRacers = getVersionedRacers(raceId),
+                nonce = nonce,
+            )
         }
     }
 
@@ -167,8 +204,8 @@ class RaceRepository(
 
             row ?: return@suspendTransaction null
 
-            val racerIds = getRacerIds(id)
-            row.toRaceEntity(racerIds)
+            val versionedRacers = getVersionedRacers(id)
+            row.toRaceEntity(versionedRacers)
         }
     }
 
@@ -216,8 +253,10 @@ class RaceRepository(
         }
     }
 
-    private suspend fun getRacerIds(id: RaceId): List<RacerId> {
-        return RaceRacerTable.selectAll().where(RaceRacerTable.raceId eq id)
-            .map { it[RaceRacerTable.racerId].value }.toList()
+    private suspend fun getVersionedRacers(id: RaceId): List<VersionedRacerEntity> {
+        return RaceRacerVersionJoin.selectAll()
+            .where { RaceRacerTable.raceId eq id }
+            .map { it.toVersionedRacerEntity() }
+            .toList()
     }
 }

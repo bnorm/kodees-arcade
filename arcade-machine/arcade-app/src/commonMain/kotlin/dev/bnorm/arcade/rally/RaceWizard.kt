@@ -32,7 +32,8 @@ import dev.bnorm.arcade.machine.Race
 import dev.bnorm.arcade.rally.race.WasmRace
 import dev.bnorm.arcade.rally.race.WasmRacer
 import dev.bnorm.arcade.server.client.ArcadeClient
-import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.RacerId
+import dev.bnorm.arcade.service.api.Version
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
@@ -82,13 +83,24 @@ fun RaceWizard(
         }
     }
 
+    class RacerDisplay(
+        val id: RacerId,
+        val version: Version,
+        val name: String,
+    )
+
     var showDownloader by remember { mutableStateOf(false) }
-    val serverRacers = remember { mutableStateListOf<RacerResponse>() }
+    val serverRacers = remember { mutableStateListOf<RacerDisplay>() }
     if (client != null && showDownloader) {
         LaunchedEffect(Unit) {
-            val foundRacers = client.getRacers().filter { it.versions.isNotEmpty() }
+            val foundRacers = client.getRacers()
+            val foundVersions = foundRacers
+                .flatMap { racer ->
+                    client.getRacerVersions(racer.id)
+                        .map { RacerDisplay(racer.id, it.version, racer.name) }
+                }
             serverRacers.clear()
-            serverRacers.addAll(foundRacers)
+            serverRacers.addAll(foundVersions)
         }
 
         Dialog(onDismissRequest = { showDownloader = false }) {
@@ -97,7 +109,7 @@ fun RaceWizard(
                     Text("Racers", style = MaterialTheme.typography.headlineSmall)
                     LazyColumn(Modifier.fillMaxWidth()) {
                         items(serverRacers) { racer ->
-                            val version = racer.versions.last()
+                            val version = racer.version
                             val name = "${racer.name} $version"
                             Text(
                                 text = name,

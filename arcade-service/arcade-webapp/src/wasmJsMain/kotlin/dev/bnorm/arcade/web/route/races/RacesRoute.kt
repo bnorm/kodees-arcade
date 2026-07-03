@@ -244,8 +244,8 @@ private fun RaceCard(
 
             Column {
                 // TODO this should be the same as race results
-                for (racerId in race.racers) {
-                    Text(racers.getValue(racerId).name, style = MaterialTheme.typography.bodyLarge)
+                for (racer in race.racers) {
+                    Text(racer.name, style = MaterialTheme.typography.bodyLarge)
                     // TODO include racer version
                 }
             }

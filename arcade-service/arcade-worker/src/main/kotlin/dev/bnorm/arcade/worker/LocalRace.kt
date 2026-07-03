@@ -22,17 +22,14 @@ class LocalRace(
 
     override suspend fun start() {
         try {
-            val race = client.getRace(id) ?: return // TODO error
-            val track = client.getTrack(race.trackId) ?: return // TODO error
-            val trackBlob = client.downloadTrack(track.id) ?: return // TODO error
+            val race = client.getRace(id) // TODO error
+            val track = client.getTrack(race.trackId) // TODO error
+            val trackBlob = client.downloadTrack(track.id) // TODO error
 
             val rallyTrack = Json.decodeFromString(RallyTrack.serializer(), trackBlob.decodeToString())
             val rallyRacers = buildList {
-                for (id in race.racers) {
-                    val racer = client.getRacer(id) ?: return // TODO error
-                    // TODO download race specific version
-                    val version = racer.versions.lastOrNull() ?: return // TODO error
-                    val blob = client.downloadRacerVersion(racer.id, version) // TODO error
+                for (racer in race.racers) {
+                    val blob = client.downloadRacerVersion(racer.id, racer.version) // TODO error
                     add(WasmRacer(racer.name, blob))
                 }
             }

@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 
 // TODO rename to driver?
 @Serializable
-class RacerResponse(
-    val id: RacerId,
-    val name: String,
+class RacerVersionResponse(
+    val version: Version
 )

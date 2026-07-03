@@ -8,6 +8,7 @@ import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.RacerCreateRequest
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.RacerVersionResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
@@ -134,6 +135,10 @@ internal class HttpArcadeClient(
 
     override suspend fun getRacer(id: RacerId): RacerResponse {
         return httpClient.get(apiPath("racers/$id")).body()
+    }
+
+    override suspend fun getRacerVersions(id: RacerId): List<RacerVersionResponse> {
+        return httpClient.get(apiPath("racers/$id/versions")).body()
     }
 
     override suspend fun downloadRacerVersion(id: RacerId, version: Version): ByteArray {

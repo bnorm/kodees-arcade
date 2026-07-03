@@ -7,19 +7,17 @@ import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.ktor.utils.io.ByteReadChannel
-import java.util.NavigableMap
-import java.util.TreeMap
-import kotlinx.coroutines.flow.groupBy
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.singleOrNull
 import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
 import org.jetbrains.exposed.v1.r2dbc.insert
@@ -33,25 +31,44 @@ object RacerTable : IdTable<RacerId>("racers") {
     override val primaryKey = PrimaryKey(id)
 }
 
-object RacerVersionTable : Table("racer_versions") {
+object RacerVersionTable : IdTable<RacerVersionId>("racer_versions") {
+    override val id = racerVersionId("id").clientDefault { RacerVersionId.generate() }.entityId()
     val racerId = reference("racer_id", RacerTable, onDelete = ReferenceOption.CASCADE)
     val version = version("version")
     val blobId = reference("blob_id", BlobTable, onDelete = ReferenceOption.RESTRICT)
 
-    override val primaryKey = PrimaryKey(racerId, version)
+    override val primaryKey = PrimaryKey(id)
+
+    init {
+        uniqueIndex(racerId, version)
+    }
 }
 
 data class RacerEntity(
     val id: RacerId,
     val name: String,
-    val versions: NavigableMap<Version, BlobId>
 )
 
-fun ResultRow.toRacerEntity(versions: NavigableMap<Version, BlobId>): RacerEntity {
+fun ResultRow.toRacerEntity(): RacerEntity {
     return RacerEntity(
         id = this[RacerTable.id].value,
         name = this[RacerTable.name],
-        versions = versions,
+    )
+}
+
+class RacerVersionEntity(
+    val id: RacerVersionId,
+    val racerId: RacerId,
+    val version: Version,
+    val blobId: BlobId,
+)
+
+fun ResultRow.toRacerVersionEntity(): RacerVersionEntity {
+    return RacerVersionEntity(
+        id = this[RacerVersionTable.id].value,
+        racerId = this[RacerVersionTable.racerId].value,
+        version = this[RacerVersionTable.version],
+        blobId = this[RacerVersionTable.blobId].value,
     )
 }
 
@@ -70,18 +87,9 @@ class RacerRepository(
 
     suspend fun getRacers(): List<RacerEntity> {
         return suspendTransaction(database) {
-            val racerVersions = RacerVersionTable.selectAll().groupBy(
-                keySelector = { it[RacerVersionTable.racerId].value },
-                valueTransform = { it[RacerVersionTable.version] to it[RacerVersionTable.blobId].value },
-            )
-            RacerTable.selectAll().map {
-                val versions = buildNavigableMap {
-                    for ((version, blobId) in racerVersions[it[RacerTable.id].value].orEmpty()) {
-                        put(version, blobId)
-                    }
-                }
-                it.toRacerEntity(versions)
-            }.toList()
+            RacerTable.selectAll()
+                .map { it.toRacerEntity() }
+                .toList()
         }
     }
 
@@ -91,28 +99,13 @@ class RacerRepository(
                 it[this.name] = name
             } get RacerTable.id
 
-            RacerEntity(id.value, name, buildNavigableMap {})
-        }
-    }
-
-    suspend fun uploadVersion(id: RacerId, version: Version, channel: ByteReadChannel): RacerEntity? {
-        return suspendTransaction(database) {
-            val racerRow = getRacerRow(id) ?: return@suspendTransaction null
-
-            val blob = blobs.upload(channel)
-            RacerVersionTable.insert {
-                it[this.racerId] = id
-                it[this.version] = version
-                it[this.blobId] = blob.id
-            }
-
-            racerRow.toRacerEntity(getVersions(id))
+            RacerEntity(id.value, name)
         }
     }
 
     suspend fun getRacer(id: RacerId): RacerEntity? {
         return suspendTransaction(database) {
-            getRacerRow(id)?.toRacerEntity(getVersions(id))
+            getRacerRow(id)?.toRacerEntity()
         }
     }
 
@@ -121,14 +114,58 @@ class RacerRepository(
             .singleOrNull()
     }
 
-    private suspend fun getVersions(id: RacerId): NavigableMap<Version, BlobId> {
-        return buildNavigableMap {
-            RacerVersionTable.selectAll().where(RacerVersionTable.racerId eq id)
-                .collect { put(it[RacerVersionTable.version], it[RacerVersionTable.blobId].value) }
+    suspend fun getRacerVersions(): List<RacerVersionEntity> {
+        return suspendTransaction(database) {
+            RacerVersionTable
+                .selectAll()
+                .map { it.toRacerVersionEntity() }
+                .toList()
         }
     }
-}
 
-private inline fun <K, V> buildNavigableMap(block: MutableMap<K, V>.() -> Unit): NavigableMap<K, V> {
-    return TreeMap<K, V>().apply(block)
+    suspend fun getRacerVersions(id: RacerId): List<RacerVersionEntity> {
+        return suspendTransaction(database) {
+            RacerVersionTable
+                .selectAll()
+                .where { RacerVersionTable.racerId eq id }
+                .map { it.toRacerVersionEntity() }
+                .toList()
+        }
+    }
+
+    // TODO iterable of racer / version key pairs?
+    suspend fun getRacerVersions(ids: Iterable<RacerId>): List<RacerVersionEntity> {
+        return suspendTransaction(database) {
+            RacerVersionTable
+                .selectAll()
+                .where { RacerVersionTable.racerId inList ids }
+                .map { it.toRacerVersionEntity() }
+                .toList()
+        }
+    }
+
+    suspend fun getRacerVersion(id: RacerId, version: Version): RacerVersionEntity? {
+        return suspendTransaction(database) {
+            RacerVersionTable.selectAll()
+                .where {
+                    (RacerVersionTable.racerId eq id) and
+                        (RacerVersionTable.version eq version)
+                }
+                .singleOrNull()
+                ?.toRacerVersionEntity()
+        }
+    }
+
+    suspend fun uploadRacerVersion(racerId: RacerId, version: Version, channel: ByteReadChannel): RacerVersionEntity? {
+        return suspendTransaction(database) {
+            val blob = blobs.upload(channel)
+            val id = RacerVersionTable.insert {
+                it[this.racerId] = racerId
+                it[this.version] = version
+                it[this.blobId] = blob.id
+            } get RacerVersionTable.id
+
+            RacerVersionEntity(id.value, racerId, version, blob.id)
+        }
+    }
 }

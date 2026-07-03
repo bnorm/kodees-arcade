@@ -22,7 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,7 +54,14 @@ fun RacerCard(
     client: ArcadeClient,
     onUpload: (RacerResponse) -> Unit,
 ) {
-    val latest = racer.versions.lastOrNull()
+    val versions = remember { mutableStateListOf<Version>() }
+    LaunchedEffect(racer) {
+        val sorted = client.getRacerVersions(racer.id).map { it.version }.sorted()
+        versions.clear()
+        versions.addAll(sorted)
+    }
+    val latest = versions.lastOrNull()
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -97,7 +106,7 @@ fun RacerCard(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
             ) {
-                for (version in racer.versions.asReversed()) {
+                for (version in versions.asReversed()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

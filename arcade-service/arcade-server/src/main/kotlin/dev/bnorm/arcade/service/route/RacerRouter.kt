@@ -3,10 +3,12 @@ package dev.bnorm.arcade.service.route
 import dev.bnorm.arcade.service.api.RacerCreateRequest
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.RacerVersionResponse
 import dev.bnorm.arcade.service.api.Version
 import dev.bnorm.arcade.service.repo.BlobRepository
 import dev.bnorm.arcade.service.repo.RacerEntity
 import dev.bnorm.arcade.service.repo.RacerRepository
+import dev.bnorm.arcade.service.repo.RacerVersionEntity
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import io.ktor.http.ContentDisposition
@@ -48,17 +50,23 @@ class RacerRouter(
                 call.respond(racer.toResponse())
             }
 
+            get("/{racerId}/versions") {
+                val racerId = call.parameters.racerId
+                val racer = racers.getRacerVersions(racerId) // TODO throw NotFoundException()
+                call.respond(racer.map { it.toResponse() })
+            }
+
             get("/{racerId}/download/{version}") {
                 val racerId = call.parameters.racerId
                 val version = call.parameters.version
-                val racer = racers.getRacer(racerId) ?: throw NotFoundException()
-                val blobId = racer.versions[version] ?: throw NotFoundException()
-                val download = blobs.download(blobId) ?: error("should be impossible")
+                val racerEntity = racers.getRacer(racerId) ?: throw NotFoundException()
+                val versionEntity = racers.getRacerVersion(racerId, version) ?: throw NotFoundException()
+                val download = blobs.download(versionEntity.blobId) ?: error("should be impossible")
 
                 call.response.header(
                     HttpHeaders.ContentDisposition,
                     ContentDisposition.Attachment
-                        .withParameter("filename", "${racer.name}-${version}.wasm")
+                        .withParameter("filename", "${racerEntity.name}-${version}.wasm")
                         .toString()
                 )
                 call.respondBytesWriter { download.copyAndClose(this) }
@@ -68,7 +76,7 @@ class RacerRouter(
                 val racerId = call.parameters.racerId
                 val version = call.parameters.version
 
-                val racer = racers.uploadVersion(racerId, version, call.receiveChannel())
+                val racer = racers.uploadRacerVersion(racerId, version, call.receiveChannel())
                     ?: throw NotFoundException()
 
                 call.respond(racer.toResponse())
@@ -80,7 +88,12 @@ class RacerRouter(
         return RacerResponse(
             id = this.id,
             name = this.name,
-            versions = this.versions.navigableKeySet().toList(),
+        )
+    }
+
+    private fun RacerVersionEntity.toResponse(): RacerVersionResponse {
+        return RacerVersionResponse(
+            version = this.version,
         )
     }
 

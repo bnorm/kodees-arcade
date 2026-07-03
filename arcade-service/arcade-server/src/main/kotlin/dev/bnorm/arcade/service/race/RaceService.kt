@@ -8,6 +8,7 @@ import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.logger
 import dev.bnorm.arcade.service.repo.BlobRepository
+import dev.bnorm.arcade.service.repo.RacerRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.flow
 @ContributesIntoSet(AppScope::class)
 class RaceService(
     private val races: RaceRepository,
+    private val racers: RacerRepository,
     private val blobs: BlobRepository,
     private val clock: Clock = Clock.System,
 ) : Service {
@@ -46,7 +48,16 @@ class RaceService(
     }
 
     suspend fun createRace(request: RaceCreateRequest): RaceResponse {
-        val entity = races.createRace(request.trackId, request.racerIds)
+        val versionByRacerId = request.racers.associateBy { it.id }
+        val racerVersionIds = racers.getRacerVersions(request.racers.map { it.id })
+            .mapNotNull { entity ->
+                entity.id.takeIf { versionByRacerId[entity.racerId]?.version == entity.version }
+            }
+        if (racerVersionIds.size != request.racers.size) {
+            TODO("bad request - an unknown racer or version")
+        }
+
+        val entity = races.createRace(request.trackId, racerVersionIds)
         submitRaceForProcessing(entity)
         return entity.toResponse()
     }
@@ -118,7 +129,13 @@ class RaceService(
             trackId = this.trackId,
             startTime = this.startTime,
             endTime = this.endTime,
-            racers = this.racers.toList(),
+            racers = this.versionedRacers.map {
+                RaceResponse.Racer(
+                    id = it.racerId,
+                    name = it.name,
+                    version = it.version,
+                )
+            }
         )
     }
 }

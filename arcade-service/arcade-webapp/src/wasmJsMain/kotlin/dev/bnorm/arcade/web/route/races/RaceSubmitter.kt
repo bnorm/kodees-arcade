@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.RacerVersionResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import kotlinx.coroutines.async
@@ -46,11 +46,13 @@ fun RaceSubmitter(
 ) {
     val scope = rememberCoroutineScope()
     val tracks = remember { mutableStateListOf<TrackResponse>() }
-    val racers = remember { mutableStateListOf<RacerResponse>() }
+    val racers = remember { mutableStateListOf<Pair<RacerResponse, RacerVersionResponse>>() }
 
     LaunchedEffect(client) {
         val foundTracks = async { client.getTracks() }
-        val foundRacers = client.getRacers().filter { it.versions.isNotEmpty() }
+        val foundRacers = client.getRacers().flatMap { racer ->
+            client.getRacerVersions(racer.id).sortedBy { it.version }.map { racer to it }
+        }
         foundTracks.await() // Force wait.
         tracks.clear()
         tracks.addAll(foundTracks.await())
@@ -59,7 +61,7 @@ fun RaceSubmitter(
     }
 
     var selectedTrack by remember { mutableStateOf<TrackId?>(null) }
-    val selectedRacers = remember { mutableStateSetOf<RacerId>() }
+    val selectedRacers = remember { mutableStateSetOf<RaceCreateRequest.Racer>() }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -124,18 +126,19 @@ fun RaceSubmitter(
                         .padding(8.dp)
                 ) {
                     Column {
-                        for (racer in racers) {
-                            val isSelected = selectedRacers.contains(racer.id)
+                        for ((racer, version) in racers) {
+                            val request = RaceCreateRequest.Racer(racer.id, version.version)
+                            val isSelected = selectedRacers.contains(request)
 
                             Text(
-                                text = "${racer.name} ${racer.versions.last()}",
+                                text = "${racer.name} ${version.version}",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(if (isSelected) Color.Gray else Color.Transparent)
                                     .clickable {
                                         when (isSelected) {
-                                            true -> selectedRacers.remove(racer.id)
-                                            false -> selectedRacers.add(racer.id)
+                                            true -> selectedRacers.remove(request)
+                                            false -> selectedRacers.add(request)
                                         }
                                     }
                                     .padding(4.dp)

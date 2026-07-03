@@ -26,14 +26,6 @@ import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 
-@Serializable
-@JvmInline
-value class BlobId(val uuid: Uuid) {
-    companion object {
-        fun generate(): BlobId = BlobId(Uuid.generateV7())
-    }
-}
-
 object BlobTable : IdTable<BlobId>("blobs") {
     override val id: Column<EntityID<BlobId>> = blobId("id").entityId()
     val path = nioPath("path")

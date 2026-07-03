@@ -8,6 +8,7 @@ import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.RacerCreateRequest
 import dev.bnorm.arcade.service.api.RacerId
 import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.RacerVersionResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
@@ -32,6 +33,7 @@ interface ArcadeClient : AutoCloseable {
     suspend fun getRacers(): List<RacerResponse>
     suspend fun createRacer(request: RacerCreateRequest): RacerResponse
     suspend fun getRacer(id: RacerId): RacerResponse
+    suspend fun getRacerVersions(id: RacerId): List<RacerVersionResponse>
     suspend fun downloadRacerVersion(id: RacerId, version: Version): ByteArray
     suspend fun uploadRacerVersion(id: RacerId, version: Version, bytes: ByteArray): RacerResponse
 

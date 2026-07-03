@@ -71,7 +71,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
             val state = RaceState(
                 race = race,
                 track = getTrack(race.trackId),
-                racers = race.racers.map { getRacer(it) }
+                racers = race.racers,
             )
             active += state
 
@@ -196,7 +196,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
 class RaceState(
     race: RaceResponse,
     val track: TrackResponse,
-    val racers: List<RacerResponse>,
+    val racers: List<RaceResponse.Racer>,
 ) {
     var race by mutableStateOf(race)
     var time by mutableLongStateOf(0L)
