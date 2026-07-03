@@ -2,14 +2,14 @@ package dev.bnorm.arcade.service.race
 
 import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceId
-import dev.bnorm.arcade.service.api.RacerId
+import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.Version
 import dev.bnorm.arcade.service.repo.BlobId
 import dev.bnorm.arcade.service.repo.BlobTable
-import dev.bnorm.arcade.service.repo.RacerTable
-import dev.bnorm.arcade.service.repo.RacerVersionId
-import dev.bnorm.arcade.service.repo.RacerVersionTable
+import dev.bnorm.arcade.service.repo.DriverTable
+import dev.bnorm.arcade.service.repo.DriverVersionId
+import dev.bnorm.arcade.service.repo.DriverVersionTable
 import dev.bnorm.arcade.service.repo.Repository
 import dev.bnorm.arcade.service.repo.TrackTable
 import dev.bnorm.arcade.service.repo.nonce
@@ -65,50 +65,50 @@ val RaceResultsJoin = RaceTable.join(
     JoinType.LEFT,
 )
 
-object RaceRacerTable : Table("race_racers") {
+object RaceDriverTable : Table("race_drivers") {
     val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
-    val racerVersionId = reference("racer_version_id", RacerVersionTable, onDelete = ReferenceOption.RESTRICT)
+    val driverVersionId = reference("driver_version_id", DriverVersionTable, onDelete = ReferenceOption.RESTRICT)
 
-    override val primaryKey = PrimaryKey(raceId, racerVersionId)
+    override val primaryKey = PrimaryKey(raceId, driverVersionId)
 }
 
-val RaceRacerVersionJoin = RaceRacerTable
+val RaceDriverVersionJoin = RaceDriverTable
     .join(
-        RacerVersionTable,
+        DriverVersionTable,
         JoinType.INNER,
     )
     .join(
-        RacerTable,
+        DriverTable,
         JoinType.INNER,
-        onColumn = RacerTable.id,
-        otherColumn = RacerVersionTable.racerId,
+        onColumn = DriverTable.id,
+        otherColumn = DriverVersionTable.driverId,
     )
 
 data class RaceEntity(
     val id: RaceId,
     val trackId: TrackId,
-    val versionedRacers: List<VersionedRacerEntity>,
+    val versionedDrivers: List<VersionedDriverEntity>,
     val nonce: Nonce,
     val startTime: Instant? = null,
     val endTime: Instant? = null,
     val blobId: BlobId? = null,
 )
 
-class VersionedRacerEntity(
-    val racerId: RacerId,
-    val racerVersionId: RacerVersionId,
+class VersionedDriverEntity(
+    val driverId: DriverId,
+    val driverVersionId: DriverVersionId,
     val name: String,
     val version: Version,
     val blobId: BlobId,
 )
 
 fun ResultRow.toRaceEntity(
-    versionedRacers: List<VersionedRacerEntity>,
+    versionedDrivers: List<VersionedDriverEntity>,
 ): RaceEntity {
     return RaceEntity(
         id = this[RaceTable.id].value,
         trackId = this[RaceTable.trackId].value,
-        versionedRacers = versionedRacers,
+        versionedDrivers = versionedDrivers,
         nonce = this[RaceResultTable.nonce],
         startTime = this[RaceResultTable.startTime],
         endTime = this[RaceResultTable.endTime],
@@ -116,13 +116,13 @@ fun ResultRow.toRaceEntity(
     )
 }
 
-fun ResultRow.toVersionedRacerEntity(): VersionedRacerEntity {
-    return VersionedRacerEntity(
-        racerId = this[RacerTable.id].value,
-        racerVersionId = this[RacerVersionTable.id].value,
-        name = this[RacerTable.name],
-        version = this[RacerVersionTable.version],
-        blobId = this[RacerVersionTable.blobId].value,
+fun ResultRow.toVersionedDriverEntity(): VersionedDriverEntity {
+    return VersionedDriverEntity(
+        driverId = this[DriverTable.id].value,
+        driverVersionId = this[DriverVersionTable.id].value,
+        name = this[DriverTable.name],
+        version = this[DriverVersionTable.version],
+        blobId = this[DriverVersionTable.blobId].value,
     )
 }
 
@@ -133,32 +133,32 @@ class RaceRepository(
 ) : Repository {
     override suspend fun migrate() {
         suspendTransaction(database) {
-            SchemaUtils.create(RaceTable, RaceRacerTable, RaceResultTable)
+            SchemaUtils.create(RaceTable, RaceDriverTable, RaceResultTable)
         }
     }
 
     suspend fun getRaces(): List<RaceEntity> {
         // TODO paginate somehow
         return suspendTransaction(database) {
-            val racerVersionIds = RaceRacerVersionJoin.selectAll().groupBy(
-                keySelector = { it[RaceRacerTable.raceId].value },
-                valueTransform = { it.toVersionedRacerEntity() },
+            val driverVersionIds = RaceDriverVersionJoin.selectAll().groupBy(
+                keySelector = { it[RaceDriverTable.raceId].value },
+                valueTransform = { it.toVersionedDriverEntity() },
             )
 
             // TODO array_agg?
-            // RaceRacerTable.join(RaceResultsJoin, JoinType.RIGHT, RaceTable.id)
-            //     .select(RaceRacerTable.racerId.function("ARRAY_AGG"), *RaceResultsJoin.columns.toTypedArray())
+            // RaceDriverTable.join(RaceResultsJoin, JoinType.RIGHT, RaceTable.id)
+            //     .select(RaceDriverTable.driverId.function("ARRAY_AGG"), *RaceResultsJoin.columns.toTypedArray())
 
             RaceResultsJoin.selectAll().map {
                 val id = it[RaceTable.id].value
-                it.toRaceEntity(racerVersionIds[id].orEmpty())
+                it.toRaceEntity(driverVersionIds[id].orEmpty())
             }.toList()
         }
     }
 
     /**
      * Specialized query to get only incomplete races.
-     * Race entities are created without associated racer IDs to limit data.
+     * Race entities are created without associated driver IDs to limit data.
      */
     suspend fun getIncompleteRaces(): List<RaceEntity> {
         // TODO paginate somehow?
@@ -169,7 +169,7 @@ class RaceRepository(
         }
     }
 
-    suspend fun createRace(trackId: TrackId, racerVersionIds: List<RacerVersionId>): RaceEntity {
+    suspend fun createRace(trackId: TrackId, driverVersionIds: List<DriverVersionId>): RaceEntity {
         return suspendTransaction(database) {
             val raceId = (RaceTable.insert {
                 it[this.trackId] = trackId
@@ -181,15 +181,15 @@ class RaceRepository(
                 it[this.nonce] = nonce
             }
 
-            RaceRacerTable.batchInsert(racerVersionIds) {
-                this[RaceRacerTable.raceId] = raceId
-                this[RaceRacerTable.racerVersionId] = it
+            RaceDriverTable.batchInsert(driverVersionIds) {
+                this[RaceDriverTable.raceId] = raceId
+                this[RaceDriverTable.driverVersionId] = it
             }
 
             RaceEntity(
                 id = raceId,
                 trackId = trackId,
-                versionedRacers = getVersionedRacers(raceId),
+                versionedDrivers = getVersionedDrivers(raceId),
                 nonce = nonce,
             )
         }
@@ -204,8 +204,8 @@ class RaceRepository(
 
             row ?: return@suspendTransaction null
 
-            val versionedRacers = getVersionedRacers(id)
-            row.toRaceEntity(versionedRacers)
+            val versionedDrivers = getVersionedDrivers(id)
+            row.toRaceEntity(versionedDrivers)
         }
     }
 
@@ -253,10 +253,10 @@ class RaceRepository(
         }
     }
 
-    private suspend fun getVersionedRacers(id: RaceId): List<VersionedRacerEntity> {
-        return RaceRacerVersionJoin.selectAll()
-            .where { RaceRacerTable.raceId eq id }
-            .map { it.toVersionedRacerEntity() }
+    private suspend fun getVersionedDrivers(id: RaceId): List<VersionedDriverEntity> {
+        return RaceDriverVersionJoin.selectAll()
+            .where { RaceDriverTable.raceId eq id }
+            .map { it.toVersionedDriverEntity() }
             .toList()
     }
 }

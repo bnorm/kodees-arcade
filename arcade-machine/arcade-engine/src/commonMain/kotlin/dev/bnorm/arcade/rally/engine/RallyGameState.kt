@@ -5,5 +5,5 @@ class RallyGameState(
     val trackHeight: Double,
     var finished: Boolean,
     var time: Long,
-    val racers: Map<String, RallyCarState>,
+    val drivers: Map<String, RallyCarState>,
 )

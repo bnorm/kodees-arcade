@@ -48,8 +48,8 @@ import dev.bnorm.arcade.rally.rememberDeskTrack
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.RacerId
-import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.DriverId
+import dev.bnorm.arcade.service.api.DriverResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.web.route.Route
@@ -68,16 +68,12 @@ class RacesRoute(
     @Composable
     override fun Content() {
         val races = remember { mutableStateListOf<RaceResponse>() }
-        val racers = remember { mutableStateMapOf<RacerId, RacerResponse>() }
         val tracks = remember { mutableStateMapOf<TrackId, TrackResponse>() }
         LaunchedEffect(Unit) {
-            val apiRacers = client.getRacers().associateBy { it.id }
             val apiTracks = client.getTracks().associateBy { it.id }
             val apiRaces = client.getRaces()
             races.clear()
             races.addAll(apiRaces)
-            racers.clear()
-            racers.putAll(apiRacers)
             tracks.clear()
             tracks.putAll(apiTracks)
         }
@@ -108,7 +104,7 @@ class RacesRoute(
                     .width(IntrinsicSize.Max)
             ) {
                 for (race in races) {
-                    RaceCard(client, race, racers, tracks, onWatch = {
+                    RaceCard(client, race, tracks, onWatch = {
                         watchRaceId = race.id
                     })
                 }
@@ -172,7 +168,6 @@ private fun RaceCreateButton(client: ArcadeClient, onCreate: (RaceResponse) -> U
 private fun RaceCard(
     client: ArcadeClient,
     race: RaceResponse,
-    racers: SnapshotStateMap<RacerId, RacerResponse>,
     tracks: SnapshotStateMap<TrackId, TrackResponse>,
     onWatch: () -> Unit,
 ) {
@@ -244,9 +239,9 @@ private fun RaceCard(
 
             Column {
                 // TODO this should be the same as race results
-                for (racer in race.racers) {
-                    Text(racer.name, style = MaterialTheme.typography.bodyLarge)
-                    // TODO include racer version
+                for (driver in race.drivers) {
+                    Text(driver.name, style = MaterialTheme.typography.bodyLarge)
+                    // TODO include driver version
                 }
             }
         }

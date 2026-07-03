@@ -11,11 +11,11 @@ import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.*
 
 /**
- * Our racer! Kodee!
+ * Our driver! Kodee!
  *
  * This object implements the logic used to control our car during a race.
  */
-object Kodee : Racer() {
+object Kodee : Driver() {
     private lateinit var track: Track
     private lateinit var targets: List<Point>
 

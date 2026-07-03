@@ -2,7 +2,7 @@ package dev.bnorm.arcade.service.repo
 
 import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceId
-import dev.bnorm.arcade.service.api.RacerId
+import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.Version
@@ -41,15 +41,15 @@ fun Table.raceId(name: String): Column<RaceId> {
     return uuid(name).transform(::RaceId, RaceId::uuid)
 }
 
-fun Table.racerId(name: String): Column<RacerId> {
-    return uuid(name).transform(::RacerId, RacerId::uuid)
+fun Table.driverId(name: String): Column<DriverId> {
+    return uuid(name).transform(::DriverId, DriverId::uuid)
 }
 
 @Serializable
 @JvmInline
-value class RacerVersionId(val uuid: Uuid) {
+value class DriverVersionId(val uuid: Uuid) {
     companion object {
-        fun generate(): RacerVersionId = RacerVersionId(Uuid.generateV7())
+        fun generate(): DriverVersionId = DriverVersionId(Uuid.generateV7())
     }
 
     override fun toString(): String {
@@ -57,8 +57,8 @@ value class RacerVersionId(val uuid: Uuid) {
     }
 }
 
-fun Table.racerVersionId(name: String): Column<RacerVersionId> {
-    return uuid(name).transform(::RacerVersionId, RacerVersionId::uuid)
+fun Table.driverVersionId(name: String): Column<DriverVersionId> {
+    return uuid(name).transform(::DriverVersionId, DriverVersionId::uuid)
 }
 
 fun Table.trackId(name: String): Column<TrackId> {

@@ -48,8 +48,8 @@ tasks.processResources.configure {
             into("webapp")
         }
     }
-    from(project(":arcade-player-samples").tasks.getByName("racers")) {
-        into("racers")
+    from(project(":arcade-player-samples").tasks.getByName("drivers")) {
+        into("drivers")
     }
 }
 

@@ -8,7 +8,7 @@ import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.logger
 import dev.bnorm.arcade.service.repo.BlobRepository
-import dev.bnorm.arcade.service.repo.RacerRepository
+import dev.bnorm.arcade.service.repo.DriverRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.flow
 @ContributesIntoSet(AppScope::class)
 class RaceService(
     private val races: RaceRepository,
-    private val racers: RacerRepository,
+    private val drivers: DriverRepository,
     private val blobs: BlobRepository,
     private val clock: Clock = Clock.System,
 ) : Service {
@@ -48,16 +48,16 @@ class RaceService(
     }
 
     suspend fun createRace(request: RaceCreateRequest): RaceResponse {
-        val versionByRacerId = request.racers.associateBy { it.id }
-        val racerVersionIds = racers.getRacerVersions(request.racers.map { it.id })
+        val versionByDriverId = request.drivers.associateBy { it.id }
+        val driverVersionIds = drivers.getDriverVersions(request.drivers.map { it.id })
             .mapNotNull { entity ->
-                entity.id.takeIf { versionByRacerId[entity.racerId]?.version == entity.version }
+                entity.id.takeIf { versionByDriverId[entity.driverId]?.version == entity.version }
             }
-        if (racerVersionIds.size != request.racers.size) {
-            TODO("bad request - an unknown racer or version")
+        if (driverVersionIds.size != request.drivers.size) {
+            TODO("bad request - an unknown driver or version")
         }
 
-        val entity = races.createRace(request.trackId, racerVersionIds)
+        val entity = races.createRace(request.trackId, driverVersionIds)
         submitRaceForProcessing(entity)
         return entity.toResponse()
     }
@@ -129,9 +129,9 @@ class RaceService(
             trackId = this.trackId,
             startTime = this.startTime,
             endTime = this.endTime,
-            racers = this.versionedRacers.map {
-                RaceResponse.Racer(
-                    id = it.racerId,
+            drivers = this.versionedDrivers.map {
+                RaceResponse.Driver(
+                    id = it.driverId,
                     name = it.name,
                     version = it.version,
                 )

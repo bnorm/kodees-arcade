@@ -23,8 +23,6 @@ import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.RacerId
-import dev.bnorm.arcade.service.api.RacerResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import io.ktor.client.plugins.sse.SSEClientException
@@ -58,10 +56,6 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
     suspend fun getTrack(id: TrackId): TrackResponse =
         tracks.getOrPut(id) { client.getTrack(id) }
 
-    val racers = remember { mutableStateMapOf<RacerId, RacerResponse>() }
-    suspend fun getRacer(id: RacerId): RacerResponse =
-        racers.getOrPut(id) { client.getRacer(id) }
-
     val complete = remember { mutableStateListOf<RaceState>() }
     val active = remember { mutableStateListOf<RaceState>() }
 
@@ -71,7 +65,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
             val state = RaceState(
                 race = race,
                 track = getTrack(race.trackId),
-                racers = race.racers,
+                drivers = race.drivers,
             )
             active += state
 
@@ -131,7 +125,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
                     value = buildString {
                         append(state.track.name)
                         append(" with ")
-                        state.racers.joinTo(this, separator = ", ") { it.name }
+                        state.drivers.joinTo(this, separator = ", ") { it.name }
                         append(" completed in ")
                         append(state.time)
                         append(" updates")
@@ -167,7 +161,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
                                 append("Running ")
                                 append(state.track.name)
                                 append(" with ")
-                                state.racers.joinTo(this, prefix = "[", postfix = "]") { it.name }
+                                state.drivers.joinTo(this, prefix = "[", postfix = "]") { it.name }
 
                                 if (state.ups > 0) {
                                     append(" running at ")
@@ -196,7 +190,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
 class RaceState(
     race: RaceResponse,
     val track: TrackResponse,
-    val racers: List<RaceResponse.Racer>,
+    val drivers: List<RaceResponse.Driver>,
 ) {
     var race by mutableStateOf(race)
     var time by mutableLongStateOf(0L)

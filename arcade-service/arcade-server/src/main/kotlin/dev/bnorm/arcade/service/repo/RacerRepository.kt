@@ -1,6 +1,6 @@
 package dev.bnorm.arcade.service.repo
 
-import dev.bnorm.arcade.service.api.RacerId
+import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.Version
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
@@ -24,148 +24,150 @@ import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 
-object RacerTable : IdTable<RacerId>("racers") {
-    override val id: Column<EntityID<RacerId>> = racerId("id").clientDefault { RacerId.generate() }.entityId()
+object DriverTable : IdTable<DriverId>("drivers") {
+    override val id: Column<EntityID<DriverId>> = driverId("id").clientDefault { DriverId.generate() }.entityId()
     val name = text("name").uniqueIndex()
 
     override val primaryKey = PrimaryKey(id)
 }
 
-object RacerVersionTable : IdTable<RacerVersionId>("racer_versions") {
-    override val id = racerVersionId("id").clientDefault { RacerVersionId.generate() }.entityId()
-    val racerId = reference("racer_id", RacerTable, onDelete = ReferenceOption.CASCADE)
+object DriverVersionTable : IdTable<DriverVersionId>("driver_versions") {
+    override val id = driverVersionId("id").clientDefault { DriverVersionId.generate() }.entityId()
+    val driverId = reference("driver_id", DriverTable, onDelete = ReferenceOption.CASCADE)
     val version = version("version")
     val blobId = reference("blob_id", BlobTable, onDelete = ReferenceOption.RESTRICT)
 
     override val primaryKey = PrimaryKey(id)
 
     init {
-        uniqueIndex(racerId, version)
+        uniqueIndex(driverId, version)
     }
 }
 
-data class RacerEntity(
-    val id: RacerId,
+data class DriverEntity(
+    val id: DriverId,
     val name: String,
 )
 
-fun ResultRow.toRacerEntity(): RacerEntity {
-    return RacerEntity(
-        id = this[RacerTable.id].value,
-        name = this[RacerTable.name],
+fun ResultRow.toDriverEntity(): DriverEntity {
+    return DriverEntity(
+        id = this[DriverTable.id].value,
+        name = this[DriverTable.name],
     )
 }
 
-class RacerVersionEntity(
-    val id: RacerVersionId,
-    val racerId: RacerId,
+class DriverVersionEntity(
+    val id: DriverVersionId,
+    val driverId: DriverId,
     val version: Version,
     val blobId: BlobId,
 )
 
-fun ResultRow.toRacerVersionEntity(): RacerVersionEntity {
-    return RacerVersionEntity(
-        id = this[RacerVersionTable.id].value,
-        racerId = this[RacerVersionTable.racerId].value,
-        version = this[RacerVersionTable.version],
-        blobId = this[RacerVersionTable.blobId].value,
+fun ResultRow.toDriverVersionEntity(): DriverVersionEntity {
+    return DriverVersionEntity(
+        id = this[DriverVersionTable.id].value,
+        driverId = this[DriverVersionTable.driverId].value,
+        version = this[DriverVersionTable.version],
+        blobId = this[DriverVersionTable.blobId].value,
     )
 }
 
 @ContributesIntoSet(AppScope::class)
 @SingleIn(AppScope::class)
 @Inject
-class RacerRepository(
+class DriverRepository(
     private val database: R2dbcDatabase,
     private val blobs: BlobRepository,
 ) : Repository {
     override suspend fun migrate() {
         suspendTransaction(database) {
-            SchemaUtils.create(RacerTable, RacerVersionTable)
+            SchemaUtils.create(DriverTable, DriverVersionTable)
         }
     }
 
-    suspend fun getRacers(): List<RacerEntity> {
+    suspend fun getDrivers(): List<DriverEntity> {
         return suspendTransaction(database) {
-            RacerTable.selectAll()
-                .map { it.toRacerEntity() }
+            DriverTable.selectAll()
+                .map { it.toDriverEntity() }
                 .toList()
         }
     }
 
-    suspend fun createRacer(name: String): RacerEntity {
+    suspend fun createDriver(name: String): DriverEntity {
         return suspendTransaction(database) {
-            val id = RacerTable.insert {
+            val id = DriverTable.insert {
                 it[this.name] = name
-            } get RacerTable.id
+            } get DriverTable.id
 
-            RacerEntity(id.value, name)
+            DriverEntity(id.value, name)
         }
     }
 
-    suspend fun getRacer(id: RacerId): RacerEntity? {
+    suspend fun getDriver(id: DriverId): DriverEntity? {
         return suspendTransaction(database) {
-            getRacerRow(id)?.toRacerEntity()
+            getDriverRow(id)?.toDriverEntity()
         }
     }
 
-    private suspend fun getRacerRow(id: RacerId): ResultRow? {
-        return RacerTable.selectAll().where(RacerTable.id eq id)
+    private suspend fun getDriverRow(id: DriverId): ResultRow? {
+        return DriverTable.selectAll().where(DriverTable.id eq id)
             .singleOrNull()
     }
 
-    suspend fun getRacerVersions(): List<RacerVersionEntity> {
+    suspend fun getDriverVersions(): List<DriverVersionEntity> {
         return suspendTransaction(database) {
-            RacerVersionTable
+            DriverVersionTable
                 .selectAll()
-                .map { it.toRacerVersionEntity() }
+                .map { it.toDriverVersionEntity() }
                 .toList()
         }
     }
 
-    suspend fun getRacerVersions(id: RacerId): List<RacerVersionEntity> {
+    suspend fun getDriverVersions(id: DriverId): List<DriverVersionEntity> {
         return suspendTransaction(database) {
-            RacerVersionTable
+            DriverVersionTable
                 .selectAll()
-                .where { RacerVersionTable.racerId eq id }
-                .map { it.toRacerVersionEntity() }
+                .where { DriverVersionTable.driverId eq id }
+                .map { it.toDriverVersionEntity() }
                 .toList()
         }
     }
 
-    // TODO iterable of racer / version key pairs?
-    suspend fun getRacerVersions(ids: Iterable<RacerId>): List<RacerVersionEntity> {
+    // TODO iterable of driver / version key pairs?
+    suspend fun getDriverVersions(ids: Iterable<DriverId>): List<DriverVersionEntity> {
         return suspendTransaction(database) {
-            RacerVersionTable
+            DriverVersionTable
                 .selectAll()
-                .where { RacerVersionTable.racerId inList ids }
-                .map { it.toRacerVersionEntity() }
+                .where { DriverVersionTable.driverId inList ids }
+                .map { it.toDriverVersionEntity() }
                 .toList()
         }
     }
 
-    suspend fun getRacerVersion(id: RacerId, version: Version): RacerVersionEntity? {
+    suspend fun getDriverVersion(id: DriverId, version: Version): DriverVersionEntity? {
         return suspendTransaction(database) {
-            RacerVersionTable.selectAll()
+            DriverVersionTable.selectAll()
                 .where {
-                    (RacerVersionTable.racerId eq id) and
-                        (RacerVersionTable.version eq version)
+                    (DriverVersionTable.driverId eq id) and
+                        (DriverVersionTable.version eq version)
                 }
                 .singleOrNull()
-                ?.toRacerVersionEntity()
+                ?.toDriverVersionEntity()
         }
     }
 
-    suspend fun uploadRacerVersion(racerId: RacerId, version: Version, channel: ByteReadChannel): RacerVersionEntity? {
+    suspend fun uploadDriverVersion(driverId: DriverId, version: Version, channel: ByteReadChannel): DriverVersionEntity? {
         return suspendTransaction(database) {
             val blob = blobs.upload(channel)
-            val id = RacerVersionTable.insert {
-                it[this.racerId] = racerId
+
+            // TODO insert first? to make sure version is unique for driver
+            val id = DriverVersionTable.insert {
+                it[this.driverId] = driverId
                 it[this.version] = version
                 it[this.blobId] = blob.id
-            } get RacerVersionTable.id
+            } get DriverVersionTable.id
 
-            RacerVersionEntity(id.value, racerId, version, blob.id)
+            DriverVersionEntity(id.value, driverId, version, blob.id)
         }
     }
 }

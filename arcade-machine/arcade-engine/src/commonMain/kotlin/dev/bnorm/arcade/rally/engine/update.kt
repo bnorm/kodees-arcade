@@ -12,15 +12,15 @@ val carHeight = 16.0
 val impactDist = (68.0 * 0.4f)
 val impactDistSq = impactDist * impactDist
 
-fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, track: Track) {
+fun update(gameState: RallyGameState, controls: Map<String, DriverControlState>, track: Track) {
     gameState.time++
 
-    val racers = gameState.racers
-    for ((name, racerState) in racers) {
-        // Skip updating racers which are finished.
-        if (racerState.lap >= track.laps) {
-            if (racerState.finished == null) {
-                racerState.finished = gameState.time
+    val drivers = gameState.drivers
+    for ((name, driverState) in drivers) {
+        // Skip updating drivers which are finished.
+        if (driverState.lap >= track.laps) {
+            if (driverState.finished == null) {
+                driverState.finished = gameState.time
             }
             continue
         }
@@ -29,37 +29,37 @@ fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, 
         val steering = controls.steering
         val throttle = controls.throttle
 
-        val oldHeading = racerState.heading
-        val oldSpeed = racerState.speed
+        val oldHeading = driverState.heading
+        val oldSpeed = driverState.speed
 
         // TODO consider traction of track
         val newHeading = simulateHeading(oldHeading, oldSpeed, steering, traction = 1.0)
         var newSpeed = simulateSpeed(oldSpeed, throttle)
-        if (updatePosition(racerState, newSpeed, newHeading, gameState)) {
+        if (updatePosition(driverState, newSpeed, newHeading, gameState)) {
             newSpeed = 0.0
         }
 
-        racerState.heading = newHeading
-        racerState.speed = newSpeed
+        driverState.heading = newHeading
+        driverState.speed = newSpeed
 
         // Update target checkpoint.
-        val checkpoint = track.checkpoints[racerState.checkpoint]
+        val checkpoint = track.checkpoints[driverState.checkpoint]
         val target = checkpoint.center
         val radius = checkpoint.length / 2
 
-        val dx = target.x - racerState.x
-        val dy = (target.y) - racerState.y
+        val dx = target.x - driverState.x
+        val dy = (target.y) - driverState.y
         val dist = sqrt(dx * dx + dy * dy)
         if (dist < radius) {
-            racerState.checkpoint += 1
-            if (racerState.checkpoint >= track.checkpoints.size) {
-                racerState.lap += 1
-                racerState.checkpoint = 0
+            driverState.checkpoint += 1
+            if (driverState.checkpoint >= track.checkpoints.size) {
+                driverState.lap += 1
+                driverState.checkpoint = 0
             }
         }
     }
 
-    // TODO optimize racer collisions
+    // TODO optimize driver collisions
     //  better representation for the cars
     //    rotated ovals?
     //    convex polygons?
@@ -69,34 +69,34 @@ fun update(gameState: RallyGameState, controls: Map<String, RacerControlState>, 
     // Only do a single pass...
     // TODO is a little bit of clipping okay?
 
-    val racerList = racers.values.toList()
-    for ((i, racer1) in racerList.withIndex()) {
-        // Skip updating racers which are finished.
-        if (racer1.lap >= track.laps) continue
+    val driverList = drivers.values.toList()
+    for ((i, driver1) in driverList.withIndex()) {
+        // Skip updating drivers which are finished.
+        if (driver1.lap >= track.laps) continue
 
-        for (j in (i + 1)..<racers.size) {
-            val racer2 = racerList[j]
-            // Skip updating racers which are finished.
-            if (racer2.lap >= track.laps) continue
+        for (j in (i + 1)..<drivers.size) {
+            val driver2 = driverList[j]
+            // Skip updating drivers which are finished.
+            if (driver2.lap >= track.laps) continue
 
-            val dx = racer1.x - racer2.x
-            val dy = racer1.y - racer2.y
+            val dx = driver1.x - driver2.x
+            val dy = driver1.y - driver2.y
             val distSq = dx * dx + dy * dy
             if (distSq < impactDistSq) {
                 val delta = sqrt(impactDistSq) - sqrt(distSq)
                 val angle = atan2(dy, dx)
                 val impulse = (delta / 2).coerceAtLeast(0.1)
-                if (updatePosition(racer1, impulse, angle, gameState)) {
-                    racer1.speed = 0.0
+                if (updatePosition(driver1, impulse, angle, gameState)) {
+                    driver1.speed = 0.0
                 }
-                if (updatePosition(racer2, impulse, angle + Angle.HALF_CIRCLE, gameState)) {
-                    racer2.speed = 0.0
+                if (updatePosition(driver2, impulse, angle + Angle.HALF_CIRCLE, gameState)) {
+                    driver2.speed = 0.0
                 }
             }
         }
     }
 
-    gameState.finished = racers.all { it.value.finished != null }
+    gameState.finished = drivers.all { it.value.finished != null }
 }
 
 /** @return if impacted with a wall. */

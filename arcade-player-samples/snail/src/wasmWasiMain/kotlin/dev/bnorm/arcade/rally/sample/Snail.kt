@@ -5,7 +5,7 @@ import dev.bnorm.arcade.geometry.atan2
 import dev.bnorm.arcade.geometry.center
 import kotlin.random.Random
 
-object Snail : Racer() {
+object Snail : Driver() {
     private lateinit var track: Track
     private var safety: Double = 0.0
     override fun onRace(track: Track) {

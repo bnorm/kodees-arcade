@@ -7,22 +7,22 @@ import ai.tegmentum.wasmtime4j.WasmValueType
 import ai.tegmentum.wasmtime4j.func.HostFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
 import ai.tegmentum.wasmtime4j.wasi.WasiContext
-import dev.bnorm.arcade.rally.engine.RacerControlState
+import dev.bnorm.arcade.rally.engine.DriverControlState
 
-actual suspend fun WasmEngine.createWasmRacer(
-    controlState: RacerControlState,
-    racer: ByteArray,
+actual suspend fun WasmEngine.createWasmDriver(
+    controlState: DriverControlState,
+    driver: ByteArray,
     name: String
-): WasmRacer {
-    val linker = createRacerLinker(this, controlState)
-    val module = compileModule(racer)
+): WasmDriver {
+    val linker = createLinker(this, controlState)
+    val module = compileModule(driver)
     val store = createStore()
     val instance = linker.instantiate(store, module)
 
     val memory = Wasmtime4jMemory(instance.defaultMemory.orElseThrow())
     val moveFunction = instance.getFunction("move").orElseThrow()
     val onRaceFunction = instance.getFunction("onRace").orElseThrow()
-    val racer = WasmRacer(
+    return WasmDriver(
         name = name,
         memory = memory,
         moveFunction = { moveFunction.callVoid() },
@@ -34,13 +34,11 @@ actual suspend fun WasmEngine.createWasmRacer(
             linker.close()
         }
     )
-
-    return racer
 }
 
-private fun createRacerLinker(
+private fun createLinker(
     engine: Engine,
-    controlState: RacerControlState,
+    controlState: DriverControlState,
 ): Linker<*> {
     val runtime = engine.runtime
     val context = runtime.createWasiContext().inheritStdio()

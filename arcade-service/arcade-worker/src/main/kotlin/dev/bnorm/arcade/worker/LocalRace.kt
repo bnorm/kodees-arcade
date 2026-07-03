@@ -2,7 +2,7 @@ package dev.bnorm.arcade.worker
 
 import dev.bnorm.arcade.machine.Race
 import dev.bnorm.arcade.rally.race.WasmRace
-import dev.bnorm.arcade.rally.race.WasmRacer
+import dev.bnorm.arcade.rally.race.WasmDriver
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import kotlinx.coroutines.channels.Channel
@@ -27,15 +27,15 @@ class LocalRace(
             val trackBlob = client.downloadTrack(track.id) // TODO error
 
             val rallyTrack = Json.decodeFromString(RallyTrack.serializer(), trackBlob.decodeToString())
-            val rallyRacers = buildList {
-                for (racer in race.racers) {
-                    val blob = client.downloadRacerVersion(racer.id, racer.version) // TODO error
-                    add(WasmRacer(racer.name, blob))
+            val rallyDrivers = buildList {
+                for (driver in race.drivers) {
+                    val blob = client.downloadDriverVersion(driver.id, driver.version) // TODO error
+                    add(WasmDriver(driver.name, blob))
                 }
             }
 
             coroutineScope {
-                val wasmRace = WasmRace(rallyTrack, rallyRacers)
+                val wasmRace = WasmRace(rallyTrack, rallyDrivers)
                 launch { wasmRace.start() }
                 wasmRace.events.consumeEach {
                     events.send(it)

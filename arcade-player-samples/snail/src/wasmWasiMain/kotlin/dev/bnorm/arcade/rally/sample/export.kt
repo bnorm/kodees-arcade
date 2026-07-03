@@ -1,19 +1,19 @@
-@file:OptIn(dev.bnorm.arcade.rally.internal.RacerExport::class, ExperimentalWasmInterop::class)
+@file:OptIn(dev.bnorm.arcade.rally.internal.DriverExport::class, ExperimentalWasmInterop::class)
 
-private val racer = dev.bnorm.arcade.rally.sample.Snail
+private val driver = dev.bnorm.arcade.rally.sample.Snail
 
 /**
- * Wasm exported function used by the game engine to call our racer.
+ * Wasm exported function used by the game engine to call our driver.
  */
 @WasmExport
 fun onRace() {
-    dev.bnorm.arcade.rally.internal.racerOnRace(racer)
+    dev.bnorm.arcade.rally.internal.driverOnRace(driver)
 }
 
 /**
- * Wasm exported function used by the game engine to call our racer.
+ * Wasm exported function used by the game engine to call our driver.
  */
 @WasmExport
 fun move() {
-    dev.bnorm.arcade.rally.internal.racerMove(racer)
+    dev.bnorm.arcade.rally.internal.driverMove(driver)
 }

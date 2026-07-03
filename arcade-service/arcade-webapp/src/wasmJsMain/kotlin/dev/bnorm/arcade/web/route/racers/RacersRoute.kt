@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.bnorm.arcade.icons.sports_motorsports
 import dev.bnorm.arcade.server.client.ArcadeClient
-import dev.bnorm.arcade.service.api.RacerCreateRequest
-import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.DriverCreateRequest
+import dev.bnorm.arcade.service.api.DriverResponse
 import dev.bnorm.arcade.web.route.Route
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
@@ -43,15 +43,15 @@ import kotlinx.coroutines.launch
 class RacersRoute(
     private val client: ArcadeClient
 ) : Route {
-    override val path: String get() = "/racers"
+    override val path: String get() = "/drivers"
 
     @Composable
     override fun Content() {
-        val racers = remember { mutableStateListOf<RacerResponse>() }
+        val drivers = remember { mutableStateListOf<DriverResponse>() }
         LaunchedEffect(Unit) {
-            val elements = client.getRacers()
-            racers.clear()
-            racers.addAll(elements)
+            val elements = client.getDrivers()
+            drivers.clear()
+            drivers.addAll(elements)
         }
 
         Column(
@@ -59,9 +59,9 @@ class RacersRoute(
                 .padding(16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Racers", style = MaterialTheme.typography.displayLarge)
+                Text("Drivers", style = MaterialTheme.typography.displayLarge)
                 Spacer(Modifier.weight(1f))
-                CreateRacerButton(client, onCreate = { racers.add(it) })
+                CreateDriverButton(client, onCreate = { drivers.add(it) })
             }
             Spacer(
                 Modifier
@@ -76,8 +76,8 @@ class RacersRoute(
                 modifier = Modifier
                     .width(IntrinsicSize.Max)
             ) {
-                for ((index, racer) in racers.withIndex()) {
-                    RacerCard(racer, client, onUpload = { racers[index] = it })
+                for ((index, driver) in drivers.withIndex()) {
+                    DriverCard(driver, client, onUpload = { drivers[index] = it })
                 }
             }
         }
@@ -85,13 +85,13 @@ class RacersRoute(
 }
 
 @Composable
-private fun CreateRacerButton(
+private fun CreateDriverButton(
     client: ArcadeClient,
-    onCreate: (RacerResponse) -> Unit
+    onCreate: (DriverResponse) -> Unit
 ) {
     var displayDialog by remember { mutableStateOf(false) }
     if (displayDialog) {
-        CreateRacerDialog(
+        CreateDriverDialog(
             onDismissRequest = {
                 if (it != null) onCreate(it)
                 displayDialog = false
@@ -103,15 +103,15 @@ private fun CreateRacerButton(
     TextButton(
         onClick = { displayDialog = true }
     ) {
-        Icon(sports_motorsports, contentDescription = "Create racer")
+        Icon(sports_motorsports, contentDescription = "Create driver")
         Spacer(Modifier.width(4.dp))
         Text("Create", style = MaterialTheme.typography.titleMedium)
     }
 }
 
 @Composable
-private fun CreateRacerDialog(
-    onDismissRequest: (RacerResponse?) -> Unit,
+private fun CreateDriverDialog(
+    onDismissRequest: (DriverResponse?) -> Unit,
     client: ArcadeClient,
 ) {
     Dialog(
@@ -126,7 +126,7 @@ private fun CreateRacerDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(16.dp)
             ) {
-                Text("New Racer", style = MaterialTheme.typography.headlineLarge)
+                Text("New Driver", style = MaterialTheme.typography.headlineLarge)
                 TextField(
                     state,
                     label = { Text("Name") },
@@ -135,8 +135,8 @@ private fun CreateRacerDialog(
                     enabled = state.text.isNotBlank(),
                     onClick = {
                         scope.launch {
-                            val racer = client.createRacer(RacerCreateRequest(state.text.trim().toString()))
-                            onDismissRequest(racer)
+                            val driver = client.createDriver(DriverCreateRequest(state.text.trim().toString()))
+                            onDismissRequest(driver)
                         }
                     },
                     modifier = Modifier

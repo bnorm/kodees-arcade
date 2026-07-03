@@ -28,7 +28,7 @@ import dev.bnorm.arcade.service.api.RaceId
 
 private data class RaceDisplay(
     val id: RaceId,
-    val racers: List<String>,
+    val drivers: List<String>,
 )
 
 @Composable
@@ -41,7 +41,7 @@ fun RaceDownloader(
     LaunchedEffect(client) {
         val foundRaces = client.getRaces()
         races.clear()
-        races.addAll(foundRaces.map { race -> RaceDisplay(race.id, race.racers.map { it.name }) })
+        races.addAll(foundRaces.map { race -> RaceDisplay(race.id, race.drivers.map { it.name }) })
     }
 
     var selectedRace by remember { mutableStateOf<RaceId?>(null) }
@@ -58,7 +58,7 @@ fun RaceDownloader(
                     text = buildString {
                         append(race.id.uuid)
                         append(" ")
-                        append(race.racers)
+                        append(race.drivers)
                     },
                     modifier = Modifier
                         .padding(8.dp)

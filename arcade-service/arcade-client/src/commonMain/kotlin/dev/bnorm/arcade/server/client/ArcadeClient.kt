@@ -5,10 +5,10 @@ import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.RacerCreateRequest
-import dev.bnorm.arcade.service.api.RacerId
-import dev.bnorm.arcade.service.api.RacerResponse
-import dev.bnorm.arcade.service.api.RacerVersionResponse
+import dev.bnorm.arcade.service.api.DriverCreateRequest
+import dev.bnorm.arcade.service.api.DriverId
+import dev.bnorm.arcade.service.api.DriverResponse
+import dev.bnorm.arcade.service.api.DriverVersionResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
@@ -30,12 +30,12 @@ interface ArcadeClient : AutoCloseable {
     // TODO find the best way to deal directly with bytes without exposing ktor
     fun downloadRace(id: RaceId): Flow<ByteArray>
 
-    suspend fun getRacers(): List<RacerResponse>
-    suspend fun createRacer(request: RacerCreateRequest): RacerResponse
-    suspend fun getRacer(id: RacerId): RacerResponse
-    suspend fun getRacerVersions(id: RacerId): List<RacerVersionResponse>
-    suspend fun downloadRacerVersion(id: RacerId, version: Version): ByteArray
-    suspend fun uploadRacerVersion(id: RacerId, version: Version, bytes: ByteArray): RacerResponse
+    suspend fun getDrivers(): List<DriverResponse>
+    suspend fun createDriver(request: DriverCreateRequest): DriverResponse
+    suspend fun getDriver(id: DriverId): DriverResponse
+    suspend fun getDriverVersions(id: DriverId): List<DriverVersionResponse>
+    suspend fun downloadDriverVersion(id: DriverId, version: Version): ByteArray
+    suspend fun uploadDriverVersion(id: DriverId, version: Version, bytes: ByteArray): DriverResponse
 
     suspend fun getTracks(): List<TrackResponse>
     suspend fun getTrack(id: TrackId): TrackResponse

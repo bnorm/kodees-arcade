@@ -22,8 +22,8 @@ kotlin {
     }
 }
 
-val racers by tasks.registering(Sync::class) {
-    into(project.layout.buildDirectory.dir("racers"))
+val drivers by tasks.registering(Sync::class) {
+    into(project.layout.buildDirectory.dir("drivers"))
 
     into("files") {
         from(project(":arcade-player-samples:kodee").tasks.named("compileProductionExecutableKotlinWasmWasi")) {
@@ -39,23 +39,23 @@ val racers by tasks.registering(Sync::class) {
 
 compose.resources {
     publicResClass = true
-    nameOfResClass = "BundledRacers"
+    nameOfResClass = "BundledDrivers"
     customDirectory(
         sourceSetName = "commonMain",
-        directoryProvider = project.layout.buildDirectory.dir("racers")
+        directoryProvider = project.layout.buildDirectory.dir("drivers")
     )
 }
 
 // TODO yuk... custom task?
 //  also, should this be a separate project?
 tasks.generateResourceAccessorsForCommonMain.configure {
-    dependsOn(racers)
+    dependsOn(drivers)
 }
 
 tasks.copyNonXmlValueResourcesForCommonMain.configure {
-    dependsOn(racers)
+    dependsOn(drivers)
 }
 
 tasks.convertXmlValueResourcesForCommonMain.configure {
-    dependsOn(racers)
+    dependsOn(drivers)
 }

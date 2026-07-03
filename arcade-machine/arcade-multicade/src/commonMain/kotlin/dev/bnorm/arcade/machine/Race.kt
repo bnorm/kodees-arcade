@@ -17,10 +17,10 @@ interface Race {
         @Serializable
         class Update(
             val time: Long,
-            val racers: Map<String, Racer>,
+            val drivers: Map<String, Driver>,
         ) : Event {
             @Serializable
-            class Racer(
+            class Driver(
                 val x: Double,
                 val y: Double,
                 val heading: Angle,

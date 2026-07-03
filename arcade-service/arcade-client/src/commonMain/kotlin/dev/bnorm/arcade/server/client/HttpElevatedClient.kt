@@ -5,10 +5,10 @@ import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.RacerCreateRequest
-import dev.bnorm.arcade.service.api.RacerId
-import dev.bnorm.arcade.service.api.RacerResponse
-import dev.bnorm.arcade.service.api.RacerVersionResponse
+import dev.bnorm.arcade.service.api.DriverCreateRequest
+import dev.bnorm.arcade.service.api.DriverId
+import dev.bnorm.arcade.service.api.DriverResponse
+import dev.bnorm.arcade.service.api.DriverVersionResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
@@ -122,31 +122,31 @@ internal class HttpArcadeClient(
         }
     }
 
-    override suspend fun getRacers(): List<RacerResponse> {
-        return httpClient.get(apiPath("racers")).body()
+    override suspend fun getDrivers(): List<DriverResponse> {
+        return httpClient.get(apiPath("drivers")).body()
     }
 
-    override suspend fun createRacer(request: RacerCreateRequest): RacerResponse {
-        return httpClient.post(apiPath("racers")) {
+    override suspend fun createDriver(request: DriverCreateRequest): DriverResponse {
+        return httpClient.post(apiPath("drivers")) {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
 
-    override suspend fun getRacer(id: RacerId): RacerResponse {
-        return httpClient.get(apiPath("racers/$id")).body()
+    override suspend fun getDriver(id: DriverId): DriverResponse {
+        return httpClient.get(apiPath("drivers/$id")).body()
     }
 
-    override suspend fun getRacerVersions(id: RacerId): List<RacerVersionResponse> {
-        return httpClient.get(apiPath("racers/$id/versions")).body()
+    override suspend fun getDriverVersions(id: DriverId): List<DriverVersionResponse> {
+        return httpClient.get(apiPath("drivers/$id/versions")).body()
     }
 
-    override suspend fun downloadRacerVersion(id: RacerId, version: Version): ByteArray {
-        return httpClient.get(apiPath("racers/$id/download/${version}")).bodyAsBytes()
+    override suspend fun downloadDriverVersion(id: DriverId, version: Version): ByteArray {
+        return httpClient.get(apiPath("drivers/$id/versions/${version}/download")).bodyAsBytes()
     }
 
-    override suspend fun uploadRacerVersion(id: RacerId, version: Version, bytes: ByteArray): RacerResponse {
-        return httpClient.post(apiPath("racers/$id/upload/${version}")) {
+    override suspend fun uploadDriverVersion(id: DriverId, version: Version, bytes: ByteArray): DriverResponse {
+        return httpClient.post(apiPath("drivers/$id/versions/${version}/upload")) {
             contentType(ContentType.Application.OctetStream)
             setBody(bytes)
         }.body()
