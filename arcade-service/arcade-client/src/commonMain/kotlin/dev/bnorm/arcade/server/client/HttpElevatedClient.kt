@@ -49,10 +49,15 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
-internal fun HttpArcadeClient(host: String, port: Int? = null, baseHttpClient: HttpClient): ArcadeClient {
+internal fun HttpArcadeClient(
+    host: String,
+    port: Int? = null,
+    secure: Boolean = false,
+    baseHttpClient: HttpClient,
+): ArcadeClient {
     return HttpArcadeClient(
         hostUrl = buildUrl {
-            this.protocol = if (host == "localhost") URLProtocol.HTTP else URLProtocol.HTTPS
+            this.protocol = if (secure) URLProtocol.HTTPS else URLProtocol.HTTP
             this.host = host
             this.port = port ?: if (host == "localhost") 8080 else DEFAULT_PORT
         },

@@ -14,7 +14,11 @@ import dev.bnorm.arcade.service.api.Version
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.Flow
 
-expect fun ArcadeClient(host: String = "localhost", port: Int? = null): ArcadeClient
+expect fun ArcadeClient(
+    host: String = "localhost",
+    port: Int? = null,
+    secure: Boolean = false,
+): ArcadeClient
 
 interface ArcadeClient : AutoCloseable {
     suspend fun getRaces(): List<RaceResponse>
