@@ -4,6 +4,8 @@ import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
+import dev.bnorm.arcade.service.api.SeasonId
+import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
 import dev.bnorm.arcade.service.route.Router
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
@@ -35,6 +37,21 @@ class RaceRouter(
 ) : Router {
     context(route: Route)
     override fun route() {
+        route.route("/api/rally/seasons/{seasonId}/races") {
+            get {
+                val seasonId = call.parameters.seasonId
+                call.respond(races.getSeasonRaces(seasonId))
+            }
+
+            post {
+                val seasonId = call.parameters.seasonId
+                val request = call.receive<SeasonRaceCreateRequest>()
+                val race = races.createRace(seasonId, request)
+                    ?: throw NotFoundException()
+                call.respond(race)
+            }
+        }
+
         route.route("/api/rally/races") {
             get {
                 call.respond(races.getAllRaces())
@@ -54,13 +71,15 @@ class RaceRouter(
 
             get("/{raceId}") {
                 val raceId = call.parameters.raceId
-                val race = races.getRace(raceId) ?: throw NotFoundException()
+                val race = races.getRace(raceId)
+                    ?: throw NotFoundException()
                 call.respond(race)
             }
 
             put("/{raceId}/reset") {
                 val raceId = call.parameters.raceId
-                val race =  races.resetRace(raceId) ?: throw NotFoundException()
+                val race = races.resetRace(raceId)
+                    ?: throw NotFoundException()
                 call.respond(race)
             }
 
@@ -95,6 +114,7 @@ class RaceRouter(
         }
     }
 
+    private val Parameters.seasonId: SeasonId get() = SeasonId(getUuid("seasonId"))
     private val Parameters.raceId: RaceId get() = RaceId(getUuid("raceId"))
     private val Parameters.nonce: Nonce get() = Nonce(getUuid("nonce"))
 }

@@ -6,9 +6,12 @@ import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
+import dev.bnorm.arcade.service.api.SeasonId
+import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
 import dev.bnorm.arcade.service.logger
 import dev.bnorm.arcade.service.repo.BlobRepository
 import dev.bnorm.arcade.service.repo.DriverRepository
+import dev.bnorm.arcade.service.season.SeasonRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.flow
 @SingleIn(AppScope::class)
 @ContributesIntoSet(AppScope::class)
 class RaceService(
+    private val seasons: SeasonRepository,
     private val races: RaceRepository,
     private val drivers: DriverRepository,
     private val blobs: BlobRepository,
@@ -47,6 +51,10 @@ class RaceService(
         return races.getRaces().map { it.toResponse() }
     }
 
+    suspend fun getSeasonRaces(seasonId: SeasonId): List<RaceResponse> {
+        return races.getRaces(seasonId).map { it.toResponse() }
+    }
+
     suspend fun createRace(request: RaceCreateRequest): RaceResponse {
         val versionByDriverId = request.drivers.associateBy { it.id }
         val driverVersionIds = drivers.getDriverVersions(request.drivers.map { it.id })
@@ -58,6 +66,25 @@ class RaceService(
         }
 
         val entity = races.createRace(request.trackId, driverVersionIds)
+        submitRaceForProcessing(entity)
+        return entity.toResponse()
+    }
+
+    suspend fun createRace(seasonId: SeasonId, request: SeasonRaceCreateRequest): RaceResponse? {
+        val validParticipants = seasons.getParticipants(seasonId)
+        if (validParticipants.isEmpty()) return null // TODO season doesn't exist or no participants and don't know which
+
+        val actualParticipants = if (request.participantIds.isEmpty()) {
+            validParticipants
+        } else {
+            val requestedParticipants = request.participantIds.toMutableSet()
+            require(requestedParticipants.size == request.participantIds.size) { "duplicate participants not allowed" }
+            validParticipants.filter { requestedParticipants.remove(it.id) }.also {
+                require(requestedParticipants.isEmpty()) { "non-season participants not allowed" }
+            }
+        }
+
+        val entity = races.createRace(request.trackId, actualParticipants.map { it.driverVersionId })
         submitRaceForProcessing(entity)
         return entity.toResponse()
     }

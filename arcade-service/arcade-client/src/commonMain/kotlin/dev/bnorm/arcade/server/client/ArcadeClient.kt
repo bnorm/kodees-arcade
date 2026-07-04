@@ -1,14 +1,21 @@
 package dev.bnorm.arcade.server.client
 
-import dev.bnorm.arcade.service.api.Nonce
-import dev.bnorm.arcade.service.api.RaceCreateRequest
-import dev.bnorm.arcade.service.api.RaceId
-import dev.bnorm.arcade.service.api.RaceProcessEvent
-import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.DriverCreateRequest
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.DriverResponse
 import dev.bnorm.arcade.service.api.DriverVersionResponse
+import dev.bnorm.arcade.service.api.Nonce
+import dev.bnorm.arcade.service.api.ParticipantCreateRequest
+import dev.bnorm.arcade.service.api.ParticipantId
+import dev.bnorm.arcade.service.api.ParticipantResponse
+import dev.bnorm.arcade.service.api.RaceCreateRequest
+import dev.bnorm.arcade.service.api.RaceId
+import dev.bnorm.arcade.service.api.RaceProcessEvent
+import dev.bnorm.arcade.service.api.RaceResponse
+import dev.bnorm.arcade.service.api.SeasonCreateRequest
+import dev.bnorm.arcade.service.api.SeasonId
+import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
+import dev.bnorm.arcade.service.api.SeasonResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
@@ -45,4 +52,14 @@ interface ArcadeClient : AutoCloseable {
 
     // TODO is this the best way to upload bytes?
     suspend fun upload(id: RaceId, nonce: Nonce, events: ReceiveChannel<ByteArray>): RaceResponse
+
+    suspend fun getSeasons(): List<SeasonResponse>
+    suspend fun createSeason(request: SeasonCreateRequest): SeasonResponse
+    suspend fun getSeason(id: SeasonId): SeasonResponse
+    suspend fun getParticipants(seasonId: SeasonId): List<ParticipantResponse>
+    suspend fun createParticipant(seasonId: SeasonId, request: ParticipantCreateRequest): ParticipantResponse
+    suspend fun getParticipant(seasonId: SeasonId, participantId: ParticipantId): ParticipantResponse
+    suspend fun removeParticipant(seasonId: SeasonId, participantId: ParticipantId)
+    suspend fun getSeasonRaces(seasonId: SeasonId): List<RaceResponse>
+    suspend fun createSeasonRace(seasonId: SeasonId, request: SeasonRaceCreateRequest): RaceResponse
 }
