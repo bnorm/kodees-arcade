@@ -2,7 +2,7 @@
 
 package dev.bnorm.arcade.rally.engine.wasm
 
-import dev.bnorm.arcade.rally.engine.RacerControlState
+import dev.bnorm.arcade.rally.engine.DriverControlState
 import js.array.Tuple
 import js.buffer.DataView
 import js.buffer.toArrayBuffer
@@ -21,11 +21,11 @@ import web.assembly.compile
 import web.assembly.instantiate
 import web.encoding.TextDecoder
 
-actual suspend fun WasmEngine.createWasmRacer(
-    controlState: RacerControlState,
-    racer: ByteArray,
+actual suspend fun WasmEngine.createWasmDriver(
+    controlState: DriverControlState,
+    driver: ByteArray,
     name: String
-): WasmRacer {
+): WasmDriver {
     lateinit var memory: Memory<*>
 
     val imports = Imports(
@@ -45,22 +45,20 @@ actual suspend fun WasmEngine.createWasmRacer(
         }
     )
 
-    val module = compile(racer.toArrayBuffer())
+    val module = compile(driver.toArrayBuffer())
     val instance = instantiate(module, imports)
 
     memory = instance.exports["memory"]!!.unsafeCast()
 
     val moveFunction = instance.exports["move"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
     val onRaceFunction = instance.exports["onRace"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
-    val racer = WasmRacer(
+    return WasmDriver(
         name = name,
         memory = BrowserMemory(memory),
         moveFunction = { invoke(moveFunction) },
         onRaceFunction = { invoke(onRaceFunction) },
         onClose = {},
     )
-
-    return racer
 }
 
 @Suppress("unused")

@@ -5,14 +5,24 @@ import io.ktor.client.engine.okhttp.OkHttp
 import kotlin.time.Duration.Companion.seconds
 import okhttp3.OkHttpClient
 
-actual fun ArcadeClient(host: String, port: Int?): ArcadeClient {
-    return ArcadeClient(host, port, preconfigured = null)
+actual fun ArcadeClient(
+    host: String,
+    port: Int?,
+    secure: Boolean,
+): ArcadeClient {
+    return ArcadeClient(host, port, secure, preconfigured = null)
 }
 
-fun ArcadeClient(host: String, port: Int?, preconfigured: OkHttpClient?): ArcadeClient {
+fun ArcadeClient(
+    host: String,
+    port: Int?,
+    secure: Boolean = false,
+    preconfigured: OkHttpClient?
+): ArcadeClient {
     return HttpArcadeClient(
         host = host,
         port = port,
+        secure = secure,
         baseHttpClient = HttpClient(OkHttp) {
             engine {
                 this.preconfigured = preconfigured

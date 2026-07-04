@@ -2,18 +2,18 @@ package dev.bnorm.arcade.rally.race
 
 import dev.bnorm.arcade.machine.Race
 import dev.bnorm.arcade.rally.Track
-import dev.bnorm.arcade.rally.engine.RacerControlState
+import dev.bnorm.arcade.rally.engine.DriverControlState
 import dev.bnorm.arcade.rally.engine.RallyCarState
 import dev.bnorm.arcade.rally.engine.RallyGameState
 import dev.bnorm.arcade.rally.engine.update
-import dev.bnorm.arcade.rally.engine.wasm.createWasmRacer
+import dev.bnorm.arcade.rally.engine.wasm.createWasmDriver
 import dev.bnorm.arcade.rally.engine.wasm.withEngine
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 
 class WasmRace(
     private val track: Track,
-    private val racers: List<WasmRacer>,
+    private val drivers: List<WasmDriver>,
 ) : Race {
     override val events: ReceiveChannel<Race.Event>
         field = Channel()
@@ -27,11 +27,11 @@ class WasmRace(
                 trackHeight = track.height,
                 finished = false,
                 time = 0,
-                racers = buildMap {
-                    for ((index, racer) in racers.withIndex()) {
+                drivers = buildMap {
+                    for ((index, driver) in drivers.withIndex()) {
                         val position = track.positions[index]
                         put(
-                            racer.name,
+                            driver.name,
                             RallyCarState(
                                 x = position.location.x,
                                 y = position.location.y,
@@ -45,23 +45,23 @@ class WasmRace(
             events.send(gameState.toUpdate())
 
             withEngine { engine ->
-                val controls = racers.associate { it.name to RacerControlState() }
-                val racers = racers.map { racer ->
-                    val controlsState = controls.getValue(racer.name)
-                    engine.createWasmRacer(controlsState, racer.bytes, racer.name)
+                val controls = this@WasmRace.drivers.associate { it.name to DriverControlState() }
+                val drivers = this@WasmRace.drivers.map { driver ->
+                    val controlsState = controls.getValue(driver.name)
+                    engine.createWasmDriver(controlsState, driver.bytes, driver.name)
                 }
 
                 try {
-                    for (racer in racers) {
-                        racer.onRace(track)
+                    for (driver in drivers) {
+                        driver.onRace(track)
                     }
 
                     while (!gameState.finished) {
-                        // Allow racers to manipulate controls.
-                        for (racer in racers) {
-                            // TODO stop calling when racer is finished.
+                        // Allow drivers to manipulate controls.
+                        for (driver in drivers) {
+                            // TODO stop calling when driver is finished.
                             //  - should they be removed from the game entirely when they finish?
-                            racer.move(gameState)
+                            driver.move(gameState)
                         }
 
                         // Update game state.
@@ -69,16 +69,16 @@ class WasmRace(
                         events.send(gameState.toUpdate())
                     }
                 } finally {
-                    for (racer in racers) {
-                        racer.close()
+                    for (driver in drivers) {
+                        driver.close()
                     }
                 }
 
-                val results = gameState.racers.entries
+                val results = gameState.drivers.entries
                     .sortedBy { (_, v) -> v.finished }
                     .map { it.key }.withIndex()
                     .associate { (place, name) ->
-                        name to Race.Event.Complete.Result(place + 1, gameState.racers.getValue(name).finished!!)
+                        name to Race.Event.Complete.Result(place + 1, gameState.drivers.getValue(name).finished!!)
                     }
                 events.send(Race.Event.Complete(results))
             }
@@ -91,8 +91,8 @@ class WasmRace(
 }
 
 private fun RallyGameState.toUpdate(): Race.Event {
-    fun RallyCarState.toRacer(): Race.Event.Update.Racer {
-        return Race.Event.Update.Racer(
+    fun RallyCarState.toDriver(): Race.Event.Update.Driver {
+        return Race.Event.Update.Driver(
             x = x,
             y = y,
             heading = heading
@@ -101,6 +101,6 @@ private fun RallyGameState.toUpdate(): Race.Event {
 
     return Race.Event.Update(
         time = time,
-        racers = racers.mapValues { (_, value) -> value.toRacer() },
+        drivers = drivers.mapValues { (_, value) -> value.toDriver() },
     )
 }

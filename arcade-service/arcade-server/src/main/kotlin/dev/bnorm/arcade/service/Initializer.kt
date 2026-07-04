@@ -3,9 +3,7 @@ package dev.bnorm.arcade.service
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.loadTrack
 import dev.bnorm.arcade.service.api.Version
-import dev.bnorm.arcade.service.repo.RacerEntity
-import dev.bnorm.arcade.service.repo.RacerRepository
-import dev.bnorm.arcade.service.repo.TrackEntity
+import dev.bnorm.arcade.service.repo.DriverRepository
 import dev.bnorm.arcade.service.repo.TrackRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
@@ -18,16 +16,16 @@ import kotlinx.serialization.json.Json
 @ContributesIntoSet(AppScope::class)
 class Initializer(
     private val tracks: TrackRepository,
-    private val racers: RacerRepository,
+    private val drivers: DriverRepository,
 ) : Service {
     override suspend fun initialize() {
         tracks.addTrack("track.json")
-        racers.addRacer("Kodee")
-        racers.addRacer("Snail")
+        drivers.addDriver("Kodee")
+        drivers.addDriver("Snail")
     }
 
-    private suspend fun TrackRepository.addTrack(resource: String): TrackEntity {
-        return createTrack(
+    private suspend fun TrackRepository.addTrack(resource: String) {
+        createTrack(
             name = "Desk",
             json = Json.encodeToString(
                 Track.serializer(),
@@ -36,13 +34,13 @@ class Initializer(
         )
     }
 
-    private suspend fun RacerRepository.addRacer(name: String): RacerEntity {
-        val racer = createRacer(name = name)
-        return uploadVersion(
-            id = racer.id,
+    private suspend fun DriverRepository.addDriver(name: String) {
+        val driver = createDriver(name = name)
+        uploadDriverVersion(
+            driverId = driver.id,
             version = Version.parse("0.1.0"),
-            channel = ClassLoader.getSystemResource("racers/files/$name.wasm")
+            channel = ClassLoader.getSystemResource("drivers/files/$name.wasm")
                 .toURI().toPath().readChannel()
-        ) ?: racer
+        )
     }
 }

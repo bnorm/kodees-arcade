@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.web.route.racers
+package dev.bnorm.arcade.web.route.drivers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,7 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,8 +36,8 @@ import androidx.compose.ui.window.Dialog
 import dev.bnorm.arcade.icons.download
 import dev.bnorm.arcade.icons.upload
 import dev.bnorm.arcade.server.client.ArcadeClient
-import dev.bnorm.arcade.service.api.RacerId
-import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.DriverId
+import dev.bnorm.arcade.service.api.DriverResponse
 import dev.bnorm.arcade.service.api.Version
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.PlatformFile
@@ -47,12 +49,19 @@ import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.launch
 
 @Composable
-fun RacerCard(
-    racer: RacerResponse,
+fun DriverCard(
+    driver: DriverResponse,
     client: ArcadeClient,
-    onUpload: (RacerResponse) -> Unit,
+    onUpload: (DriverResponse) -> Unit,
 ) {
-    val latest = racer.versions.lastOrNull()
+    val versions = remember { mutableStateListOf<Version>() }
+    LaunchedEffect(driver) {
+        val sorted = client.getDriverVersions(driver.id).map { it.version }.sorted()
+        versions.clear()
+        versions.addAll(sorted)
+    }
+    val latest = versions.lastOrNull()
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -69,7 +78,7 @@ fun RacerCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        racer.name,
+                        driver.name,
                         style = MaterialTheme.typography.headlineLarge,
                         modifier = Modifier.alignByBaseline()
                     )
@@ -82,7 +91,7 @@ fun RacerCard(
                     }
                 }
                 Spacer(Modifier.weight(1f).widthIn(min = 32.dp))
-                UploadRacerButton(client, racer.id, onUpload = onUpload)
+                UploadDriverButton(client, driver.id, onUpload = onUpload)
             }
             Spacer(
                 Modifier
@@ -97,13 +106,13 @@ fun RacerCard(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
             ) {
-                for (version in racer.versions.asReversed()) {
+                for (version in versions.asReversed()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(version.toString(), style = MaterialTheme.typography.bodyLarge)
                         Spacer(Modifier.weight(1f))
-                        DownloadRacerButton(client, racer, version)
+                        DownloadDriverButton(client, driver, version)
                     }
                 }
             }
@@ -112,15 +121,15 @@ fun RacerCard(
 }
 
 @Composable
-private fun UploadRacerButton(
+private fun UploadDriverButton(
     client: ArcadeClient,
-    id: RacerId,
-    onUpload: (RacerResponse) -> Unit,
+    id: DriverId,
+    onUpload: (DriverResponse) -> Unit,
     modifier: Modifier = Modifier.Companion
 ) {
     var displayDialog by remember { mutableStateOf(false) }
     if (displayDialog) {
-        UploadRacerDialog(
+        UploadDriverDialog(
             client = client,
             id = id,
             onDismissRequest = {
@@ -141,12 +150,12 @@ private fun UploadRacerButton(
             }
     ) {
         // TODO this doesn't look truly centered...
-        Icon(upload, contentDescription = "Upload racer")
+        Icon(upload, contentDescription = "Upload driver")
     }
 }
 
 @Composable
-private fun UploadRacerDialog(client: ArcadeClient, id: RacerId, onDismissRequest: (RacerResponse?) -> Unit) {
+private fun UploadDriverDialog(client: ArcadeClient, id: DriverId, onDismissRequest: (DriverResponse?) -> Unit) {
     Dialog(
         onDismissRequest = { onDismissRequest(null) },
     ) {
@@ -179,8 +188,8 @@ private fun UploadRacerDialog(client: ArcadeClient, id: RacerId, onDismissReques
                             // TODO protect against bad version strings
                             val version = Version.parse(state.text.toString())
                             val bytes = file!!.readBytes()
-                            val racer = client.uploadRacerVersion(id, version, bytes)
-                            onDismissRequest(racer)
+                            val driver = client.uploadDriverVersion(id, version, bytes)
+                            onDismissRequest(driver)
                         }
                     },
                     modifier = Modifier
@@ -194,9 +203,9 @@ private fun UploadRacerDialog(client: ArcadeClient, id: RacerId, onDismissReques
 }
 
 @Composable
-private fun DownloadRacerButton(
+private fun DownloadDriverButton(
     client: ArcadeClient,
-    racer: RacerResponse,
+    driver: DriverResponse,
     version: Version,
     modifier: Modifier = Modifier.Companion
 ) {
@@ -211,13 +220,13 @@ private fun DownloadRacerButton(
             ) {
                 scope.launch {
                     FileKit.download(
-                        bytes = client.downloadRacerVersion(racer.id, version),
-                        fileName = "${racer.name} $version.wasm"
+                        bytes = client.downloadDriverVersion(driver.id, version),
+                        fileName = "${driver.name} $version.wasm"
                     )
                 }
             }
     ) {
         // TODO this doesn't look truly centered...
-        Icon(download, contentDescription = "Download racer", modifier = Modifier.size(16.dp))
+        Icon(download, contentDescription = "Download driver", modifier = Modifier.size(16.dp))
     }
 }

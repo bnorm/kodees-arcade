@@ -9,5 +9,12 @@ class RaceResponse(
     val trackId: TrackId,
     val startTime: Instant?,
     val endTime: Instant?,
-    val racers: List<RacerId>, // TODO version as well?
-)
+    val drivers: List<Driver>,
+) {
+    @Serializable
+    class Driver(
+        val id: DriverId,
+        val name: String,
+        val version: Version,
+    )
+}

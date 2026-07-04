@@ -27,12 +27,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.arcade_player_samples.generated.resources.BundledRacers
+import dev.bnorm.arcade.arcade_player_samples.generated.resources.BundledDrivers
 import dev.bnorm.arcade.machine.Race
 import dev.bnorm.arcade.rally.race.WasmRace
-import dev.bnorm.arcade.rally.race.WasmRacer
+import dev.bnorm.arcade.rally.race.WasmDriver
 import dev.bnorm.arcade.server.client.ArcadeClient
-import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.DriverId
+import dev.bnorm.arcade.service.api.Version
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
@@ -40,7 +41,7 @@ import io.github.vinceglb.filekit.name
 import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.launch
 
-private val BUNDLED_RACERS = listOf("Kodee", "Snail")
+private val BUNDLED_DRIVERS = listOf("Kodee", "Snail")
 
 @Composable
 fun RaceWizard(
@@ -50,10 +51,10 @@ fun RaceWizard(
 ) {
     val scope = rememberCoroutineScope()
 
-    val racers = remember { mutableStateListOf<WasmRacer>() }
+    val drivers = remember { mutableStateListOf<WasmDriver>() }
 
-    fun pickRacerName(baseName: String): String {
-        val existingNames = racers.mapTo(mutableSetOf()) { it.name }
+    fun pickDriverName(baseName: String): String {
+        val existingNames = drivers.mapTo(mutableSetOf()) { it.name }
         var name = baseName
         if (name in existingNames) name = "$name (1)"
         var i = 1
@@ -63,18 +64,18 @@ fun RaceWizard(
         return name
     }
 
-    fun canAddRacer(): Boolean = racers.size < 6
+    fun canAddDriver(): Boolean = drivers.size < 6
 
-    val racersLauncher = rememberFilePickerLauncher(
+    val driversLauncher = rememberFilePickerLauncher(
         mode = FileKitMode.Single,
         type = FileKitType.File("wasm"),
-//        directory = PlatformFile("../arcade-player-samples/build/racers/files"),
+//        directory = PlatformFile("../arcade-player-samples/build/drivers/files"),
     ) { file ->
         if (file != null) {
             scope.launch {
-                racers.add(
-                    WasmRacer(
-                        name = pickRacerName(file.name.substringBeforeLast(".")),
+                drivers.add(
+                    WasmDriver(
+                        name = pickDriverName(file.name.substringBeforeLast(".")),
                         bytes = file.readBytes(),
                     )
                 )
@@ -82,31 +83,42 @@ fun RaceWizard(
         }
     }
 
+    class DriverDisplay(
+        val id: DriverId,
+        val version: Version,
+        val name: String,
+    )
+
     var showDownloader by remember { mutableStateOf(false) }
-    val serverRacers = remember { mutableStateListOf<RacerResponse>() }
+    val serverDrivers = remember { mutableStateListOf<DriverDisplay>() }
     if (client != null && showDownloader) {
         LaunchedEffect(Unit) {
-            val foundRacers = client.getRacers().filter { it.versions.isNotEmpty() }
-            serverRacers.clear()
-            serverRacers.addAll(foundRacers)
+            val foundDrivers = client.getDrivers()
+            val foundVersions = foundDrivers
+                .flatMap { driver ->
+                    client.getDriverVersions(driver.id)
+                        .map { DriverDisplay(driver.id, it.version, driver.name) }
+                }
+            serverDrivers.clear()
+            serverDrivers.addAll(foundVersions)
         }
 
         Dialog(onDismissRequest = { showDownloader = false }) {
             Surface(shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Racers", style = MaterialTheme.typography.headlineSmall)
+                    Text("Drivers", style = MaterialTheme.typography.headlineSmall)
                     LazyColumn(Modifier.fillMaxWidth()) {
-                        items(serverRacers) { racer ->
-                            val version = racer.versions.last()
-                            val name = "${racer.name} $version"
+                        items(serverDrivers) { driver ->
+                            val version = driver.version
+                            val name = "${driver.name} $version"
                             Text(
                                 text = name,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
                                         scope.launch {
-                                            val wasm = client.downloadRacerVersion(racer.id, version)
-                                            racers.add(WasmRacer(pickRacerName(name), wasm))
+                                            val wasm = client.downloadDriverVersion(driver.id, version)
+                                            drivers.add(WasmDriver(pickDriverName(name), wasm))
                                             showDownloader = false
                                         }
                                     }
@@ -122,16 +134,16 @@ fun RaceWizard(
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
-                enabled = canAddRacer(),
+                enabled = canAddDriver(),
                 onClick = {
-                    racersLauncher.launch()
+                    driversLauncher.launch()
                 }
             ) {
-                Text("Load Racer")
+                Text("Load Driver")
             }
             if (client != null) {
                 Button(
-                    enabled = canAddRacer(),
+                    enabled = canAddDriver(),
                     onClick = {
                         showDownloader = true
                     }
@@ -140,9 +152,9 @@ fun RaceWizard(
                 }
             }
             Button(
-                enabled = racers.isNotEmpty(),
+                enabled = drivers.isNotEmpty(),
                 onClick = {
-                    racers.clear()
+                    drivers.clear()
                 }
             ) {
                 Text("Clear")
@@ -150,35 +162,35 @@ fun RaceWizard(
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Quick Add: ")
-            for (racer in BUNDLED_RACERS) {
+            for (driver in BUNDLED_DRIVERS) {
                 Button(
-                    enabled = canAddRacer(),
+                    enabled = canAddDriver(),
                     onClick = {
                         scope.launch {
-                            racers.add(
-                                WasmRacer(
-                                    name = pickRacerName(racer),
-                                    bytes = BundledRacers.readBytes("files/$racer.wasm"),
+                            drivers.add(
+                                WasmDriver(
+                                    name = pickDriverName(driver),
+                                    bytes = BundledDrivers.readBytes("files/$driver.wasm"),
                                 )
                             )
                         }
                     }
                 ) {
-                    Text(racer)
+                    Text(driver)
                 }
             }
         }
 
-        for (racer in racers) {
+        for (driver in drivers) {
             Spacer(Modifier.width(8.dp))
-            Text(racer.name)
+            Text(driver.name)
         }
 
         Spacer(Modifier.width(8.dp))
         Button(
-            enabled = racers.isNotEmpty(),
+            enabled = drivers.isNotEmpty(),
             onClick = {
-                onStart(WasmRace(track, racers.toList()))
+                onStart(WasmRace(track, drivers.toList()))
             }
         ) {
             Text("Start!")

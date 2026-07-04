@@ -26,11 +26,11 @@ class RecordRace(
             coroutineScope {
                 launch {
                     path.toFile().writeChannel().use {
-
                             for (event in race.events) {
                                 val bytes = ProtoBuf.encodeToByteArray(Race.Event.serializer(), event)
                                 writeInt(bytes.size)
                                 writeByteArray(bytes)
+                                events.send(event)
                             }
                     }
                 }

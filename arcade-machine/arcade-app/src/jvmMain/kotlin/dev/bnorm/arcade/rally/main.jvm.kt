@@ -28,10 +28,10 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import java.nio.file.Paths
 
 // TODO support team racing?
-//  could be cool for racers to try and assist each other
+//  could be cool for drivers to try and assist each other
 
 // TODO support heats and seasons?
-//  same Wasm instance for racers through the heats or entire season
+//  same Wasm instance for drivers through the heats or entire season
 //  tracks change over the course of the season or repeat for heats
 
 // TODO full F1 style season?

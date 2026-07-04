@@ -1,13 +1,21 @@
 package dev.bnorm.arcade.server.client
 
+import dev.bnorm.arcade.service.api.DriverCreateRequest
+import dev.bnorm.arcade.service.api.DriverId
+import dev.bnorm.arcade.service.api.DriverResponse
+import dev.bnorm.arcade.service.api.DriverVersionResponse
 import dev.bnorm.arcade.service.api.Nonce
+import dev.bnorm.arcade.service.api.ParticipantCreateRequest
+import dev.bnorm.arcade.service.api.ParticipantId
+import dev.bnorm.arcade.service.api.ParticipantResponse
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.RacerCreateRequest
-import dev.bnorm.arcade.service.api.RacerId
-import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.SeasonCreateRequest
+import dev.bnorm.arcade.service.api.SeasonId
+import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
+import dev.bnorm.arcade.service.api.SeasonResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
@@ -16,6 +24,7 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.client.plugins.sse.sse
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
@@ -23,6 +32,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsChannel
+import io.ktor.client.statement.discardRemaining
 import io.ktor.http.ContentType
 import io.ktor.http.DEFAULT_PORT
 import io.ktor.http.URLProtocol
@@ -49,10 +59,15 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
-internal fun HttpArcadeClient(host: String, port: Int? = null, baseHttpClient: HttpClient): ArcadeClient {
+internal fun HttpArcadeClient(
+    host: String,
+    port: Int? = null,
+    secure: Boolean = false,
+    baseHttpClient: HttpClient,
+): ArcadeClient {
     return HttpArcadeClient(
         hostUrl = buildUrl {
-            this.protocol = if (host == "localhost") URLProtocol.HTTP else URLProtocol.HTTPS
+            this.protocol = if (secure) URLProtocol.HTTPS else URLProtocol.HTTP
             this.host = host
             this.port = port ?: if (host == "localhost") 8080 else DEFAULT_PORT
         },
@@ -88,19 +103,31 @@ internal class HttpArcadeClient(
         }
     }
 
-    override suspend fun getRaces(): List<RaceResponse> {
-        return httpClient.get(apiPath("races")).body()
+    private suspend inline fun <reified R> get(path: String): R {
+        return httpClient.get(apiPath(path)).body()
     }
 
-    override suspend fun getRace(id: RaceId): RaceResponse {
-        return httpClient.get(apiPath("races/$id")).body()
-    }
-
-    override suspend fun createRace(request: RaceCreateRequest): RaceResponse {
-        return httpClient.post(apiPath("races")) {
+    private suspend inline fun <reified B, reified R> post(path: String, request: B): R {
+        return httpClient.post(apiPath(path)) {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
+    }
+
+    private suspend fun delete(path: String) {
+        httpClient.delete(apiPath(path)).discardRemaining()
+    }
+
+    override suspend fun getRaces(): List<RaceResponse> {
+        return get("races")
+    }
+
+    override suspend fun getRace(id: RaceId): RaceResponse {
+        return get("races/$id")
+    }
+
+    override suspend fun createRace(request: RaceCreateRequest): RaceResponse {
+        return post("races", request)
     }
 
     override suspend fun resetRace(id: RaceId): RaceResponse {
@@ -116,42 +143,43 @@ internal class HttpArcadeClient(
         }
     }
 
-    override suspend fun getRacers(): List<RacerResponse> {
-        return httpClient.get(apiPath("racers")).body()
+    override suspend fun getDrivers(): List<DriverResponse> {
+        return get("drivers")
     }
 
-    override suspend fun createRacer(request: RacerCreateRequest): RacerResponse {
-        return httpClient.post(apiPath("racers")) {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
+    override suspend fun createDriver(request: DriverCreateRequest): DriverResponse {
+        return post("drivers", request)
     }
 
-    override suspend fun getRacer(id: RacerId): RacerResponse {
-        return httpClient.get(apiPath("racers/$id")).body()
+    override suspend fun getDriver(id: DriverId): DriverResponse {
+        return get("drivers/$id")
     }
 
-    override suspend fun downloadRacerVersion(id: RacerId, version: Version): ByteArray {
-        return httpClient.get(apiPath("racers/$id/download/${version}")).bodyAsBytes()
+    override suspend fun getDriverVersions(id: DriverId): List<DriverVersionResponse> {
+        return get("drivers/$id/versions")
     }
 
-    override suspend fun uploadRacerVersion(id: RacerId, version: Version, bytes: ByteArray): RacerResponse {
-        return httpClient.post(apiPath("racers/$id/upload/${version}")) {
+    override suspend fun downloadDriverVersion(id: DriverId, version: Version): ByteArray {
+        return httpClient.get(apiPath("drivers/$id/versions/${version}/download")).bodyAsBytes()
+    }
+
+    override suspend fun uploadDriverVersion(id: DriverId, version: Version, bytes: ByteArray): DriverResponse {
+        return httpClient.post(apiPath("drivers/$id/versions/${version}/upload")) {
             contentType(ContentType.Application.OctetStream)
             setBody(bytes)
         }.body()
     }
 
     override suspend fun getTracks(): List<TrackResponse> {
-        return httpClient.get(apiPath("tracks")).body()
+        return get("tracks")
     }
 
     override suspend fun getTrack(id: TrackId): TrackResponse {
-        return httpClient.get(apiPath("tracks/$id")).body()
+        return get("tracks/$id")
     }
 
     override suspend fun downloadTrack(id: TrackId): ByteArray {
-        return httpClient.get(apiPath("tracks/$id/download")).body()
+        return get("tracks/$id/download")
     }
 
     override fun listen(): Flow<RaceProcessEvent> = channelFlow {
@@ -189,6 +217,41 @@ internal class HttpArcadeClient(
         }.body()
     }
 
+    override suspend fun getSeasons(): List<SeasonResponse> {
+        return get("seasons")
+    }
+
+    override suspend fun createSeason(request: SeasonCreateRequest): SeasonResponse {
+        return post("seasons", request)
+    }
+
+    override suspend fun getSeason(id: SeasonId): SeasonResponse {
+        return get("seasons/$id")
+    }
+
+    override suspend fun getParticipants(seasonId: SeasonId): List<ParticipantResponse> {
+        return get("seasons/$seasonId/participants")
+    }
+
+    override suspend fun createParticipant(seasonId: SeasonId, request: ParticipantCreateRequest): ParticipantResponse {
+        return post("seasons/$seasonId/participants", request)
+    }
+
+    override suspend fun getParticipant(seasonId: SeasonId, participantId: ParticipantId): ParticipantResponse {
+        return get("seasons/$seasonId/participants/$participantId")
+    }
+
+    override suspend fun removeParticipant(seasonId: SeasonId, participantId: ParticipantId) {
+        delete("seasons/$seasonId/participants/$participantId")
+    }
+
+    override suspend fun getSeasonRaces(seasonId: SeasonId): List<RaceResponse> {
+        return get("seasons/$seasonId/races")
+    }
+
+    override suspend fun createSeasonRace(seasonId: SeasonId, request: SeasonRaceCreateRequest): RaceResponse {
+        return post("seasons/$seasonId/races", request)
+    }
 
     override fun close() {
         httpClient.close()

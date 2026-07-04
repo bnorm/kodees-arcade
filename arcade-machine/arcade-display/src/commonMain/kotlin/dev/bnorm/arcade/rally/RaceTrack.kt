@@ -165,7 +165,7 @@ private fun Game(
 
     val textMeasurer = rememberTextMeasurer()
     Canvas(modifier.fillMaxSize()) {
-        for ((index, entry) in state?.racers?.entries.orEmpty().withIndex()) {
+        for ((index, entry) in state?.drivers?.entries.orEmpty().withIndex()) {
             val (name, state) = entry
             val x = state.x.toFloat()
             val y = size.height - state.y.toFloat()
@@ -181,7 +181,7 @@ private fun Game(
             drawText(result, color = Color.Black, topLeft = center + textOffset)
         }
 
-        for ((index, state) in state?.racers?.values.orEmpty().withIndex()) {
+        for ((index, state) in state?.drivers?.values.orEmpty().withIndex()) {
             val x = state.x.toFloat()
             val y = size.height - state.y.toFloat()
             val center = Offset(x, y)

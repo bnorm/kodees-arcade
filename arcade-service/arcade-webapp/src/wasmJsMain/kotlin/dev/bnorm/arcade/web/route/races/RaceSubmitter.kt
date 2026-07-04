@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.RacerId
-import dev.bnorm.arcade.service.api.RacerResponse
+import dev.bnorm.arcade.service.api.DriverResponse
+import dev.bnorm.arcade.service.api.DriverVersionResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import kotlinx.coroutines.async
@@ -46,20 +46,22 @@ fun RaceSubmitter(
 ) {
     val scope = rememberCoroutineScope()
     val tracks = remember { mutableStateListOf<TrackResponse>() }
-    val racers = remember { mutableStateListOf<RacerResponse>() }
+    val drivers = remember { mutableStateListOf<Pair<DriverResponse, DriverVersionResponse>>() }
 
     LaunchedEffect(client) {
         val foundTracks = async { client.getTracks() }
-        val foundRacers = client.getRacers().filter { it.versions.isNotEmpty() }
+        val foundDrivers = client.getDrivers().flatMap { driver ->
+            client.getDriverVersions(driver.id).sortedBy { it.version }.map { driver to it }
+        }
         foundTracks.await() // Force wait.
         tracks.clear()
         tracks.addAll(foundTracks.await())
-        racers.clear()
-        racers.addAll(foundRacers)
+        drivers.clear()
+        drivers.addAll(foundDrivers)
     }
 
     var selectedTrack by remember { mutableStateOf<TrackId?>(null) }
-    val selectedRacers = remember { mutableStateSetOf<RacerId>() }
+    val selectedDrivers = remember { mutableStateSetOf<RaceCreateRequest.Driver>() }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -82,7 +84,7 @@ fun RaceSubmitter(
                 Spacer(Modifier.width(2.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = "Racers",
+                        text = "Drivers",
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
@@ -124,18 +126,19 @@ fun RaceSubmitter(
                         .padding(8.dp)
                 ) {
                     Column {
-                        for (racer in racers) {
-                            val isSelected = selectedRacers.contains(racer.id)
+                        for ((driver, version) in drivers) {
+                            val request = RaceCreateRequest.Driver(driver.id, version.version)
+                            val isSelected = selectedDrivers.contains(request)
 
                             Text(
-                                text = "${racer.name} ${racer.versions.last()}",
+                                text = "${driver.name} ${version.version}",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(if (isSelected) Color.Gray else Color.Transparent)
                                     .clickable {
                                         when (isSelected) {
-                                            true -> selectedRacers.remove(racer.id)
-                                            false -> selectedRacers.add(racer.id)
+                                            true -> selectedDrivers.remove(request)
+                                            false -> selectedDrivers.add(request)
                                         }
                                     }
                                     .padding(4.dp)
@@ -146,10 +149,10 @@ fun RaceSubmitter(
             }
         }
         Button(
-            enabled = selectedTrack != null && selectedRacers.isNotEmpty(),
+            enabled = selectedTrack != null && selectedDrivers.isNotEmpty(),
             onClick = {
                 scope.launch {
-                    val request = RaceCreateRequest(selectedTrack!!, selectedRacers.toList())
+                    val request = RaceCreateRequest(selectedTrack!!, selectedDrivers.toList())
                     onCreate(client.createRace(request))
                 }
             }
