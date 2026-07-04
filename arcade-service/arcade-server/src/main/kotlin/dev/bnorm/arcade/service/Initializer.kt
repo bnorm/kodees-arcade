@@ -25,12 +25,11 @@ class Initializer(
     }
 
     private suspend fun TrackRepository.addTrack(resource: String) {
+        val track = loadTrack(ClassLoader.getSystemResource(resource).readText())
         createTrack(
             name = "Desk",
-            json = Json.encodeToString(
-                Track.serializer(),
-                loadTrack(ClassLoader.getSystemResource(resource).readText())
-            )
+            positions = track.positions.size,
+            json = Json.encodeToString(Track.serializer(), track)
         )
     }
 

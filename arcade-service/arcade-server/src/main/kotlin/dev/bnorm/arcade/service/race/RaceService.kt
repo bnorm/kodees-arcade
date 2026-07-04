@@ -2,6 +2,7 @@ package dev.bnorm.arcade.service.race
 
 import dev.bnorm.arcade.service.Service
 import dev.bnorm.arcade.service.api.Nonce
+import dev.bnorm.arcade.service.api.ParticipantId
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
@@ -56,35 +57,44 @@ class RaceService(
     }
 
     suspend fun createRace(request: RaceCreateRequest): RaceResponse {
-        val versionByDriverId = request.drivers.associateBy { it.id }
-        val driverVersionIds = drivers.getDriverVersions(request.drivers.map { it.id })
+        val versionByDriverId = request.positions.associateBy { it.driverId }
+        val driverVersionIds = drivers.getDriverVersions(request.positions.map { it.driverId })
             .mapNotNull { entity ->
                 entity.id.takeIf { versionByDriverId[entity.driverId]?.version == entity.version }
             }
-        if (driverVersionIds.size != request.drivers.size) {
+        if (driverVersionIds.size != request.positions.size) {
             TODO("bad request - an unknown driver or version")
         }
 
-        val entity = races.createRace(request.trackId, driverVersionIds)
+        val entity = races.createRace(seasonId = null, request.trackId, driverVersionIds)
         submitRaceForProcessing(entity)
         return entity.toResponse()
     }
 
-    suspend fun createRace(seasonId: SeasonId, request: SeasonRaceCreateRequest): RaceResponse? {
-        val validParticipants = seasons.getParticipants(seasonId)
-        if (validParticipants.isEmpty()) return null // TODO season doesn't exist or no participants and don't know which
+    suspend fun createRace(seasonId: SeasonId, request: SeasonRaceCreateRequest): RaceResponse {
+        require(request.positions.isNotEmpty()) { "no participants" }
 
-        val actualParticipants = if (request.participantIds.isEmpty()) {
-            validParticipants
-        } else {
-            val requestedParticipants = request.participantIds.toMutableSet()
-            require(requestedParticipants.size == request.participantIds.size) { "duplicate participants not allowed" }
-            validParticipants.filter { requestedParticipants.remove(it.id) }.also {
-                require(requestedParticipants.isEmpty()) { "non-season participants not allowed" }
+        val allParticipants = seasons.getParticipants(seasonId)
+
+        val unknownParticipants = mutableSetOf<ParticipantId>()
+        val participants = buildList {
+            for (participantId in request.positions) {
+                val participant = allParticipants.find { it.id == participantId }
+                if (participant != null) {
+                    add(participant.driverVersionId)
+                } else {
+                    unknownParticipants.add(participantId)
+                }
             }
         }
 
-        val entity = races.createRace(request.trackId, actualParticipants.map { it.driverVersionId })
+        require(unknownParticipants.isEmpty()) { "non-season participants not allowed" }
+        val duplicateParticipants = request.positions.duplicates()
+        require(duplicateParticipants.isEmpty()) { "duplicate participants not allowed" }
+
+        // TODO check track positions vs participants size
+
+        val entity = races.createRace(seasonId, request.trackId, participants)
         submitRaceForProcessing(entity)
         return entity.toResponse()
     }
@@ -156,13 +166,24 @@ class RaceService(
             trackId = this.trackId,
             startTime = this.startTime,
             endTime = this.endTime,
-            drivers = this.versionedDrivers.map {
-                RaceResponse.Driver(
-                    id = it.driverId,
+            positions = this.positions.map {
+                RaceResponse.Position(
+                    position = it.position,
+                    driverId = it.driverId,
                     name = it.name,
                     version = it.version,
                 )
             }
         )
+    }
+}
+
+private fun <T> Iterable<T>.duplicates(): Set<T> {
+    val upstream = this
+    return buildSet {
+        val seen = mutableSetOf<T>()
+        for (value in upstream) {
+            if (!seen.add(value)) add(value)
+        }
     }
 }

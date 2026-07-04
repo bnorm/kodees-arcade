@@ -65,7 +65,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
             val state = RaceState(
                 race = race,
                 track = getTrack(race.trackId),
-                drivers = race.drivers,
+                drivers = race.positions,
             )
             active += state
 
@@ -190,7 +190,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
 class RaceState(
     race: RaceResponse,
     val track: TrackResponse,
-    val drivers: List<RaceResponse.Driver>,
+    val drivers: List<RaceResponse.Position>,
 ) {
     var race by mutableStateOf(race)
     var time by mutableLongStateOf(0L)
@@ -223,7 +223,7 @@ suspend fun process(
                     }
 
                     is RallyRace.Event.Update -> {
-                        state.time = it.time
+                        state.time++
                         if (Clock.System.now() >= targetTime) {
                             val elapsed = Clock.System.now() - state.startTime!!
                             state.ups = state.time / (elapsed.inWholeNanoseconds / 1_000_000_000.0)

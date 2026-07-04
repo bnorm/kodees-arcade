@@ -36,19 +36,19 @@ class SeasonRouter(
                 call.respond(seasons.createSeason(request))
             }
 
-            get("/{seasonsId}") {
+            get("/{seasonId}") {
                 val seasonId = call.parameters.seasonId
                 val season = seasons.getSeason(seasonId)
                     ?: throw NotFoundException()
                 call.respond(season)
             }
 
-            get("/{seasonsId}/participants") {
+            get("/{seasonId}/participants") {
                 val seasonId = call.parameters.seasonId
                 call.respond(seasons.getParticipants(seasonId))
             }
 
-            post("/{seasonsId}/participants") {
+            post("/{seasonId}/participants") {
                 val seasonId = call.parameters.seasonId
                 val request = call.receive<ParticipantCreateRequest>()
                 val participant = seasons.createParticipant(seasonId, request)
@@ -56,7 +56,7 @@ class SeasonRouter(
                 call.respond(participant)
             }
 
-            get("/{seasonsId}/participants/{participantId}") {
+            get("/{seasonId}/participants/{participantId}") {
                 val seasonId = call.parameters.seasonId
                 val participantId = call.parameters.participantId
                 val participant = seasons.getParticipant(seasonId, participantId)
@@ -64,7 +64,7 @@ class SeasonRouter(
                 call.respond(participant)
             }
 
-            delete("/{seasonsId}/participants/{participantId}") {
+            delete("/{seasonId}/participants/{participantId}") {
                 val seasonId = call.parameters.seasonId
                 val participantId = call.parameters.participantId
                 val result = seasons.deleteParticipants(seasonId, participantId)

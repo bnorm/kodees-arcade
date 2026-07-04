@@ -3,6 +3,7 @@ package dev.bnorm.arcade.machine
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.rally.Track
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 interface Race {
@@ -12,12 +13,13 @@ interface Race {
     @Serializable
     sealed interface Event {
         @Serializable
-        class Start(val track: Track) : Event
+        @SerialName("Start")
+        class Start(val track: Track, val drivers: List<String>) : Event
 
         @Serializable
+        @SerialName("Update")
         class Update(
-            val time: Long,
-            val drivers: Map<String, Driver>,
+            val drivers: List<Driver>,
         ) : Event {
             @Serializable
             class Driver(
@@ -28,6 +30,7 @@ interface Race {
         }
 
         @Serializable
+        @SerialName("Complete")
         class Complete(
             val results: Map<String, Result>
         ) : Event {

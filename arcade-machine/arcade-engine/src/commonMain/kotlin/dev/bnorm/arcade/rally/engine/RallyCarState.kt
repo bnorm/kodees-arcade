@@ -3,6 +3,8 @@ package dev.bnorm.arcade.rally.engine
 import dev.bnorm.arcade.geometry.Angle
 
 class RallyCarState(
+    val name: String,
+    val controls: DriverControlState,
     var x: Double,
     var y: Double,
     var heading: Angle,

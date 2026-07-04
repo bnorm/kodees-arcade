@@ -1,6 +1,11 @@
 package dev.bnorm.arcade.rally.engine
 
-import dev.bnorm.arcade.geometry.*
+import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.atan2
+import dev.bnorm.arcade.geometry.center
+import dev.bnorm.arcade.geometry.cos
+import dev.bnorm.arcade.geometry.length
+import dev.bnorm.arcade.geometry.sin
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.simulateHeading
 import dev.bnorm.arcade.rally.simulateSpeed
@@ -12,11 +17,11 @@ val carHeight = 16.0
 val impactDist = (68.0 * 0.4f)
 val impactDistSq = impactDist * impactDist
 
-fun update(gameState: RallyGameState, controls: Map<String, DriverControlState>, track: Track) {
+fun update(gameState: RallyGameState, track: Track) {
     gameState.time++
 
     val drivers = gameState.drivers
-    for ((name, driverState) in drivers) {
+    for (driverState in drivers) {
         // Skip updating drivers which are finished.
         if (driverState.lap >= track.laps) {
             if (driverState.finished == null) {
@@ -25,7 +30,7 @@ fun update(gameState: RallyGameState, controls: Map<String, DriverControlState>,
             continue
         }
 
-        val controls = controls.getValue(name)
+        val controls = driverState.controls
         val steering = controls.steering
         val throttle = controls.throttle
 
@@ -69,13 +74,12 @@ fun update(gameState: RallyGameState, controls: Map<String, DriverControlState>,
     // Only do a single pass...
     // TODO is a little bit of clipping okay?
 
-    val driverList = drivers.values.toList()
-    for ((i, driver1) in driverList.withIndex()) {
+    for ((i, driver1) in drivers.withIndex()) {
         // Skip updating drivers which are finished.
         if (driver1.lap >= track.laps) continue
 
         for (j in (i + 1)..<drivers.size) {
-            val driver2 = driverList[j]
+            val driver2 = drivers[j]
             // Skip updating drivers which are finished.
             if (driver2.lap >= track.laps) continue
 
@@ -96,7 +100,7 @@ fun update(gameState: RallyGameState, controls: Map<String, DriverControlState>,
         }
     }
 
-    gameState.finished = drivers.all { it.value.finished != null }
+    gameState.finished = drivers.all { it.finished != null }
 }
 
 /** @return if impacted with a wall. */

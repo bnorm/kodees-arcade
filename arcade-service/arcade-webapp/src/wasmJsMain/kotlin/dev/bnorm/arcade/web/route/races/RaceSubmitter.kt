@@ -21,7 +21,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -30,10 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.server.client.ArcadeClient
-import dev.bnorm.arcade.service.api.RaceCreateRequest
-import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.DriverResponse
 import dev.bnorm.arcade.service.api.DriverVersionResponse
+import dev.bnorm.arcade.service.api.RaceCreateRequest
+import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import kotlinx.coroutines.async
@@ -61,7 +60,7 @@ fun RaceSubmitter(
     }
 
     var selectedTrack by remember { mutableStateOf<TrackId?>(null) }
-    val selectedDrivers = remember { mutableStateSetOf<RaceCreateRequest.Driver>() }
+    val selectedPositions = remember { mutableStateListOf<RaceCreateRequest.Position>() }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -127,18 +126,18 @@ fun RaceSubmitter(
                 ) {
                     Column {
                         for ((driver, version) in drivers) {
-                            val request = RaceCreateRequest.Driver(driver.id, version.version)
-                            val isSelected = selectedDrivers.contains(request)
+                            val position = RaceCreateRequest.Position(driver.id, version.version)
+                            val index = selectedPositions.indexOf(position)
 
                             Text(
                                 text = "${driver.name} ${version.version}",
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(if (isSelected) Color.Gray else Color.Transparent)
+                                    .background(if (index >= 0) Color.Gray else Color.Transparent)
                                     .clickable {
-                                        when (isSelected) {
-                                            true -> selectedDrivers.remove(request)
-                                            false -> selectedDrivers.add(request)
+                                        when (index) {
+                                            -1 -> selectedPositions.add(position)
+                                            else -> selectedPositions.remove(position)
                                         }
                                     }
                                     .padding(4.dp)
@@ -149,10 +148,10 @@ fun RaceSubmitter(
             }
         }
         Button(
-            enabled = selectedTrack != null && selectedDrivers.isNotEmpty(),
+            enabled = selectedTrack != null && selectedPositions.isNotEmpty(),
             onClick = {
                 scope.launch {
-                    val request = RaceCreateRequest(selectedTrack!!, selectedDrivers.toList())
+                    val request = RaceCreateRequest(selectedTrack!!, selectedPositions.toList())
                     onCreate(client.createRace(request))
                 }
             }

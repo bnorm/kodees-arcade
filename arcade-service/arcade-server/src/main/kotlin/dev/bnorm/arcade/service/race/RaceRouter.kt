@@ -47,7 +47,6 @@ class RaceRouter(
                 val seasonId = call.parameters.seasonId
                 val request = call.receive<SeasonRaceCreateRequest>()
                 val race = races.createRace(seasonId, request)
-                    ?: throw NotFoundException()
                 call.respond(race)
             }
         }

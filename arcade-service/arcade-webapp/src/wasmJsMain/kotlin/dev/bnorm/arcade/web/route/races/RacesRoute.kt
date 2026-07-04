@@ -48,8 +48,6 @@ import dev.bnorm.arcade.rally.rememberDeskTrack
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.DriverId
-import dev.bnorm.arcade.service.api.DriverResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.web.route.Route
@@ -239,8 +237,8 @@ private fun RaceCard(
 
             Column {
                 // TODO this should be the same as race results
-                for (driver in race.drivers) {
-                    Text(driver.name, style = MaterialTheme.typography.bodyLarge)
+                for (position in race.positions) {
+                    Text(position.name, style = MaterialTheme.typography.bodyLarge)
                     // TODO include driver version
                 }
             }

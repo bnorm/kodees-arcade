@@ -21,3 +21,20 @@ Accept: application/json
 ###
 
 GET {{hostname}}/api/rally/races/{{raceId}}/download
+
+### all seasons
+
+GET {{hostname}}/api/rally/seasons
+Accept: application/json
+
+> {% client.global.set("seasonId", response.body[0].id); %}
+
+### first season participants
+
+GET {{hostname}}/api/rally/seasons/{{seasonId}}/participants
+Accept: application/json
+
+### first season races
+
+GET {{hostname}}/api/rally/seasons/{{seasonId}}/races
+Accept: application/json

@@ -53,7 +53,6 @@ actual suspend fun WasmEngine.createWasmDriver(
     val moveFunction = instance.exports["move"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
     val onRaceFunction = instance.exports["onRace"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
     return WasmDriver(
-        name = name,
         memory = BrowserMemory(memory),
         moveFunction = { invoke(moveFunction) },
         onRaceFunction = { invoke(onRaceFunction) },

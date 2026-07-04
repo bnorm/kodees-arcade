@@ -57,6 +57,7 @@ class TrackRouter(
         return TrackResponse(
             id = this.id,
             name = this.name,
+            positions = this.positions
         )
     }
 

@@ -23,7 +23,6 @@ actual suspend fun WasmEngine.createWasmDriver(
     val moveFunction = instance.getFunction("move").orElseThrow()
     val onRaceFunction = instance.getFunction("onRace").orElseThrow()
     return WasmDriver(
-        name = name,
         memory = memory,
         moveFunction = { moveFunction.callVoid() },
         onRaceFunction = { onRaceFunction.callVoid() },

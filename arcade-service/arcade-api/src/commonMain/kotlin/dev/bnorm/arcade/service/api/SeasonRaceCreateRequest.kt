@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 class SeasonRaceCreateRequest(
     val trackId: TrackId,
-    val participantIds: List<ParticipantId> = emptyList(),
+    val positions: List<ParticipantId>,
 )

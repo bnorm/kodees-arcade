@@ -4,6 +4,7 @@ import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.ParticipantId
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.Version
+import dev.bnorm.arcade.service.race.RaceTable
 import dev.bnorm.arcade.service.repo.DriverTable
 import dev.bnorm.arcade.service.repo.DriverVersionId
 import dev.bnorm.arcade.service.repo.DriverVersionTable
@@ -97,7 +98,7 @@ fun ResultRow.toParticipantEntity(): ParticipantEntity {
 
 object SeasonRaceTable : Table("season_races") {
     val seasonId = reference("season_id", SeasonTable, onDelete = ReferenceOption.CASCADE)
-    val raceId = reference("race_id", DriverVersionTable, onDelete = ReferenceOption.RESTRICT).uniqueIndex()
+    val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.RESTRICT).uniqueIndex()
 
     override val primaryKey = PrimaryKey(seasonId, raceId)
 }

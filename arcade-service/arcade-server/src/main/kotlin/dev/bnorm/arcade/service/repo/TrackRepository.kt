@@ -24,6 +24,7 @@ import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 object TrackTable : IdTable<TrackId>("tracks") {
     override val id: Column<EntityID<TrackId>> = trackId("id").clientDefault { TrackId.generate() }.entityId()
     val name = text("name").uniqueIndex()
+    val positions = integer("positions")
     // TODO should a track be a blob or just a json column?
     val blobId = reference("blob_id", BlobTable, onDelete = ReferenceOption.RESTRICT)
 
@@ -33,6 +34,7 @@ object TrackTable : IdTable<TrackId>("tracks") {
 data class TrackEntity(
     val id: TrackId,
     val name: String,
+    val positions: Int,
     val blobId: BlobId,
 )
 
@@ -40,6 +42,7 @@ fun ResultRow.toTrackEntity(): TrackEntity {
     return TrackEntity(
         id = this[TrackTable.id].value,
         name = this[TrackTable.name],
+        positions = this[TrackTable.positions],
         blobId = this[TrackTable.blobId].value,
     )
 }
@@ -63,14 +66,17 @@ class TrackRepository(
         }
     }
 
-    suspend fun createTrack(name: String, json: String): TrackEntity {
+    suspend fun createTrack(name: String, positions: Int, json: String): TrackEntity {
         return suspendTransaction(database) {
             val blob = blobs.upload(json.byteInputStream().toByteReadChannel())
-            val id = TrackTable.insert {
+            val id = TrackId.generate()
+            TrackTable.insert {
+                it[this.id] = id
                 it[this.name] = name
+                it[this.positions] = positions
                 it[this.blobId] = blob.id
-            } get TrackTable.id
-            TrackEntity(id.value, name, blob.id)
+            }
+            TrackEntity(id, name, positions, blob.id)
         }
     }
 

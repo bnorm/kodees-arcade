@@ -129,11 +129,12 @@ private fun Game(
         )
     }.map { imageResource(it) }
 
-    var state by remember { mutableStateOf<Race.Event.Update?>(null) }
+    var start by remember { mutableStateOf<Race.Event.Start?>(null) }
+    var update by remember { mutableStateOf<Race.Event.Update?>(null) }
 
     LaunchedEffect(race, desiredFps) {
         if (race == null) {
-            state = null
+            update = null
             return@LaunchedEffect
         }
 
@@ -154,9 +155,12 @@ private fun Game(
                         break
                     }
 
-                    is Race.Event.Start -> continue
+                    is Race.Event.Start -> {
+                        start = event
+                    }
+
                     is Race.Event.Update -> {
-                        state = event
+                        update = event
                     }
                 }
             }
@@ -165,15 +169,16 @@ private fun Game(
 
     val textMeasurer = rememberTextMeasurer()
     Canvas(modifier.fillMaxSize()) {
-        for ((index, entry) in state?.drivers?.entries.orEmpty().withIndex()) {
-            val (name, state) = entry
-            val x = state.x.toFloat()
-            val y = size.height - state.y.toFloat()
+        val names = start?.drivers.orEmpty()
+
+        for ((index, driver) in update?.drivers.orEmpty().withIndex()) {
+            val x = driver.x.toFloat()
+            val y = size.height - driver.y.toFloat()
             val center = Offset(x, y)
 
             val image = images[index]
 
-            val result = textMeasurer.measure(name)
+            val result = textMeasurer.measure(names[index])
             val textOffset = Offset(
                 x = -result.size.width / 2f,
                 y = image.height.toFloat() / 2f * 0.4f,
@@ -181,12 +186,12 @@ private fun Game(
             drawText(result, color = Color.Black, topLeft = center + textOffset)
         }
 
-        for ((index, state) in state?.drivers?.values.orEmpty().withIndex()) {
-            val x = state.x.toFloat()
-            val y = size.height - state.y.toFloat()
+        for ((index, driver) in update?.drivers.orEmpty().withIndex()) {
+            val x = driver.x.toFloat()
+            val y = size.height - driver.y.toFloat()
             val center = Offset(x, y)
 
-            val heading = 90f - state.heading.toRelative().degrees.toFloat()
+            val heading = 90f - driver.heading.toRelative().degrees.toFloat()
 
             val image = images[index]
             val imageSize = Offset(

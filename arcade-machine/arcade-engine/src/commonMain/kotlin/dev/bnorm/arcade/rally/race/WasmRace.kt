@@ -1,6 +1,9 @@
 package dev.bnorm.arcade.rally.race
 
+import dev.bnorm.arcade.geometry.Point
+import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.machine.Race
+import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.engine.DriverControlState
 import dev.bnorm.arcade.rally.engine.RallyCarState
@@ -20,35 +23,30 @@ class WasmRace(
 
     override suspend fun start() {
         try {
-            events.send(Race.Event.Start(track))
+            events.send(Race.Event.Start(track, drivers.map { it.name }))
 
             val gameState = RallyGameState(
                 trackWidth = track.width,
                 trackHeight = track.height,
                 finished = false,
                 time = 0,
-                drivers = buildMap {
-                    for ((index, driver) in drivers.withIndex()) {
-                        val position = track.positions[index]
-                        put(
-                            driver.name,
-                            RallyCarState(
-                                x = position.location.x,
-                                y = position.location.y,
-                                heading = position.heading,
-                            )
-                        )
-                    }
+                drivers = List(drivers.size) {
+                    val position = track.positions[it]
+                    RallyCarState(
+                        name = drivers[it].name,
+                        controls = DriverControlState(),
+                        x = position.location.x,
+                        y = position.location.y,
+                        heading = position.heading,
+                    )
                 }
             )
 
             events.send(gameState.toUpdate())
 
             withEngine { engine ->
-                val controls = this@WasmRace.drivers.associate { it.name to DriverControlState() }
-                val drivers = this@WasmRace.drivers.map { driver ->
-                    val controlsState = controls.getValue(driver.name)
-                    engine.createWasmDriver(controlsState, driver.bytes, driver.name)
+                val drivers = drivers.mapIndexed { index, driver ->
+                    engine.createWasmDriver(gameState.drivers[index].controls, driver.bytes, driver.name)
                 }
 
                 try {
@@ -58,14 +56,24 @@ class WasmRace(
 
                     while (!gameState.finished) {
                         // Allow drivers to manipulate controls.
-                        for (driver in drivers) {
+                        repeat(drivers.size) { index ->
                             // TODO stop calling when driver is finished.
                             //  - should they be removed from the game entirely when they finish?
-                            driver.move(gameState)
+
+                            val carState = gameState.drivers[index]
+                            val car = Car(
+                                time = gameState.time,
+                                location = Point(carState.x, carState.y),
+                                velocity = Vector(carState.heading, carState.speed),
+                                lap = carState.lap,
+                                nextCheckpoint = carState.checkpoint,
+                            )
+
+                            drivers[index].move(car)
                         }
 
                         // Update game state.
-                        update(gameState, controls, track)
+                        update(gameState, track)
                         events.send(gameState.toUpdate())
                     }
                 } finally {
@@ -74,11 +82,10 @@ class WasmRace(
                     }
                 }
 
-                val results = gameState.drivers.entries
-                    .sortedBy { (_, v) -> v.finished }
-                    .map { it.key }.withIndex()
-                    .associate { (place, name) ->
-                        name to Race.Event.Complete.Result(place + 1, gameState.drivers.getValue(name).finished!!)
+                val results = gameState.drivers
+                    .sortedBy { it.finished }.withIndex()
+                    .associate { (place, state) ->
+                        state.name to Race.Event.Complete.Result(place + 1, state.finished!!)
                     }
                 events.send(Race.Event.Complete(results))
             }
@@ -100,7 +107,6 @@ private fun RallyGameState.toUpdate(): Race.Event {
     }
 
     return Race.Event.Update(
-        time = time,
-        drivers = drivers.mapValues { (_, value) -> value.toDriver() },
+        drivers = drivers.map { it.toDriver() },
     )
 }

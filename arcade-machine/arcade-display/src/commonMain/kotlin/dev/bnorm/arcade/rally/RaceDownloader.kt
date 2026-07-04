@@ -41,7 +41,7 @@ fun RaceDownloader(
     LaunchedEffect(client) {
         val foundRaces = client.getRaces()
         races.clear()
-        races.addAll(foundRaces.map { race -> RaceDisplay(race.id, race.drivers.map { it.name }) })
+        races.addAll(foundRaces.map { race -> RaceDisplay(race.id, race.positions.map { it.name }) })
     }
 
     var selectedRace by remember { mutableStateOf<RaceId?>(null) }
