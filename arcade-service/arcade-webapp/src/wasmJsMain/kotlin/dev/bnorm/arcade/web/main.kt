@@ -19,7 +19,7 @@ interface WebGraph {
     private fun provideClient(): ArcadeClient {
         val hostname = window.location.hostname
         val port = window.location.port.toIntOrNull()
-        val secure = window.location.protocol == "https"
+        val secure = window.location.protocol == "https:"
         return ArcadeClient(host = hostname, port = port, secure = secure)
     }
 
