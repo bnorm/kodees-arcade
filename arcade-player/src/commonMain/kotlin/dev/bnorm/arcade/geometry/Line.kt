@@ -48,7 +48,9 @@ fun Line(p: Point, angle: Angle): Line {
 
 fun Line.intersectVertical(x: Double): Point? {
     if (isVertical) return null
-    return Point(x, m * x + b)
+    val y = m * x + b
+    if (y.isInfinite()) return null
+    return Point(x, y)
 }
 
 operator fun Line.contains(p: Point): Boolean =
@@ -67,5 +69,7 @@ infix fun Line.intersect(line: Line): Point? {
     // m1 * x + b1 = m2 * x + b2
     // x = (b2 - b1) / (m1 - m2)
 
-    return this.intersectVertical((line.b - b) / (m - line.m))
+    val x = (line.b - b) / (m - line.m)
+    if (x.isInfinite()) return null
+    return this.intersectVertical(x)
 }

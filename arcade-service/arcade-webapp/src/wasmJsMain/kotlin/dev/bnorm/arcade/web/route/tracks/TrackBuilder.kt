@@ -1,0 +1,525 @@
+ package dev.bnorm.arcade.web.route.tracks
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.Point
+import dev.bnorm.arcade.geometry.Segment
+import dev.bnorm.arcade.geometry.Vector
+import dev.bnorm.arcade.geometry.acos
+import dev.bnorm.arcade.geometry.asin
+import dev.bnorm.arcade.geometry.center
+import dev.bnorm.arcade.geometry.cos
+import dev.bnorm.arcade.geometry.intersect
+import dev.bnorm.arcade.geometry.plus
+import dev.bnorm.arcade.geometry.sign
+import dev.bnorm.arcade.geometry.sin
+import dev.bnorm.arcade.geometry.toLine
+import dev.bnorm.arcade.geometry.toPoint
+import dev.bnorm.arcade.geometry.toRelative
+import dev.bnorm.arcade.geometry.toVector
+import dev.bnorm.arcade.rally.FixedSize
+import kotlin.math.abs
+import kotlin.math.sqrt
+
+@Composable
+fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modifier = Modifier) {
+    // TODO the *second* checkpoint is the starting line
+    //  the first and second checkpoints define the starting grid and how many positions are possible
+
+    var mouse by remember { mutableStateOf<Point?>(null) }
+    var point by remember { mutableStateOf<Point?>(null) }
+    var segment by remember { mutableStateOf<Segment?>(null) }
+    val checkpoints = remember { mutableStateListOf<Segment>() }
+    var complete by remember { mutableStateOf(false) }
+
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    Column(
+        modifier = modifier
+            .focusable()
+            .focusRequester(focusRequester)
+            .onKeyEvent {
+                (it.type == KeyEventType.KeyUp) && when (it.key) {
+                    Key.Z if it.isCtrlPressed -> {
+                        if (complete) {
+                            checkpoints.removeLast()
+                            complete = false
+                        } else if (checkpoints.isEmpty()) {
+                            point = null
+                            segment = null
+                        } else {
+                            checkpoints.removeLast()
+                            segment = computeSegment(mouse, point, checkpoints.lastOrNull())
+                        }
+                        true
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
+            }
+    ) {
+        Row {
+            Button(
+                onClick = {
+                    point = null
+                    segment = null
+                    checkpoints.clear()
+                    complete = false
+                }
+            ) {
+                Text("Clear")
+            }
+
+            Button(
+                enabled = !complete,
+                onClick = {
+                    val last = computeSegment(checkpoints.last(), checkpoints.first())
+                    if (last != null) {
+                        checkpoints.add(last)
+                        point = null
+                        segment = null
+                        complete = true
+                    }
+                }
+            ) {
+                Text("Close")
+            }
+
+            Button(
+                enabled = complete,
+                onClick = {
+                    // TODO rotate checkpoints so the first defines the starting line
+                    onSave(checkpoints)
+                }
+            ) {
+                Text("Save")
+            }
+        }
+
+        FixedSize(
+            size = size,
+            density = Density(1f),
+        ) {
+            Canvas(
+                Modifier
+                    .fillMaxSize()
+                    .border(2.dp, Color.Black)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                when (event.type) {
+                                    PointerEventType.Enter -> {
+                                    }
+
+                                    PointerEventType.Exit -> {
+                                        mouse = null
+                                        point = null
+                                        segment = null
+                                    }
+
+                                    PointerEventType.Move -> {
+                                        if (!complete) {
+                                            val location = event.changes.first().position.toPoint(size)
+                                            mouse = location
+                                            segment = computeSegment(location, point, checkpoints.lastOrNull())
+                                        } else {
+                                            mouse = null
+                                        }
+                                    }
+
+                                    PointerEventType.Release -> {
+                                        if (!complete) {
+                                            val location = event.changes.first().position.toPoint(size)
+
+                                            segment?.let {
+                                                checkpoints.add(it)
+                                                point = null
+                                            }
+
+                                            if (checkpoints.isEmpty() && point == null) {
+                                                point = location
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+            ) {
+                for (segment in checkpoints) {
+                    drawLine(
+                        color = Color.Blue,
+                        start = segment.start.toOffset(size),
+                        end = segment.end.toOffset(size),
+                        strokeWidth = 4f,
+                    )
+                }
+                if (checkpoints.size >= 2) {
+                    val first = checkpoints[0]
+                    val second = checkpoints[1]
+
+                    val center = first.toLine().intersect(second.toLine())
+                    if (center != null) {
+                        val separation = (TRACK_WIDTH - 2.0 * CAR_WIDTH) / 3.0
+                        val dist = separation + CAR_WIDTH
+                        val padding = separation + CAR_WIDTH / 2
+
+                        val innerRadius = minOf(center.distanceTo(first.start), center.distanceTo(first.end)) + padding
+                        val outerRadius = innerRadius + dist
+
+                        val start = center.angleTo(second.start)
+                        val total = (start - center.angleTo(first.start)).toRelative()
+
+                        val paddingAngle = acos(1 - (padding * padding) / (2 * innerRadius * innerRadius)) * sign(total)
+                        val distAngle = acos(1 - (dist * dist) / (2 * innerRadius * innerRadius)) * sign(total)
+
+                        val available = (total / distAngle).toInt()
+                        repeat(abs(available)) {
+                            val angle = start - paddingAngle - distAngle * it.toDouble()
+                            drawCircle(
+                                Color.Black,
+                                radius = (CAR_WIDTH / 2).toFloat(),
+                                center = (center + Vector(angle, innerRadius)).toOffset(size)
+                            )
+                            drawCircle(
+                                Color.Black,
+                                radius = (CAR_WIDTH / 2).toFloat(),
+                                center = (center + Vector(angle, outerRadius)).toOffset(size)
+                            )
+                        }
+                    }
+                }
+
+                val (dashed, lines) = checkpoints.toPaths(this.size, complete = complete)
+                val dashLength = 25f
+                for (path in dashed) {
+                    drawPath(
+                        path,
+                        color = Color.Black,
+                        style = Stroke(
+                            width = 4f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, dashLength))
+                        )
+                    )
+                }
+                for (path in lines) {
+                    drawPath(path, color = Color.Black, style = Stroke(width = 1f))
+                }
+
+                val segment = segment
+                if (segment != null) {
+                    drawLine(
+                        color = Color.Green,
+                        start = segment.start.toOffset(size),
+                        end = segment.end.toOffset(size),
+                        strokeWidth = 4f,
+                    )
+                    val previous = checkpoints.lastOrNull()
+                    if (previous != null) {
+                        drawArcsBetween(Color.Green, previous, segment)
+                    }
+                }
+
+                val point = point
+                if (point != null) {
+                    drawCircle(
+                        color = Color.Green,
+                        center = point.toOffset(size),
+                        radius = 4f,
+                    )
+                }
+
+                val mouse = mouse
+                if (mouse != null) {
+                    val offset = mouse.toOffset(size)
+                    drawCircle(
+                        color = if (point != null || segment != null || checkpoints.isNotEmpty()) Color.Green else Color.Red,
+                        center = offset,
+                        radius = 4f,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val TRACK_WIDTH = 90.0
+private const val CAR_WIDTH = 20.0
+
+fun computeSegment(
+    mouse: Point?,
+    point: Point?,
+    last: Segment?
+): Segment? {
+    if (mouse == null) return null
+
+    if (last != null) {
+        val segmentVector = (last.end - last.start).toVector()
+        val vector = (mouse - last.center).toVector()
+
+        // Angle to the right (negative) of the segment vector.
+        val alpha = (vector.angle - segmentVector.angle).toRelative()
+        if (alpha > Angle.ZERO) {
+            // Corners must be less than 180 deg turns
+            // TODO based on mouse, try and find a 180 turn which lines up directly with the mouse.
+            return null
+        } else {
+            // 'vector.magnitude' is the base of an isosceles triangle with base angle of 'alpha'.
+            // Therefore, cos(alpha) = opposite / hypotenuse, where:
+            // * hypotenuse = is the radius of the circle through both segment center and mouse.
+            // * opposite = 'vector.magnitude' / 2.
+            val cosAlpha = cos(Angle.HALF_CIRCLE - alpha)
+            val radius = (vector.magnitude / 2.0) / cosAlpha
+
+            // Reverse the calculation with different radii to create a new segment,
+            // which shares the same circle center point for its start and end point arcs.
+            val halfWidth = segmentVector.magnitude / 2.0
+            return if (abs(radius) > halfWidth) {
+                // TODO there's a way to reduce the number of cos/sin usage here
+                Segment(
+                    start = last.start + Vector(
+                        vector.angle,
+                        2 * (radius - halfWidth) * cosAlpha
+                    ),
+                    end = last.end + Vector(
+                        vector.angle,
+                        2 * (radius + halfWidth) * cosAlpha
+                    )
+                )
+            } else {
+                null
+            }
+        }
+    } else if (point != null) {
+        val delta = Vector(point.angleTo(mouse), TRACK_WIDTH / 2).toPoint()
+        return Segment(point - delta, point + delta)
+    } else {
+        return null
+    }
+}
+
+fun computeSegment(
+    last: Segment,
+    first: Segment,
+): Segment? {
+    val lastVector = (last.end - last.start).toVector()
+    val lastCenter = last.center
+
+    val firstAngle = first.start.angleTo(first.end)
+    val firstCenter = first.center
+
+    val pathVector = (firstCenter - lastCenter).toVector()
+
+    val beta1 = (pathVector.angle - (lastVector.angle + Angle.HALF_CIRCLE)).toRelative()
+    val beta2 = (firstAngle - pathVector.angle).toRelative()
+    val pathAcuteAngle = (Angle.HALF_CIRCLE + beta1 + beta2) / 2.0
+
+    // TODO this just assumes that magnitude1 = magnitude2
+    val lawOfCosines = cos(pathAcuteAngle)
+    val magnitude = sqrt(
+        (pathVector.magnitude * pathVector.magnitude) /
+            (2.0 - 2.0 * lawOfCosines)
+    )
+
+    val asin = asin(sin(pathAcuteAngle) * magnitude / pathVector.magnitude)
+    val alpha1 = asin + beta1
+    val alpha2 = asin + beta2
+
+    val cosAlpha1 = cos(alpha1)
+    val radius1 = (magnitude / 2.0) / cosAlpha1
+    val radius2 = (magnitude / 2.0) / cos(alpha2)
+
+    val halfWidth = lastVector.magnitude / 2.0
+    return if (abs(radius1) > halfWidth && abs(radius2) > halfWidth) {
+        // TODO there's a way to reduce the number of cos/sin usage here
+        Segment(
+            start = last.start + Vector(
+                lastVector.angle + alpha1 + Angle.HALF_CIRCLE,
+                2.0 * (radius1 - halfWidth) * cosAlpha1
+            ),
+            end = last.end + Vector(
+                lastVector.angle + alpha1 + Angle.HALF_CIRCLE,
+                2.0 * (radius1 + halfWidth) * cosAlpha1
+            )
+        )
+    } else {
+        // TODO we did something wrong... this should always be possible?
+        null
+    }
+}
+
+private fun DrawScope.drawArcsBetween(color: Color, start: Segment, end: Segment) {
+    val center = start.toLine().intersect(end.toLine())
+    if (center == null) {
+        // Parallel lines
+        // TODO can we just draw straight lines?
+        return
+    }
+
+    val startAngle = center.angleTo(start.start)
+    val endAngle = center.angleTo(end.start)
+    val sweepAngle = (endAngle - startAngle).toRelative()
+
+    drawArc(
+        color = color,
+        center = center,
+        radius = center.distanceTo(end.start),
+        startAngle = startAngle,
+        sweepAngle = sweepAngle
+    )
+    drawArc(
+        color = color,
+        center = center,
+        radius = center.distanceTo(end.end),
+        startAngle = startAngle,
+        sweepAngle = sweepAngle
+    )
+}
+
+fun DrawScope.drawArc(
+    color: Color,
+    center: Point,
+    radius: Double,
+    startAngle: Angle,
+    sweepAngle: Angle,
+) {
+    drawArc(
+        color = color,
+        startAngle = -startAngle.degrees.toFloat(),
+        sweepAngle = -sweepAngle.degrees.toFloat(),
+        useCenter = false,
+        topLeft = Offset(
+            (center.x - radius).toFloat(),
+            (size.height - center.y - radius).toFloat()
+        ),
+        size = Size(
+            (2.0 * radius).toFloat(),
+            (2.0 * radius).toFloat(),
+        ),
+        style = Stroke(width = 4f),
+    )
+}
+
+fun Offset.toPoint(size: IntSize): Point {
+    return Point(x.toDouble(), size.height - y.toDouble())
+}
+
+fun Point.toOffset(size: IntSize): Offset {
+    return Offset(x.toFloat(), size.height - y.toFloat())
+}
+
+fun List<Segment>.toPaths(size: Size, complete: Boolean = true): Pair<List<Path>, List<Path>> {
+    val right = Path()
+    val left = Path()
+    val lines = listOf(Path(), Path(), Path(), Path())
+
+    fun addArcs(prev: Segment, next: Segment) {
+        val center = prev.toLine().intersect(next.toLine())
+        if (center == null) {
+            // Parallel lines?
+            TODO("can we just draw straight lines?")
+        }
+
+        val startAngle = center.angleTo(prev.start)
+        val endAngle = center.angleTo(next.start)
+        val sweepAngle = (endAngle - startAngle).toRelative()
+
+        val radiusStart = center.distanceTo(prev.start)
+        right.arcTo(size, center, radiusStart, startAngle, sweepAngle)
+        lines[0].arcTo(size, center, radiusStart + 2.0, startAngle, sweepAngle)
+        lines[1].arcTo(size, center, radiusStart - 2.0, startAngle, sweepAngle)
+
+        val radiusEnd = center.distanceTo(prev.end)
+        left.arcTo(size, center, radiusEnd, startAngle, sweepAngle)
+        lines[2].arcTo(size, center, radiusEnd + 2.0, startAngle, sweepAngle)
+        lines[3].arcTo(size, center, radiusEnd - 2.0, startAngle, sweepAngle)
+    }
+
+    var previous: Segment? = null
+    for (current in this) {
+        if (previous != null) {
+            addArcs(previous, current)
+        } else {
+            right.moveTo(current.start.x.toFloat(), size.height - current.start.y.toFloat())
+            lines[0].moveTo(current.start.x.toFloat(), size.height - current.start.y.toFloat())
+            lines[1].moveTo(current.start.x.toFloat(), size.height - current.start.y.toFloat())
+
+            left.moveTo(current.end.x.toFloat(), size.height - current.end.y.toFloat())
+            lines[2].moveTo(current.end.x.toFloat(), size.height - current.end.y.toFloat())
+            lines[3].moveTo(current.end.x.toFloat(), size.height - current.end.y.toFloat())
+        }
+        previous = current
+    }
+
+    if (complete && previous != null && this.size > 1) {
+        addArcs(previous, this.first())
+    }
+
+    return listOf(right, left) to lines
+}
+
+fun Path.arcTo(
+    size: Size,
+    center: Point,
+    radius: Double,
+    startAngle: Angle,
+    sweepAngle: Angle
+) {
+    arcTo(
+        rect = Rect(
+            offset = Offset(
+                (center.x - radius).toFloat(),
+                (size.height - center.y - radius).toFloat()
+            ),
+            size = Size(
+                (2.0 * radius).toFloat(),
+                (2.0 * radius).toFloat(),
+            ),
+        ),
+        startAngleDegrees = -startAngle.degrees.toFloat(),
+        sweepAngleDegrees = -sweepAngle.degrees.toFloat(),
+        forceMoveTo = false
+    )
+}

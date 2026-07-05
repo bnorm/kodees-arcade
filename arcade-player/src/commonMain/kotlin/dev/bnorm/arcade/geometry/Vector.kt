@@ -12,6 +12,14 @@ class Vector(
         val ZERO = Vector(Angle.ZERO, 0.0)
         fun unit(angle: Angle = Angle.ZERO): Vector = Vector(angle, 1.0)
     }
+
+    fun rotate(angle: Angle): Vector {
+        return Vector(this.angle + angle, magnitude)
+    }
+
+    override fun toString(): String {
+        return "Vector($angle $magnitude)"
+    }
 }
 
 fun Vector.toPoint(): Point {

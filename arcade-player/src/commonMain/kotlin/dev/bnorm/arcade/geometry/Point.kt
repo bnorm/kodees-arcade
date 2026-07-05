@@ -1,7 +1,7 @@
 package dev.bnorm.arcade.geometry
 
+ import kotlin.math.sqrt
 import kotlinx.serialization.Serializable
-import kotlin.math.sqrt
 
 @Serializable
 data class Point(
@@ -10,6 +10,22 @@ data class Point(
 ) {
     companion object {
         val ZERO = Point(0.0, 0.0)
+    }
+
+    operator fun plus(point: Point): Point {
+        return plus(point.x, point.y)
+    }
+
+    fun plus(x: Double, y: Double): Point {
+        return Point(this.x + x, this.y + y)
+    }
+
+    operator fun minus(point: Point): Point {
+        return minus(point.x, point.y)
+    }
+
+    fun minus(x: Double, y: Double): Point {
+        return Point(this.x - x, this.y - y)
     }
 
     fun distanceSquaredTo(other: Point): Double {
@@ -35,18 +51,18 @@ fun Point.toVector(origin: Point = Point.ZERO): Vector {
     return Vector(origin.angleTo(this), origin.distanceTo(this))
 }
 
-operator fun Point.plus(point: Point): Point {
-    return plus(point.x, point.y)
-}
-
-fun Point.plus(x: Double, y: Double): Point {
-    return Point(this.x + x, this.y + y)
-}
-
 operator fun Point.plus(vector: Vector): Point {
     return plus(vector.angle, vector.magnitude)
 }
 
 fun Point.plus(angle: Angle, magnitude: Double): Point {
     return Point(x + cos(angle) * magnitude, y + sin(angle) * magnitude)
+}
+
+operator fun Point.minus(vector: Vector): Point {
+    return minus(vector.angle, vector.magnitude)
+}
+
+fun Point.minus(angle: Angle, magnitude: Double): Point {
+    return Point(x - cos(angle) * magnitude, y - sin(angle) * magnitude)
 }
