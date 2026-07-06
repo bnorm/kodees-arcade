@@ -16,6 +16,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            api(project(":arcade-geometry"))
             implementation(libs.kotlinx.serialization.protobuf)
         }
     }

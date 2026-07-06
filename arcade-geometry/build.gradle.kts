@@ -12,11 +12,11 @@ kotlin {
     wasmJs {
         browser()
     }
+    wasmWasi()
 
     sourceSets {
         commonMain.dependencies {
-            api(project(":arcade-geometry"))
-            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.serialization.core)
         }
     }
 }
