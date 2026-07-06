@@ -5,12 +5,12 @@ import dev.bnorm.arcade.rally.race.WasmDriver
 import dev.bnorm.arcade.rally.race.WasmRace
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
+import dev.bnorm.arcade.service.api.TrackResponse
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import dev.bnorm.arcade.rally.Track as RallyTrack
 
 class LocalRace(
@@ -24,9 +24,7 @@ class LocalRace(
         try {
             val race = client.getRace(id) // TODO error
             val track = client.getTrack(race.trackId) // TODO error
-            val trackBlob = client.downloadTrack(track.id) // TODO error
 
-            val rallyTrack = Json.decodeFromString(RallyTrack.serializer(), trackBlob.decodeToString())
             val rallyDrivers = buildList {
                 for (driver in race.positions) {
                     val blob = client.downloadDriverVersion(driver.driverId, driver.version) // TODO error
@@ -35,7 +33,7 @@ class LocalRace(
             }
 
             coroutineScope {
-                val wasmRace = WasmRace(rallyTrack, rallyDrivers)
+                val wasmRace = WasmRace(track.toRallyTrack(), rallyDrivers)
                 launch { wasmRace.start() }
                 wasmRace.events.consumeEach {
                     events.send(it)
@@ -47,4 +45,14 @@ class LocalRace(
             events.close()
         }
     }
+}
+
+private fun TrackResponse.toRallyTrack(): RallyTrack {
+    return RallyTrack(
+        width = width,
+        height = height,
+        checkpoints = checkpoints,
+        positions = positions,
+        laps = 25,
+    )
 }

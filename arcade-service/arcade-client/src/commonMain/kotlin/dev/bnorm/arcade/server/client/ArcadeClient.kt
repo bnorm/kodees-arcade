@@ -16,6 +16,7 @@ import dev.bnorm.arcade.service.api.SeasonCreateRequest
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
 import dev.bnorm.arcade.service.api.SeasonResponse
+import dev.bnorm.arcade.service.api.TrackCreateRequest
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
@@ -45,8 +46,8 @@ interface ArcadeClient : AutoCloseable {
     suspend fun uploadDriverVersion(id: DriverId, version: Version, bytes: ByteArray): DriverResponse
 
     suspend fun getTracks(): List<TrackResponse>
+    suspend fun createTrack(request: TrackCreateRequest): TrackResponse
     suspend fun getTrack(id: TrackId): TrackResponse
-    suspend fun downloadTrack(id: TrackId): ByteArray
 
     fun listen(): Flow<RaceProcessEvent>
 

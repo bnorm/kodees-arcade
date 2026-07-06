@@ -32,6 +32,7 @@ dependencies {
 
     implementation(libs.exposed.core)
     implementation(libs.exposed.r2dbc)
+    implementation(libs.exposed.json)
     implementation(libs.exposed.kotlin.datetime)
     implementation(libs.r2dbc.h2)
 

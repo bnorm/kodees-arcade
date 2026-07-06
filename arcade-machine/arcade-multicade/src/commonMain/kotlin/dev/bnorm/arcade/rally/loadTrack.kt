@@ -2,6 +2,7 @@ package dev.bnorm.arcade.rally
 
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
+import dev.bnorm.arcade.geometry.Position
 import dev.bnorm.arcade.geometry.Segment
 import kotlinx.serialization.json.Json
 
@@ -19,7 +20,7 @@ fun loadTrack(json: String): Track {
             )
         },
         positions = jsonTrack.pole_positions.map {
-            Track.Position(
+            Position(
                 location = Point(it.position.x, trackHeight - it.position.y),
                 heading = Angle.ofDegrees(it.rotation.degrees.toDouble())
             )

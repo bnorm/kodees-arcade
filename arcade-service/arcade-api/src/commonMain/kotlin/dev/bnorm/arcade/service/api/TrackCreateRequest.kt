@@ -5,8 +5,7 @@ import dev.bnorm.arcade.geometry.Segment
 import kotlinx.serialization.Serializable
 
 @Serializable
-class TrackResponse(
-    val id: TrackId,
+class TrackCreateRequest(
     val name: String,
     val width: Double,
     val height: Double,

@@ -1,4 +1,4 @@
- package dev.bnorm.arcade.web.route.tracks
+package dev.bnorm.arcade.web.route.tracks
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
+import dev.bnorm.arcade.geometry.Position
 import dev.bnorm.arcade.geometry.Segment
 import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.geometry.acos
@@ -49,18 +51,20 @@ import dev.bnorm.arcade.geometry.intersect
 import dev.bnorm.arcade.geometry.plus
 import dev.bnorm.arcade.geometry.sign
 import dev.bnorm.arcade.geometry.sin
+import dev.bnorm.arcade.geometry.times
 import dev.bnorm.arcade.geometry.toLine
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
 import dev.bnorm.arcade.rally.FixedSize
+import dev.bnorm.arcade.rally.Track
 import kotlin.math.abs
 import kotlin.math.sqrt
 
 @Composable
-fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modifier = Modifier) {
-    // TODO the *second* checkpoint is the starting line
-    //  the first and second checkpoints define the starting grid and how many positions are possible
+fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Modifier) {
+    // the *second* checkpoint is the starting line
+    // the first and second checkpoints define the starting grid and how many positions are possible
 
     var mouse by remember { mutableStateOf<Point?>(null) }
     var point by remember { mutableStateOf<Point?>(null) }
@@ -102,6 +106,7 @@ fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modif
         Row {
             Button(
                 onClick = {
+                    focusRequester.requestFocus()
                     point = null
                     segment = null
                     checkpoints.clear()
@@ -114,6 +119,7 @@ fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modif
             Button(
                 enabled = !complete,
                 onClick = {
+                    focusRequester.requestFocus()
                     val last = computeSegment(checkpoints.last(), checkpoints.first())
                     if (last != null) {
                         checkpoints.add(last)
@@ -129,8 +135,16 @@ fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modif
             Button(
                 enabled = complete,
                 onClick = {
+                    focusRequester.requestFocus()
                     // TODO rotate checkpoints so the first defines the starting line
-                    onSave(checkpoints)
+                    val track = Track(
+                        width = size.width.toDouble(),
+                        height = size.height.toDouble(),
+                        checkpoints = List(checkpoints.size) { checkpoints[(it + 1) % checkpoints.size] },
+                        positions = computePositions(checkpoints),
+                        laps = 25,
+                    )
+                    onSave(track)
                 }
             ) {
                 Text("Save")
@@ -170,6 +184,7 @@ fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modif
                                     }
 
                                     PointerEventType.Release -> {
+                                        focusRequester.requestFocus()
                                         if (!complete) {
                                             val location = event.changes.first().position.toPoint(size)
 
@@ -188,6 +203,20 @@ fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modif
                         }
                     }
             ) {
+                val centerPath = checkpoints.toPaths(this.size, complete = complete)
+                val dashLength = 25f
+                drawPath(centerPath, color = Color.Black, style = Stroke(width = TRACK_WIDTH.toFloat() + 6f))
+                drawPath(
+                    centerPath,
+                    color = Color.White,
+                    style = Stroke(
+                        width = TRACK_WIDTH.toFloat() + 5f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, dashLength), phase = dashLength)
+                    )
+                )
+                drawPath(centerPath, color = Color.Black, style = Stroke(width = TRACK_WIDTH.toFloat() + 1f))
+                drawPath(centerPath, color = Color.Gray, style = Stroke(width = TRACK_WIDTH.toFloat()))
+
                 for (segment in checkpoints) {
                     drawLine(
                         color = Color.Blue,
@@ -195,57 +224,6 @@ fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modif
                         end = segment.end.toOffset(size),
                         strokeWidth = 4f,
                     )
-                }
-                if (checkpoints.size >= 2) {
-                    val first = checkpoints[0]
-                    val second = checkpoints[1]
-
-                    val center = first.toLine().intersect(second.toLine())
-                    if (center != null) {
-                        val separation = (TRACK_WIDTH - 2.0 * CAR_WIDTH) / 3.0
-                        val dist = separation + CAR_WIDTH
-                        val padding = separation + CAR_WIDTH / 2
-
-                        val innerRadius = minOf(center.distanceTo(first.start), center.distanceTo(first.end)) + padding
-                        val outerRadius = innerRadius + dist
-
-                        val start = center.angleTo(second.start)
-                        val total = (start - center.angleTo(first.start)).toRelative()
-
-                        val paddingAngle = acos(1 - (padding * padding) / (2 * innerRadius * innerRadius)) * sign(total)
-                        val distAngle = acos(1 - (dist * dist) / (2 * innerRadius * innerRadius)) * sign(total)
-
-                        val available = (total / distAngle).toInt()
-                        repeat(abs(available)) {
-                            val angle = start - paddingAngle - distAngle * it.toDouble()
-                            drawCircle(
-                                Color.Black,
-                                radius = (CAR_WIDTH / 2).toFloat(),
-                                center = (center + Vector(angle, innerRadius)).toOffset(size)
-                            )
-                            drawCircle(
-                                Color.Black,
-                                radius = (CAR_WIDTH / 2).toFloat(),
-                                center = (center + Vector(angle, outerRadius)).toOffset(size)
-                            )
-                        }
-                    }
-                }
-
-                val (dashed, lines) = checkpoints.toPaths(this.size, complete = complete)
-                val dashLength = 25f
-                for (path in dashed) {
-                    drawPath(
-                        path,
-                        color = Color.Black,
-                        style = Stroke(
-                            width = 4f,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, dashLength))
-                        )
-                    )
-                }
-                for (path in lines) {
-                    drawPath(path, color = Color.Black, style = Stroke(width = 1f))
                 }
 
                 val segment = segment
@@ -280,6 +258,50 @@ fun TrackBuilder(size: IntSize, onSave: (List<Segment>) -> Unit, modifier: Modif
                         radius = 4f,
                     )
                 }
+            }
+        }
+    }
+}
+
+private fun computePositions(checkpoints: SnapshotStateList<Segment>): List<Position> {
+    if (checkpoints.size < 2) return emptyList()
+
+    return buildList {
+        val first = checkpoints[0]
+        val second = checkpoints[1]
+
+        val center = first.toLine().intersect(second.toLine())
+        if (center != null) {
+            val separation = (TRACK_WIDTH - 2.0 * CAR_WIDTH) / 3.0
+            val dist = separation + CAR_WIDTH
+            val padding = separation + CAR_WIDTH / 2
+
+            val start = center.angleTo(second.start)
+            val total = (start - center.angleTo(first.start)).toRelative()
+            val sign = sign(total)
+
+            // TODO use sign to determine start vs end
+            val innerRadius = minOf(center.distanceTo(first.start), center.distanceTo(first.end)) + padding
+            val outerRadius = innerRadius + dist
+
+            val paddingAngle = acos(1 - (padding * padding) / (2 * innerRadius * innerRadius)) * sign
+            val distAngle = acos(1 - (dist * dist) / (2 * innerRadius * innerRadius)) * sign
+
+            val available = (total / distAngle).toInt()
+            repeat(abs(available)) {
+                val angle = start - paddingAngle - distAngle * it.toDouble()
+                add(
+                    Position(
+                        location = (center + Vector(angle, innerRadius)),
+                        heading = angle + sign * Angle.QUARTER_CIRCLE,
+                    )
+                )
+                add(
+                    Position(
+                        location = (center + Vector(angle, outerRadius)),
+                        heading = angle + sign * Angle.QUARTER_CIRCLE,
+                    )
+                )
             }
         }
     }
@@ -450,76 +472,55 @@ fun Point.toOffset(size: IntSize): Offset {
     return Offset(x.toFloat(), size.height - y.toFloat())
 }
 
-fun List<Segment>.toPaths(size: Size, complete: Boolean = true): Pair<List<Path>, List<Path>> {
-    val right = Path()
-    val left = Path()
-    val lines = listOf(Path(), Path(), Path(), Path())
+fun List<Segment>.toPaths(size: Size, complete: Boolean = true): Path {
+    val centerLine = Path()
+    if (this.isEmpty()) return centerLine
 
-    fun addArcs(prev: Segment, next: Segment) {
-        val center = prev.toLine().intersect(next.toLine())
-        if (center == null) {
-            // Parallel lines?
-            TODO("can we just draw straight lines?")
+    fun pathToNext(prev: Segment, next: Segment) {
+        val intersect = prev.toLine().intersect(next.toLine())
+        if (intersect == null) {
+            // TODO parallel lines?
+            val center = next.center
+            centerLine.lineTo(center.x.toFloat(), size.height - center.y.toFloat())
+            TODO("parallel lines")
+        } else {
+            val startAngle = intersect.angleTo(prev.start)
+            val endAngle = intersect.angleTo(next.start)
+            val sweepAngle = (endAngle - startAngle).toRelative()
+            val radius = intersect.distanceTo(prev.center)
+
+            centerLine.arcTo(
+                rect = Rect(
+                    offset = Offset(
+                        (intersect.x - radius).toFloat(),
+                        (size.height - intersect.y - radius).toFloat()
+                    ),
+                    size = Size(
+                        (2.0 * radius).toFloat(),
+                        (2.0 * radius).toFloat(),
+                    ),
+                ),
+                startAngleDegrees = -startAngle.degrees.toFloat(),
+                sweepAngleDegrees = -sweepAngle.degrees.toFloat(),
+                forceMoveTo = false,
+            )
         }
-
-        val startAngle = center.angleTo(prev.start)
-        val endAngle = center.angleTo(next.start)
-        val sweepAngle = (endAngle - startAngle).toRelative()
-
-        val radiusStart = center.distanceTo(prev.start)
-        right.arcTo(size, center, radiusStart, startAngle, sweepAngle)
-        lines[0].arcTo(size, center, radiusStart + 2.0, startAngle, sweepAngle)
-        lines[1].arcTo(size, center, radiusStart - 2.0, startAngle, sweepAngle)
-
-        val radiusEnd = center.distanceTo(prev.end)
-        left.arcTo(size, center, radiusEnd, startAngle, sweepAngle)
-        lines[2].arcTo(size, center, radiusEnd + 2.0, startAngle, sweepAngle)
-        lines[3].arcTo(size, center, radiusEnd - 2.0, startAngle, sweepAngle)
     }
 
     var previous: Segment? = null
     for (current in this) {
         if (previous != null) {
-            addArcs(previous, current)
+            pathToNext(previous, current)
         } else {
-            right.moveTo(current.start.x.toFloat(), size.height - current.start.y.toFloat())
-            lines[0].moveTo(current.start.x.toFloat(), size.height - current.start.y.toFloat())
-            lines[1].moveTo(current.start.x.toFloat(), size.height - current.start.y.toFloat())
-
-            left.moveTo(current.end.x.toFloat(), size.height - current.end.y.toFloat())
-            lines[2].moveTo(current.end.x.toFloat(), size.height - current.end.y.toFloat())
-            lines[3].moveTo(current.end.x.toFloat(), size.height - current.end.y.toFloat())
+            val center = current.center
+            centerLine.moveTo(center.x.toFloat(), size.height - center.y.toFloat())
         }
         previous = current
     }
 
-    if (complete && previous != null && this.size > 1) {
-        addArcs(previous, this.first())
+    if (complete && previous != null) {
+        pathToNext(previous, this.first())
     }
 
-    return listOf(right, left) to lines
-}
-
-fun Path.arcTo(
-    size: Size,
-    center: Point,
-    radius: Double,
-    startAngle: Angle,
-    sweepAngle: Angle
-) {
-    arcTo(
-        rect = Rect(
-            offset = Offset(
-                (center.x - radius).toFloat(),
-                (size.height - center.y - radius).toFloat()
-            ),
-            size = Size(
-                (2.0 * radius).toFloat(),
-                (2.0 * radius).toFloat(),
-            ),
-        ),
-        startAngleDegrees = -startAngle.degrees.toFloat(),
-        sweepAngleDegrees = -sweepAngle.degrees.toFloat(),
-        forceMoveTo = false
-    )
+    return centerLine
 }

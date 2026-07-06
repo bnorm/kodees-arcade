@@ -1,6 +1,5 @@
 package dev.bnorm.arcade.service
 
-import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.loadTrack
 import dev.bnorm.arcade.service.api.Version
 import dev.bnorm.arcade.service.repo.DriverRepository
@@ -10,7 +9,6 @@ import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
 import io.ktor.util.cio.readChannel
 import kotlin.io.path.toPath
-import kotlinx.serialization.json.Json
 
 @SingleIn(AppScope::class)
 @ContributesIntoSet(AppScope::class)
@@ -28,8 +26,10 @@ class Initializer(
         val track = loadTrack(ClassLoader.getSystemResource(resource).readText())
         createTrack(
             name = "Desk",
-            positions = track.positions.size,
-            json = Json.encodeToString(Track.serializer(), track)
+            width = track.width,
+            height = track.height,
+            checkpoints = track.checkpoints,
+            positions = track.positions,
         )
     }
 
