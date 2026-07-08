@@ -15,8 +15,8 @@ class Segment(
 
 val Segment.center: Point
     get() = Point(
-        x = start.x + (end.x - start.x) / 2.0,
-        y = start.y + (end.y - start.y) / 2.0,
+        x = (start.x + end.x) / 2.0,
+        y = (start.y + end.y) / 2.0,
     )
 
 val Segment.length: Double

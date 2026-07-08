@@ -82,3 +82,7 @@ infix fun Line.intersect(line: Line): Point? {
     if (x.isInfinite()) return null
     return this.intersectVertical(x)
 }
+
+fun Line.toNormal(point: Point): Line {
+    return Line(point, -1.0 / m)
+}
