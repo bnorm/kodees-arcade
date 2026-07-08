@@ -43,8 +43,8 @@ import dev.bnorm.arcade.icons.play_arrow
 import dev.bnorm.arcade.icons.replay
 import dev.bnorm.arcade.icons.sports_motorsports
 import dev.bnorm.arcade.rally.RaceTrack
+import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.race.DownloadRace
-import dev.bnorm.arcade.rally.rememberDeskTrack
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
@@ -113,21 +113,24 @@ class RacesRoute(
 
 @Composable
 private fun WatchRaceDialog(client: ArcadeClient, raceId: RaceId?, onDismiss: () -> Unit) {
-    if (raceId != null) {
-        val race = remember(raceId) { DownloadRace(client, raceId) }
-        LaunchedEffect(race) {
-            race.start()
-        }
+    if (raceId == null) return
 
+    var track by remember { mutableStateOf<TrackResponse?>(null) }
+    LaunchedEffect(Unit) {
+        track = client.getTrack(client.getRace(raceId).trackId)
+    }
+
+    if (track != null) {
         Dialog(onDismissRequest = {
             onDismiss()
         }) {
+            val race = remember(raceId) { DownloadRace(client, raceId) }
+            LaunchedEffect(race) {
+                race.start()
+            }
+
             Card {
-                // TODO download this from the server
-                val track = rememberDeskTrack()
-                if (track != null) {
-                    RaceTrack(track, race, onComplete = {}, onStop = {}, modifier = Modifier.padding(16.dp))
-                }
+                RaceTrack(track!!.toTrack(), race, onComplete = {}, onStop = {}, modifier = Modifier.padding(16.dp))
             }
         }
     }
@@ -315,4 +318,14 @@ private fun Duration.toAgoString(): String {
             }
         }
     }
+}
+
+private fun TrackResponse.toTrack(): Track {
+    return Track(
+        width = width,
+        height = height,
+        checkpoints = checkpoints,
+        positions = positions,
+        laps = 25,
+    )
 }
