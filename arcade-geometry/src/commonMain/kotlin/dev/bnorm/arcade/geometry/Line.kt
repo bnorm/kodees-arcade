@@ -18,6 +18,15 @@ class Line(
     }
 }
 
+fun Line(p: Point, m: Double): Line {
+    // Vertical line.
+    if (m.isNaN()) return Line(p.x, m)
+
+    // y = m * x + b
+    val b = p.y - (m * p.x)
+    return Line(m, b)
+}
+
 fun Line(p1: Point, p2: Point): Line {
     // Vertical line
     if (p1.x == p2.x) return Line(Double.NaN, p1.x)

@@ -48,6 +48,7 @@ import dev.bnorm.arcade.geometry.asin
 import dev.bnorm.arcade.geometry.center
 import dev.bnorm.arcade.geometry.cos
 import dev.bnorm.arcade.geometry.intersect
+import dev.bnorm.arcade.geometry.nearest
 import dev.bnorm.arcade.geometry.plus
 import dev.bnorm.arcade.geometry.sign
 import dev.bnorm.arcade.geometry.sin
@@ -92,7 +93,7 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                             segment = null
                         } else {
                             checkpoints.removeLast()
-                            segment = computeSegment(mouse, point, checkpoints.lastOrNull())
+                            segment = computeNextSegment(mouse, point, checkpoints.lastOrNull())
                         }
                         true
                     }
@@ -120,7 +121,7 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                 enabled = !complete,
                 onClick = {
                     focusRequester.requestFocus()
-                    val last = computeSegment(checkpoints.last(), checkpoints.first())
+                    val last = computeMiddleSegment(mouse, checkpoints.last(), checkpoints.first())
                     if (last != null) {
                         checkpoints.add(last)
                         point = null
@@ -159,7 +160,7 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                 Modifier
                     .fillMaxSize()
                     .border(2.dp, Color.Black)
-                    .pointerInput(Unit) {
+                    .pointerInput(size) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
@@ -177,7 +178,7 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                                         if (!complete) {
                                             val location = event.changes.first().position.toPoint(size)
                                             mouse = location
-                                            segment = computeSegment(location, point, checkpoints.lastOrNull())
+                                            segment = computeNextSegment(location, point, checkpoints.lastOrNull())
                                         } else {
                                             mouse = null
                                         }
@@ -310,7 +311,7 @@ private fun computePositions(checkpoints: SnapshotStateList<Segment>): List<Posi
 private const val TRACK_WIDTH = 90.0
 private const val CAR_WIDTH = 20.0
 
-fun computeSegment(
+fun computeNextSegment(
     mouse: Point?,
     point: Point?,
     last: Segment?
@@ -318,41 +319,55 @@ fun computeSegment(
     if (mouse == null) return null
 
     if (last != null) {
+        val segmentCenter = last.center
         val segmentVector = (last.end - last.start).toVector()
-        val vector = (mouse - last.center).toVector()
+        val vector = (mouse - segmentCenter).toVector()
 
         // Angle to the right (negative) of the segment vector.
-        val alpha = (vector.angle - segmentVector.angle).toRelative()
-        if (alpha > Angle.ZERO) {
-            // Corners must be less than 180 deg turns
-            // TODO based on mouse, try and find a 180 turn which lines up directly with the mouse.
-            return null
-        } else {
-            // 'vector.magnitude' is the base of an isosceles triangle with base angle of 'alpha'.
-            // Therefore, cos(alpha) = opposite / hypotenuse, where:
-            // * hypotenuse = is the radius of the circle through both segment center and mouse.
-            // * opposite = 'vector.magnitude' / 2.
-            val cosAlpha = cos(Angle.HALF_CIRCLE - alpha)
-            val radius = (vector.magnitude / 2.0) / cosAlpha
+        var alpha = (vector.angle - segmentVector.angle).toRelative()
+        // Distance from segment center to the mouse.
+        var distance = vector.magnitude
 
-            // Reverse the calculation with different radii to create a new segment,
-            // which shares the same circle center point for its start and end point arcs.
-            val halfWidth = segmentVector.magnitude / 2.0
-            return if (abs(radius) > halfWidth) {
-                // TODO there's a way to reduce the number of cos/sin usage here
-                Segment(
-                    start = last.start + Vector(
-                        vector.angle,
-                        2 * (radius - halfWidth) * cosAlpha
-                    ),
-                    end = last.end + Vector(
-                        vector.angle,
-                        2 * (radius + halfWidth) * cosAlpha
-                    )
+        // Limit angle and distance if the angle is to the left (positive) of the segment.
+        // Also limit distance, so it's the distance along the segment line,
+        // rather than distance to the mouse.
+        // TODO try and remove the weird 0.0001 adjustment
+        if (alpha > Angle.QUARTER_CIRCLE) {
+            alpha = -Angle.HALF_CIRCLE + Angle.ofRadians(0.0001)
+            distance = segmentCenter.distanceTo(mouse.nearest(last.toLine()))
+        } else if (alpha > Angle.ZERO) {
+            alpha = Angle.ZERO - Angle.ofRadians(0.0001)
+            distance = segmentCenter.distanceTo(mouse.nearest(last.toLine()))
+        }
+
+        // Limit direct distance between segments.
+        // TODO configurable?
+        distance = minOf(distance, 250.0)
+
+        // 'vector.magnitude' is the base of an isosceles triangle with base angle of 'alpha'.
+        // Therefore, cos(alpha) = opposite / hypotenuse, where:
+        // * hypotenuse = is the radius of the circle through both segment center and mouse.
+        // * opposite = 'vector.magnitude' / 2.
+        val cosAlpha = cos(Angle.HALF_CIRCLE - alpha)
+        val radius = (distance / 2.0) / cosAlpha
+
+        // Reverse the calculation with different radii to create a new segment,
+        // which shares the same circle center point for its start and end point arcs.
+        val halfWidth = segmentVector.magnitude / 2.0
+        return if (abs(radius) > halfWidth) {
+            // TODO there's a way to reduce the number of cos/sin usage here
+            Segment(
+                start = last.start + Vector(
+                    segmentVector.angle + alpha,
+                    2 * (radius - halfWidth) * cosAlpha
+                ),
+                end = last.end + Vector(
+                    segmentVector.angle + alpha,
+                    2 * (radius + halfWidth) * cosAlpha
                 )
-            } else {
-                null
-            }
+            )
+        } else {
+            null
         }
     } else if (point != null) {
         val delta = Vector(point.angleTo(mouse), TRACK_WIDTH / 2).toPoint()
@@ -362,48 +377,72 @@ fun computeSegment(
     }
 }
 
-fun computeSegment(
-    last: Segment,
-    first: Segment,
+fun computeMiddleSegment(
+    mouse: Point?,
+    prev: Segment,
+    next: Segment,
 ): Segment? {
-    val lastVector = (last.end - last.start).toVector()
-    val lastCenter = last.center
+    val prevVector = (prev.end - prev.start).toVector()
+    val prevCenter = prev.center
 
-    val firstAngle = first.start.angleTo(first.end)
-    val firstCenter = first.center
+    val nextAngle = next.start.angleTo(next.end)
+    val nextCenter = next.center
 
-    val pathVector = (firstCenter - lastCenter).toVector()
+    val pathVector = (nextCenter - prevCenter).toVector()
+    val dist = pathVector.magnitude
 
-    val beta1 = (pathVector.angle - (lastVector.angle + Angle.HALF_CIRCLE)).toRelative()
-    val beta2 = (firstAngle - pathVector.angle).toRelative()
+    val beta1 = (pathVector.angle - (prevVector.angle + Angle.HALF_CIRCLE)).toRelative()
+    val beta2 = (nextAngle - pathVector.angle).toRelative()
     val pathAcuteAngle = (Angle.HALF_CIRCLE + beta1 + beta2) / 2.0
 
-    // TODO this just assumes that magnitude1 = magnitude2
-    val lawOfCosines = cos(pathAcuteAngle)
-    val magnitude = sqrt(
-        (pathVector.magnitude * pathVector.magnitude) /
-            (2.0 - 2.0 * lawOfCosines)
-    )
+    // Use Law of Cosines to determine the edges.
+    val cosPathAcuteAngle = cos(pathAcuteAngle)
+    val dist1: Double
+    val dist2: Double
+    when {
+        mouse == null -> {
+            // Assume equidistant.
+            dist1 = sqrt((dist * dist) / (2.0 - 2.0 * cosPathAcuteAngle))
+            dist2 = dist1
+        }
 
-    val asin = asin(sin(pathAcuteAngle) * magnitude / pathVector.magnitude)
-    val alpha1 = asin + beta1
-    val alpha2 = asin + beta2
+        else -> {
+            // Use the mouse distance along the direct segment from center-to-center
+            // to determine the ratio of distances.
+            val nearest = mouse.nearest(Segment(prevCenter, nextCenter))
+            val ratio = prevCenter.distanceTo(nearest) / dist
+            if (ratio < 0.5) {
+                val p = 2.0 * ratio // 0..1
+                dist2 = sqrt((dist * dist) / (p * p + 1.0 - 2.0 * p * cosPathAcuteAngle))
+                dist1 = p * dist2
+            } else {
+                val p = 2.0 - 2.0 * ratio // 0..1
+                dist1 = sqrt((dist * dist) / (p * p + 1.0 - 2.0 * p * cosPathAcuteAngle))
+                dist2 = p * dist1
+            }
+        }
+    }
+
+    // Use Law of Sines to determine the other angles of the triangle.
+    val sinPathAcuteAngle = sin(pathAcuteAngle)
+    val alpha1 = asin(sinPathAcuteAngle * dist2 / dist) + beta1
+    val alpha2 = asin(sinPathAcuteAngle * dist1 / dist) + beta2
 
     val cosAlpha1 = cos(alpha1)
-    val radius1 = (magnitude / 2.0) / cosAlpha1
-    val radius2 = (magnitude / 2.0) / cos(alpha2)
+    val radius1 = (dist1 / 2.0) / cosAlpha1
+    val radius2 = (dist2 / 2.0) / cos(alpha2)
 
-    val halfWidth = lastVector.magnitude / 2.0
+    val halfWidth = prevVector.magnitude / 2.0
     return if (abs(radius1) > halfWidth && abs(radius2) > halfWidth) {
         // TODO there's a way to reduce the number of cos/sin usage here
         Segment(
-            start = last.start + Vector(
-                lastVector.angle + alpha1 + Angle.HALF_CIRCLE,
-                2.0 * (radius1 - halfWidth) * cosAlpha1
+            start = prev.start + Vector(
+                prevVector.angle + alpha1 + Angle.HALF_CIRCLE,
+                2.0 * (radius1 - halfWidth) * cosAlpha1,
             ),
-            end = last.end + Vector(
-                lastVector.angle + alpha1 + Angle.HALF_CIRCLE,
-                2.0 * (radius1 + halfWidth) * cosAlpha1
+            end = prev.end + Vector(
+                prevVector.angle + alpha1 + Angle.HALF_CIRCLE,
+                2.0 * (radius1 + halfWidth) * cosAlpha1,
             )
         )
     } else {
