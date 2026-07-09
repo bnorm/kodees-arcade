@@ -40,7 +40,7 @@ internal fun DrawScope.drawTrack(
         )
     )
     drawPath(centerLine, color = Color.Black, style = Stroke(width = TRACK_WIDTH.toFloat() + 1f))
-    drawPath(centerLine, color = Color.Gray, style = Stroke(width = TRACK_WIDTH.toFloat()))
+    drawPath(centerLine, color = Color.DarkGray, style = Stroke(width = TRACK_WIDTH.toFloat()))
 }
 
 fun List<Segment>.toCenterLine(size: Size, complete: Boolean = true): Path {

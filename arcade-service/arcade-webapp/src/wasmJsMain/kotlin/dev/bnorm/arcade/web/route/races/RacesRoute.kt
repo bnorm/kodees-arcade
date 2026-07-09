@@ -43,8 +43,8 @@ import dev.bnorm.arcade.icons.play_arrow
 import dev.bnorm.arcade.icons.replay
 import dev.bnorm.arcade.icons.sports_motorsports
 import dev.bnorm.arcade.rally.RaceTrack
-import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.race.DownloadRace
+import dev.bnorm.arcade.rally.track.toTrack
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
@@ -318,14 +318,4 @@ private fun Duration.toAgoString(): String {
             }
         }
     }
-}
-
-private fun TrackResponse.toTrack(): Track {
-    return Track(
-        width = width,
-        height = height,
-        checkpoints = checkpoints,
-        positions = positions,
-        laps = 25,
-    )
 }
