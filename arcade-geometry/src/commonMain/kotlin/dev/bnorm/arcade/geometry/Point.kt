@@ -28,6 +28,10 @@ data class Point(
         return Point(this.x - x, this.y - y)
     }
 
+    operator fun times(scalar: Double): Point {
+        return Point(this.x * scalar, this.y * scalar)
+    }
+
     fun distanceSquaredTo(other: Point): Double {
         val dx = other.x - x
         val dy = other.y - y
@@ -65,4 +69,8 @@ operator fun Point.minus(vector: Vector): Point {
 
 fun Point.minus(angle: Angle, magnitude: Double): Point {
     return Point(x - cos(angle) * magnitude, y - sin(angle) * magnitude)
+}
+
+operator fun Double.times(point: Point): Point {
+    return point.times(this)
 }

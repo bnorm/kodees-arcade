@@ -50,6 +50,7 @@ import dev.bnorm.arcade.geometry.plus
 import dev.bnorm.arcade.geometry.sign
 import dev.bnorm.arcade.geometry.sin
 import dev.bnorm.arcade.geometry.times
+import dev.bnorm.arcade.geometry.toAbsolute
 import dev.bnorm.arcade.geometry.toLine
 import dev.bnorm.arcade.geometry.toNormal
 import dev.bnorm.arcade.geometry.toPoint
@@ -310,23 +311,34 @@ private fun DrawScope.drawBuilderResult(
 private fun computePositions(checkpoints: List<Segment>): List<Position> {
     if (checkpoints.size < 2) return emptyList()
 
+    val first = checkpoints[0]
+    val second = checkpoints[1]
+
+    val separation = (TRACK_WIDTH - 2.0 * CAR_WIDTH) / 3.0
+    val dist = separation + CAR_WIDTH
+    val padding = separation + CAR_WIDTH / 2
+
     return buildList {
-        val first = checkpoints[0]
-        val second = checkpoints[1]
+        fun buildForStraight() {
+            val vector = first.center.toVector(second.center)
+            val total = vector.magnitude
 
-        val center = first.toLine().intersect(second.toLine())
-        if (center != null) {
-            val separation = (TRACK_WIDTH - 2.0 * CAR_WIDTH) / 3.0
-            val dist = separation + CAR_WIDTH
-            val padding = separation + CAR_WIDTH / 2
+            val distVector = Vector(vector.angle, dist).toPoint()
+            val offsetVector = Vector(vector.angle + Angle.QUARTER_CIRCLE, dist / 2.0).toPoint()
 
+            val start = second.center + Vector(vector.angle, padding)
+            val heading = (vector.angle + Angle.HALF_CIRCLE).toAbsolute()
+            repeat((total / dist).toInt()) {
+                val point = start + distVector * it.toDouble()
+                add(Position(point + offsetVector, heading))
+                add(Position(point - offsetVector, heading))
+            }
+        }
+
+        fun buildForArc(center: Point, innerRadius: Double, outerRadius: Double) {
             val start = center.angleTo(second.start)
             val total = (start - center.angleTo(first.start)).toRelative()
             val sign = sign(total)
-
-            // TODO use sign to determine start vs end
-            val innerRadius = minOf(center.distanceTo(first.start), center.distanceTo(first.end)) + padding
-            val outerRadius = innerRadius + dist
 
             val paddingAngle = acos(1 - (padding * padding) / (2 * innerRadius * innerRadius)) * sign
             val distAngle = acos(1 - (dist * dist) / (2 * innerRadius * innerRadius)) * sign
@@ -334,18 +346,24 @@ private fun computePositions(checkpoints: List<Segment>): List<Position> {
             val available = (total / distAngle).toInt()
             repeat(abs(available)) {
                 val angle = start - paddingAngle - distAngle * it.toDouble()
-                add(
-                    Position(
-                        location = (center + Vector(angle, innerRadius)),
-                        heading = angle + sign * Angle.QUARTER_CIRCLE,
-                    )
-                )
-                add(
-                    Position(
-                        location = (center + Vector(angle, outerRadius)),
-                        heading = angle + sign * Angle.QUARTER_CIRCLE,
-                    )
-                )
+                val heading = angle + sign * Angle.QUARTER_CIRCLE
+                add(Position(center + Vector(angle, innerRadius), heading))
+                add(Position(center + Vector(angle, outerRadius), heading))
+            }
+        }
+
+        val center = first.toLine().intersect(second.toLine())
+        if (center == null) {
+            buildForStraight()
+        } else {
+            // TODO use sign to determine start vs end?
+            val innerRadius = minOf(center.distanceTo(first.start), center.distanceTo(first.end)) + padding
+            val outerRadius = innerRadius + dist
+
+            if (minOf(innerRadius, outerRadius) > VISUALLY_STRAIGHT_ENOUGH) {
+                buildForStraight()
+            } else {
+                buildForArc(center, innerRadius, outerRadius)
             }
         }
     }
