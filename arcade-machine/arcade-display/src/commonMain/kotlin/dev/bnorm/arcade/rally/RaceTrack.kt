@@ -1,8 +1,6 @@
 package dev.bnorm.arcade.rally
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -16,20 +14,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
@@ -43,61 +36,31 @@ import dev.bnorm.arcade.arcade_display.generated.resources.car_purple
 import dev.bnorm.arcade.arcade_display.generated.resources.car_red
 import dev.bnorm.arcade.arcade_display.generated.resources.car_teal
 import dev.bnorm.arcade.arcade_display.generated.resources.car_yellow
+import dev.bnorm.arcade.display.GameModel
+import dev.bnorm.arcade.display.GameViewModel
 import dev.bnorm.arcade.geometry.toRelative
-import dev.bnorm.arcade.machine.Race
-import dev.bnorm.arcade.rally.track.drawTrack
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.TimeSource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
+import dev.bnorm.arcade.machine.Game
+import dev.bnorm.arcade.rally.track.Track
 import org.jetbrains.compose.resources.imageResource
 
 @Composable
-fun RaceTrack(
-    track: Track,
-    race: Race?,
-    onComplete: (Race.Event.Complete) -> Unit,
-    onStop: () -> Unit,
+fun Game(
+    gameViewModel: GameViewModel,
+    onComplete: (Game.Event.Complete) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var desiredFps by remember { mutableFloatStateOf(60f) }
-
-    // TODO track must be based on the race itself
-    val bitmap = remember(track) {
-        renderComposeScene(
-            width = track.width.toInt(),
-            height = track.height.toInt(),
-            density = Density(1f),
-        ) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(red = 0x00, green = 0x55, blue = 0x00))
-            ) {
-                drawTrack(track.checkpoints, complete = true)
-            }
-        }.toComposeImageBitmap()
-    }
-
+    val model by gameViewModel.models.collectAsState()
     Column(
         modifier
             .height(IntrinsicSize.Min)
     ) {
-        FixedSize(
-            size = IntSize(track.width.toInt(), track.height.toInt()),
-            density = Density(1f),
-            modifier = Modifier.fillMaxWidth().weight(1f)
-        ) {
-            Image(
-                bitmap = bitmap,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            Game(race, desiredFps, onComplete)
-        }
+        Game(
+            model = model,
+            onComplete = onComplete,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -105,24 +68,31 @@ fun RaceTrack(
             modifier = Modifier.padding(16.dp),
         ) {
             Button(
-                enabled = race != null,
+                enabled = model.active,
                 onClick = {
-                    onStop()
+                    gameViewModel.stop()
                 }
             ) {
                 Text("Stop!")
             }
 
+            Button(
+                enabled = model.active,
+                onClick = { gameViewModel.togglePlayPause() }
+            ) {
+                Text(if (model.running) "Pause" else "Play")
+            }
+
             Text(
-                text = "FPS: ${desiredFps.toInt()}",
+                text = "FPS: ${model.desiredUps.toInt()}",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.width(96.dp)
             )
 
             LogarithmicSlider(
-                initialValue = desiredFps,
+                initialValue = model.desiredUps,
                 maxValue = 10000f,
-                onValueChange = { desiredFps = it },
+                onValueChange = { gameViewModel.adjustUps(it) },
                 steps = 50,
             )
         }
@@ -131,9 +101,8 @@ fun RaceTrack(
 
 @Composable
 private fun Game(
-    race: Race?,
-    desiredFps: Float,
-    onComplete: (Race.Event.Complete) -> Unit,
+    model: GameModel,
+    onComplete: (Game.Event.Complete) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val images = remember {
@@ -148,79 +117,56 @@ private fun Game(
         )
     }.map { imageResource(it) }
 
-    var start by remember { mutableStateOf<Race.Event.Start?>(null) }
-    var update by remember { mutableStateOf<Race.Event.Update?>(null) }
+    val track = model.start.track
+    val names = model.start.drivers
+    FixedSize(
+        size = IntSize(
+            width = track.width.toInt(),
+            height = track.height.toInt(),
+        ),
+        density = Density(1f),
+        modifier = modifier
+    ) {
+        Track(track, modifier = Modifier.fillMaxSize())
 
-    LaunchedEffect(race, desiredFps) {
-        if (race == null) {
-            update = null
-            return@LaunchedEffect
+        val textMeasurer = rememberTextMeasurer()
+        val nameMeasureResults = remember(names) {
+            names.map { textMeasurer.measure(it) }
         }
+        Canvas(Modifier.fillMaxSize()) {
+            val positions = model.update?.drivers.orEmpty()
+            for ((index, position) in positions.withIndex()) {
+                val x = position.x.toFloat()
+                val y = size.height - position.y.toFloat()
+                val center = Offset(x, y)
 
-        withContext(Dispatchers.Default) {
-            val frameDelay = (1.0 / desiredFps).seconds
-            val startTime = TimeSource.Monotonic.markNow()
-            var targetTime = 0.seconds
+                val image = images[index % images.size]
 
-            for (event in race.events) {
-                val currentTime = startTime.elapsedNow()
-                val delay = targetTime - currentTime
-                if (delay > Duration.ZERO) delay(delay)
-                targetTime = maxOf(targetTime + frameDelay, currentTime)
-
-                when (event) {
-                    is Race.Event.Complete -> {
-                        onComplete(event)
-                        break
-                    }
-
-                    is Race.Event.Start -> {
-                        start = event
-                    }
-
-                    is Race.Event.Update -> {
-                        update = event
-                    }
-                }
+                val result = nameMeasureResults[index]
+                val textOffset = Offset(
+                    x = -result.size.width / 2f,
+                    y = image.height.toFloat() / 2f * 0.4f,
+                )
+                drawText(result, color = Color.Black, topLeft = center + textOffset)
             }
-        }
-    }
 
-    val textMeasurer = rememberTextMeasurer()
-    Canvas(modifier.fillMaxSize()) {
-        val names = start?.drivers.orEmpty()
+            for ((index, position) in positions.withIndex()) {
+                val x = position.x.toFloat()
+                val y = size.height - position.y.toFloat()
+                val center = Offset(x, y)
 
-        for ((index, driver) in update?.drivers.orEmpty().withIndex()) {
-            val x = driver.x.toFloat()
-            val y = size.height - driver.y.toFloat()
-            val center = Offset(x, y)
+                val heading = 90f - position.heading.toRelative().degrees.toFloat()
 
-            val image = images[index]
+                val image = images[index % images.size]
+                val imageSize = Offset(
+                    x = image.width.toFloat(),
+                    y = image.height.toFloat(),
+                )
 
-            val result = textMeasurer.measure(names[index])
-            val textOffset = Offset(
-                x = -result.size.width / 2f,
-                y = image.height.toFloat() / 2f * 0.4f,
-            )
-            drawText(result, color = Color.Black, topLeft = center + textOffset)
-        }
-
-        for ((index, driver) in update?.drivers.orEmpty().withIndex()) {
-            val x = driver.x.toFloat()
-            val y = size.height - driver.y.toFloat()
-            val center = Offset(x, y)
-
-            val heading = 90f - driver.heading.toRelative().degrees.toFloat()
-
-            val image = images[index]
-            val imageSize = Offset(
-                x = image.width.toFloat(),
-                y = image.height.toFloat(),
-            )
-
-            rotate(degrees = heading, pivot = center) {
-                scale(scale = 0.4f, pivot = center) {
-                    drawImage(image, topLeft = center - (imageSize / 2f))
+                rotate(degrees = heading, pivot = center) {
+                    scale(scale = 0.4f, pivot = center) {
+                        drawImage(image, topLeft = center - (imageSize / 2f))
+                    }
                 }
             }
         }

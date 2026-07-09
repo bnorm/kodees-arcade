@@ -83,6 +83,9 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
     // the first and second checkpoints define the starting grid and how many positions are possible
     var complete by remember { mutableStateOf(false) }
     val checkpoints = remember { mutableStateListOf<Segment>() }
+    val positions by derivedStateOf {
+        computePositions(checkpoints)
+    }
 
     var mouse by remember { mutableStateOf<Point?>(null) }
     var addMode by remember { mutableStateOf(AddMode.Curve) }
@@ -174,7 +177,7 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                         height = size.height.toDouble(),
                         // Rotate checkpoints so the first defines the starting line.
                         checkpoints = List(checkpoints.size) { checkpoints[(it + 1) % checkpoints.size] },
-                        positions = computePositions(checkpoints),
+                        positions = positions,
                     )
                     onSave(track)
                 }
@@ -243,7 +246,12 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                         }
                     }
             ) {
-                drawTrack(checkpoints, complete)
+                drawTrack(
+                    checkpoints = checkpoints,
+                    startingLine = checkpoints.getOrNull(1),
+                    positions = positions,
+                    complete = complete,
+                )
 
                 for (segment in checkpoints) {
                     drawLine(

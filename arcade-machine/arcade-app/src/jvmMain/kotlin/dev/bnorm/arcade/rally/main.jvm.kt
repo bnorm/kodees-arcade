@@ -7,7 +7,6 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,11 +25,11 @@ import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberDialogState
 import androidx.compose.ui.window.rememberWindowState
-import dev.bnorm.arcade.display.RaceViewModel
+import dev.bnorm.arcade.display.GameViewModel
 import dev.bnorm.arcade.display.TrackViewModel
-import dev.bnorm.arcade.machine.Race
-import dev.bnorm.arcade.machine.RecordRace
-import dev.bnorm.arcade.machine.ReplayRace
+import dev.bnorm.arcade.machine.Game
+import dev.bnorm.arcade.machine.RecordGame
+import dev.bnorm.arcade.machine.ReplayGame
 import dev.bnorm.arcade.rally.track.TrackBuilder
 import dev.bnorm.arcade.rally.track.TrackDownloader
 import dev.bnorm.arcade.server.client.ArcadeClient
@@ -57,7 +56,7 @@ fun main() {
         val client = remember { ArcadeClient() }
 
         val trackViewModel = TrackViewModel(scope)
-        val raceViewModel = RaceViewModel(scope)
+        val gameViewModel = GameViewModel(TrackViewModel.INITIAL_TRACK, scope)
 
         Window(
             title = "Rally",
@@ -66,9 +65,9 @@ fun main() {
         ) {
             MenuBar {
                 Menu("Race") {
-                    RaceWizardItem(client, trackViewModel, raceViewModel)
-                    RaceLoadItem(this@Window, raceViewModel)
-                    RaceDownloadItem(client, raceViewModel)
+                    RaceWizardItem(client, trackViewModel, gameViewModel)
+                    RaceLoadItem(this@Window, gameViewModel)
+                    RaceDownloadItem(client, gameViewModel)
                 }
 
                 Menu("Track") {
@@ -77,7 +76,7 @@ fun main() {
                 }
             }
 
-            var complete by remember { mutableStateOf<Race.Event.Complete?>(null) }
+            var complete by remember { mutableStateOf<Game.Event.Complete?>(null) }
             complete?.let {
                 BasicAlertDialog(
                     onDismissRequest = { complete = null },
@@ -88,17 +87,11 @@ fun main() {
                 }
             }
 
-            val trackModel by trackViewModel.models.collectAsState()
-            val raceModel by raceViewModel.models.collectAsState()
-            RaceTrack(
-                track = trackModel.track,
-                race = raceModel.race,
+            Game(
+                gameViewModel = gameViewModel,
                 onComplete = {
                     complete = it
-                    raceViewModel.clear()
-                },
-                onStop = {
-                    raceViewModel.clear()
+                    gameViewModel.clear()
                 },
                 modifier = Modifier
                     .fillMaxSize()
@@ -111,10 +104,10 @@ fun main() {
 private fun MenuScope.RaceWizardItem(
     client: ArcadeClient,
     trackViewModel: TrackViewModel,
-    raceViewModel: RaceViewModel,
+    gameViewModel: GameViewModel,
 ) {
     val state = rememberDialogState(
-        size = DpSize(400.dp, 300.dp),
+        size = DpSize(600.dp, 600.dp),
         position = WindowPosition.PlatformDefault,
     )
 
@@ -125,13 +118,11 @@ private fun MenuScope.RaceWizardItem(
             state = state,
             onCloseRequest = { visible = false }
         ) {
-            val trackModel by trackViewModel.models.collectAsState()
-
             RaceWizard(
                 client,
-                trackModel.track,
+                trackViewModel,
                 onStart = {
-                    raceViewModel.new(RecordRace(it, Paths.get("./recording.race")))
+                    gameViewModel.new(RecordGame(it, Paths.get("./recording.race")))
                     visible = false
                 }
             )
@@ -141,7 +132,7 @@ private fun MenuScope.RaceWizardItem(
     Item(
         text = "New",
         onClick = {
-            raceViewModel.clear()
+            gameViewModel.clear()
             visible = true
         }
     )
@@ -150,21 +141,21 @@ private fun MenuScope.RaceWizardItem(
 @Composable
 private fun MenuScope.RaceLoadItem(
     scope: WindowScope,
-    raceViewModel: RaceViewModel
+    gameViewModel: GameViewModel
 ) {
     val recordingPicker = scope.rememberFilePickerLauncher(
         mode = FileKitMode.Single,
         type = FileKitType.File("race"),
     ) { file ->
         if (file != null) {
-            raceViewModel.new(ReplayRace(file))
+            gameViewModel.new(ReplayGame(file))
         }
     }
 
     Item(
         text = "Load",
         onClick = {
-            raceViewModel.clear()
+            gameViewModel.clear()
             recordingPicker.launch()
         }
     )
@@ -173,7 +164,7 @@ private fun MenuScope.RaceLoadItem(
 @Composable
 private fun MenuScope.RaceDownloadItem(
     client: ArcadeClient,
-    raceViewModel: RaceViewModel
+    gameViewModel: GameViewModel
 ) {
     val state = rememberDialogState(
         size = DpSize(400.dp, 300.dp),
@@ -190,7 +181,7 @@ private fun MenuScope.RaceDownloadItem(
             RaceDownloader(
                 client,
                 onStart = {
-                    raceViewModel.new(it)
+                    gameViewModel.new(it)
                     visible = false
                 }
             )
@@ -200,7 +191,7 @@ private fun MenuScope.RaceDownloadItem(
     Item(
         text = "Download",
         onClick = {
-            raceViewModel.clear()
+            gameViewModel.clear()
             visible = true
         }
     )

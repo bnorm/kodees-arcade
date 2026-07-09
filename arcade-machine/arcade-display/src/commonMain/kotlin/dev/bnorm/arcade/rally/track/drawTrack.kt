@@ -8,17 +8,43 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
+import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.Position
 import dev.bnorm.arcade.geometry.Segment
+import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.geometry.center
 import dev.bnorm.arcade.geometry.intersect
 import dev.bnorm.arcade.geometry.toLine
+import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
+import dev.bnorm.arcade.geometry.toVector
 
 // TODO move these to physics?
 internal const val TRACK_WIDTH = 90.0
 internal const val CAR_WIDTH = 20.0
 
+private val STARTING_GRID = Path().apply {
+    val size = CAR_WIDTH.toFloat()
+    moveTo(size / 4, size / 2)
+    relativeLineTo(size / 4, 0f)
+    relativeLineTo(0f, -size)
+    relativeLineTo(-size / 4, 0f)
+}
+
 internal fun DrawScope.drawTrack(
+    checkpoints: List<Segment>,
+    startingLine: Segment?,
+    positions: List<Position>,
+    complete: Boolean,
+) {
+    drawPavement(checkpoints, complete)
+    if (startingLine != null) drawStartingLine(startingLine)
+    drawStartingGrid(positions)
+}
+
+private fun DrawScope.drawPavement(
     checkpoints: List<Segment>,
     complete: Boolean
 ) {
@@ -41,6 +67,44 @@ internal fun DrawScope.drawTrack(
     )
     drawPath(centerLine, color = Color.Black, style = Stroke(width = TRACK_WIDTH.toFloat() + 1f))
     drawPath(centerLine, color = Color.DarkGray, style = Stroke(width = TRACK_WIDTH.toFloat()))
+}
+
+private fun DrawScope.drawStartingLine(segment: Segment) {
+    val vector = (segment.end - segment.start).toVector()
+    val repeat = (vector.magnitude / 8.0).toInt()
+
+    val move = Vector(vector.angle, magnitude = vector.magnitude / repeat).toPoint()
+    val offset = Vector(vector.angle + Angle.QUARTER_CIRCLE, magnitude = 4.0).toPoint()
+
+    var flip = true
+    repeat(repeat) {
+        val start = segment.start + move * it.toDouble()
+        val stop = segment.start + move * (it + 1).toDouble()
+        drawLine(
+            if (flip) Color.Black else Color.White,
+            start = (start + offset).toOffset(),
+            end = (stop + offset).toOffset(),
+            strokeWidth = 8f,
+        )
+        drawLine(
+            if (flip) Color.White else Color.Black,
+            start = (start - offset).toOffset(),
+            end = (stop - offset).toOffset(),
+            strokeWidth = 8f,
+        )
+        flip = !flip
+    }
+}
+
+private fun DrawScope.drawStartingGrid(positions: List<Position>) {
+    for (position in positions) {
+        val location = position.location.toOffset()
+        rotate(-position.heading.degrees.toFloat(), location) {
+            translate(location.x, location.y) {
+                drawPath(STARTING_GRID, color = Color.LightGray, style = Stroke(width = 2f))
+            }
+        }
+    }
 }
 
 fun List<Segment>.toCenterLine(size: Size, complete: Boolean = true): Path {

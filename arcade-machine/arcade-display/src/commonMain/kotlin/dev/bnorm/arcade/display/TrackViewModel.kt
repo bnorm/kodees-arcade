@@ -2,10 +2,8 @@ package dev.bnorm.arcade.display
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Position
@@ -17,6 +15,23 @@ import kotlinx.coroutines.flow.Flow
 class TrackViewModel(
     scope: CoroutineScope,
 ) : ViewModel<TrackViewEvent, TrackModel>(scope) {
+    companion object {
+        val INITIAL_TRACK = Track(
+            width = 500.0,
+            height = 400.0,
+            checkpoints = listOf(
+                Segment(Point(151.0, 170.0), Point(150.0, 80.0)),
+                Segment(Point(151.0, 230.0), Point(150.0, 320.0)),
+                Segment(Point(349.0, 230.0), Point(350.0, 320.0)),
+                Segment(Point(349.0, 170.0), Point(350.0, 80.0)),
+            ),
+            positions = listOf(
+                Position(Point(200.0, 110.0), Angle.HALF_CIRCLE),
+                Position(Point(200.0, 140.0), Angle.HALF_CIRCLE),
+            ),
+        )
+    }
+
     fun new(track: Track) {
         take(TrackViewEvent.New(track))
     }
@@ -32,45 +47,30 @@ sealed class TrackViewEvent {
 }
 
 data class TrackModel(
-    val track: Track,
+    val tracks: List<Track>,
 )
 
 @Composable
 fun TrackPresenter(
     events: Flow<TrackViewEvent>,
 ): TrackModel {
-    var track by remember {
-        val initial = Track(
-            width = 500.0,
-            height = 400.0,
-            checkpoints = listOf(
-                Segment(Point(151.0, 170.0), Point(150.0, 80.0)),
-                Segment(Point(151.0, 230.0), Point(150.0, 320.0)),
-                Segment(Point(349.0, 230.0), Point(350.0, 320.0)),
-                Segment(Point(349.0, 170.0), Point(350.0, 80.0)),
-            ),
-            positions = listOf(
-                Position(Point(200.0, 110.0), Angle.HALF_CIRCLE),
-                Position(Point(200.0, 140.0), Angle.HALF_CIRCLE),
-            ),
-        )
-
-        mutableStateOf(initial)
+    val tracks = remember {
+        mutableStateListOf<Track>().apply {
+            add(TrackViewModel.INITIAL_TRACK)
+        }
     }
-
-//    LaunchedEffect(Unit) {
-//        track = loadTrack(Res.readBytes("files/track.json").decodeToString())
-//    }
 
     LaunchedEffect(events) {
         events.collect { event ->
             when (event) {
                 is TrackViewEvent.New -> {
-                    track = event.track
+                    tracks.add(event.track)
                 }
             }
         }
     }
 
-    return TrackModel(track)
+    return TrackModel(
+        tracks = tracks.toList(), // Make sure to take a snapshot
+    )
 }
