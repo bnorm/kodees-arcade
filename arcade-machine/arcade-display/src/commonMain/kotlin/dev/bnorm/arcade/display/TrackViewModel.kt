@@ -53,7 +53,6 @@ fun TrackPresenter(
                 Position(Point(200.0, 110.0), Angle.HALF_CIRCLE),
                 Position(Point(200.0, 140.0), Angle.HALF_CIRCLE),
             ),
-            laps = 25
         )
 
         mutableStateOf(initial)

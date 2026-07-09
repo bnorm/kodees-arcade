@@ -175,7 +175,6 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                         // Rotate checkpoints so the first defines the starting line.
                         checkpoints = List(checkpoints.size) { checkpoints[(it + 1) % checkpoints.size] },
                         positions = computePositions(checkpoints),
-                        laps = 25,
                     )
                     onSave(track)
                 }

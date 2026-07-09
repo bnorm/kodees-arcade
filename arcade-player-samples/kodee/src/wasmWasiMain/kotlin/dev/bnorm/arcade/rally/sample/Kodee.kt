@@ -19,8 +19,8 @@ object Kodee : Driver() {
     private lateinit var track: Track
     private lateinit var targets: List<Point>
 
-    override fun onRace(track: Track) {
-        this.track = track
+    override fun onRace(race: Race) {
+        this.track = race.track
 
         val count = track.checkpoints.size
 

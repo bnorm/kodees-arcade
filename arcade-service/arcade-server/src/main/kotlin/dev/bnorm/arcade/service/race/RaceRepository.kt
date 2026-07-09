@@ -45,6 +45,7 @@ import org.jetbrains.exposed.v1.r2dbc.update
 object RaceTable : IdTable<RaceId>("races") {
     override val id: Column<EntityID<RaceId>> = raceId("id").entityId()
     val trackId = reference("track_id", TrackTable)
+    val laps = integer("laps")
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -94,6 +95,7 @@ val PositionVersionDriverJoin = PositionTable
 data class RaceEntity(
     val id: RaceId,
     val trackId: TrackId,
+    val laps: Int,
     val positions: List<PositionEntity>,
     val nonce: Nonce,
     val startTime: Instant? = null,
@@ -150,6 +152,7 @@ fun ResultRow.toRaceEntity(
     return RaceEntity(
         id = this[RaceTable.id].value,
         trackId = this[RaceTable.trackId].value,
+        laps = this[RaceTable.laps],
         positions = positions,
         nonce = this[RaceResultTable.nonce],
         startTime = this[RaceResultTable.startTime],
@@ -232,12 +235,18 @@ class RaceRepository(
         }
     }
 
-    suspend fun createRace(seasonId: SeasonId?, trackId: TrackId, positions: List<DriverVersionId>): RaceEntity {
+    suspend fun createRace(
+        seasonId: SeasonId?,
+        trackId: TrackId,
+        positions: List<DriverVersionId>,
+        laps: Int,
+    ): RaceEntity {
         return suspendTransaction(database) {
             val raceId = RaceId.generate()
             RaceTable.insert {
                 it[this.id] = raceId
                 it[this.trackId] = trackId
+                it[this.laps] = laps
             }
 
             val nonce = Nonce.generate()
@@ -262,6 +271,7 @@ class RaceRepository(
             RaceEntity(
                 id = raceId,
                 trackId = trackId,
+                laps = laps,
                 positions = getPositions(raceId),
                 nonce = nonce,
             )

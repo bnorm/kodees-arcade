@@ -59,6 +59,7 @@ fun RaceSubmitter(
         drivers.addAll(foundDrivers)
     }
 
+    // TODO entered laps
     var selectedTrack by remember { mutableStateOf<TrackId?>(null) }
     val selectedPositions = remember { mutableStateListOf<RaceCreateRequest.Position>() }
 
@@ -151,7 +152,7 @@ fun RaceSubmitter(
             enabled = selectedTrack != null && selectedPositions.isNotEmpty(),
             onClick = {
                 scope.launch {
-                    val request = RaceCreateRequest(selectedTrack!!, selectedPositions.toList())
+                    val request = RaceCreateRequest(selectedTrack!!, selectedPositions.toList(), laps = 25)
                     onCreate(client.createRace(request))
                 }
             }

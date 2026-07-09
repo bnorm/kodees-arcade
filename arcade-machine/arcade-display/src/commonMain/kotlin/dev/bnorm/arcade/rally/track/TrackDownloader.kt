@@ -77,6 +77,5 @@ fun TrackResponse.toTrack(): Track {
         height = height,
         checkpoints = checkpoints,
         positions = positions,
-        laps = 25,
     )
 }

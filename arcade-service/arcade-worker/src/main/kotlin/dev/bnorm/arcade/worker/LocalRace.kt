@@ -24,6 +24,7 @@ class LocalRace(
         try {
             val race = client.getRace(id) // TODO error
             val track = client.getTrack(race.trackId) // TODO error
+            require(race.positions.size <= track.positions.size)
 
             val rallyDrivers = buildList {
                 for (driver in race.positions) {
@@ -33,7 +34,7 @@ class LocalRace(
             }
 
             coroutineScope {
-                val wasmRace = WasmRace(track.toRallyTrack(), rallyDrivers)
+                val wasmRace = WasmRace(track.toRallyTrack(), rallyDrivers, race.laps)
                 launch { wasmRace.start() }
                 wasmRace.events.consumeEach {
                     events.send(it)
@@ -53,6 +54,5 @@ private fun TrackResponse.toRallyTrack(): RallyTrack {
         height = height,
         checkpoints = checkpoints,
         positions = positions,
-        laps = 25,
     )
 }

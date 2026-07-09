@@ -1,8 +1,10 @@
 package dev.bnorm.arcade.rally
 
 abstract class Driver {
-    open fun onRace(track: Track) {}
+    open fun onRace(race: Race) {}
     abstract fun move(car: Car, controls: Controls)
+
+    // TODO onX call for other driver
 
     // TODO a driver can "watch" one other driver per "move"
     //  this allows a driver to know the throttle and steering for the other driver
@@ -14,7 +16,7 @@ abstract class Driver {
     //  does this actually provide an advantage?
     //    maybe collision prediction in corders or something?
 
-    // TODO we need a "heat" callback
+    // TODO do we need a "heat" callback?
     //  a way to initialize the driver for each race
     //  and a way to preserve data from previous heats
     //    (multiple heats should use the same Wasm instance)

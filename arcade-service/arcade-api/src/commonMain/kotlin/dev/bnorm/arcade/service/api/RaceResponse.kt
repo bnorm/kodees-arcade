@@ -7,9 +7,10 @@ import kotlinx.serialization.Serializable
 class RaceResponse(
     val id: RaceId,
     val trackId: TrackId,
+    val laps: Int,
+    val positions: List<Position>,
     val startTime: Instant?,
     val endTime: Instant?,
-    val positions: List<Position>,
 ) {
     @Serializable
     class Position(

@@ -10,5 +10,4 @@ class Track(
     val height: Double,
     val checkpoints: List<Segment>,
     val positions: List<Position>,
-    val laps: Int,
 )
