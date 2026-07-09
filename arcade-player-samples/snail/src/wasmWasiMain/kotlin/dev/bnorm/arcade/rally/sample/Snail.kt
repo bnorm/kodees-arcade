@@ -8,8 +8,8 @@ import kotlin.random.Random
 object Snail : Driver() {
     private lateinit var track: Track
     private var safety: Double = 0.0
-    override fun onRace(track: Track) {
-        this.track = track
+    override fun onRace(race: Race) {
+        this.track = race.track
         this.safety = Random.nextDouble(0.1)
     }
 

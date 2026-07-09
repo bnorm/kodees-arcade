@@ -18,6 +18,15 @@ class Line(
     }
 }
 
+fun Line(p: Point, m: Double): Line {
+    // Vertical line.
+    if (m.isNaN()) return Line(p.x, m)
+
+    // y = m * x + b
+    val b = p.y - (m * p.x)
+    return Line(m, b)
+}
+
 fun Line(p1: Point, p2: Point): Line {
     // Vertical line
     if (p1.x == p2.x) return Line(Double.NaN, p1.x)
@@ -48,7 +57,9 @@ fun Line(p: Point, angle: Angle): Line {
 
 fun Line.intersectVertical(x: Double): Point? {
     if (isVertical) return null
-    return Point(x, m * x + b)
+    val y = m * x + b
+    if (y.isInfinite()) return null
+    return Point(x, y)
 }
 
 operator fun Line.contains(p: Point): Boolean =
@@ -67,5 +78,11 @@ infix fun Line.intersect(line: Line): Point? {
     // m1 * x + b1 = m2 * x + b2
     // x = (b2 - b1) / (m1 - m2)
 
-    return this.intersectVertical((line.b - b) / (m - line.m))
+    val x = (line.b - b) / (m - line.m)
+    if (x.isInfinite()) return null
+    return this.intersectVertical(x)
+}
+
+fun Line.toNormal(point: Point): Line {
+    return Line(point, -1.0 / m)
 }

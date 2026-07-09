@@ -23,7 +23,7 @@ fun update(gameState: RallyGameState, track: Track) {
     val drivers = gameState.drivers
     for (driverState in drivers) {
         // Skip updating drivers which are finished.
-        if (driverState.lap >= track.laps) {
+        if (driverState.lap >= gameState.laps && driverState.checkpoint > 0) {
             if (driverState.finished == null) {
                 driverState.finished = gameState.time
             }
@@ -53,7 +53,7 @@ fun update(gameState: RallyGameState, track: Track) {
         val radius = checkpoint.length / 2
 
         val dx = target.x - driverState.x
-        val dy = (target.y) - driverState.y
+        val dy = target.y - driverState.y
         val dist = sqrt(dx * dx + dy * dy)
         if (dist < radius) {
             driverState.checkpoint += 1
@@ -76,12 +76,12 @@ fun update(gameState: RallyGameState, track: Track) {
 
     for ((i, driver1) in drivers.withIndex()) {
         // Skip updating drivers which are finished.
-        if (driver1.lap >= track.laps) continue
+        if (driver1.lap >= gameState.laps) continue
 
         for (j in (i + 1)..<drivers.size) {
             val driver2 = drivers[j]
             // Skip updating drivers which are finished.
-            if (driver2.lap >= track.laps) continue
+            if (driver2.lap >= gameState.laps) continue
 
             val dx = driver1.x - driver2.x
             val dy = driver1.y - driver2.y

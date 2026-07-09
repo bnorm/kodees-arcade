@@ -19,6 +19,7 @@ plugins {
 
 rootProject.name = "kodees-arcade"
 
+include(":arcade-geometry")
 include(":arcade-machine:arcade-app")
 include(":arcade-machine:arcade-display")
 include(":arcade-machine:arcade-engine")

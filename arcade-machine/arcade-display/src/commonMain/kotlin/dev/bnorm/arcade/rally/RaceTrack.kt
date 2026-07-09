@@ -2,6 +2,7 @@ package dev.bnorm.arcade.rally
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -27,6 +28,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
@@ -40,9 +43,9 @@ import dev.bnorm.arcade.arcade_display.generated.resources.car_purple
 import dev.bnorm.arcade.arcade_display.generated.resources.car_red
 import dev.bnorm.arcade.arcade_display.generated.resources.car_teal
 import dev.bnorm.arcade.arcade_display.generated.resources.car_yellow
-import dev.bnorm.arcade.arcade_display.generated.resources.track
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.machine.Race
+import dev.bnorm.arcade.rally.track.drawTrack
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
@@ -50,7 +53,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.imageResource
-import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun RaceTrack(
@@ -62,6 +64,23 @@ fun RaceTrack(
 ) {
     var desiredFps by remember { mutableFloatStateOf(60f) }
 
+    // TODO track must be based on the race itself
+    val bitmap = remember(track) {
+        renderComposeScene(
+            width = track.width.toInt(),
+            height = track.height.toInt(),
+            density = Density(1f),
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(red = 0x00, green = 0x55, blue = 0x00))
+            ) {
+                drawTrack(track.checkpoints, complete = true)
+            }
+        }.toComposeImageBitmap()
+    }
+
     Column(
         modifier
             .height(IntrinsicSize.Min)
@@ -72,7 +91,7 @@ fun RaceTrack(
             modifier = Modifier.fillMaxWidth().weight(1f)
         ) {
             Image(
-                painter = painterResource(Res.drawable.track),
+                bitmap = bitmap,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
             )

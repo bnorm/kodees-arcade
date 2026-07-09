@@ -40,7 +40,7 @@ fun main() {
             }
         }
 
-        val track = rememberDeskTrack()
+        val track: Track? = null
         if (track != null) {
             Column {
                 var race by remember { mutableStateOf<Race?>(null) }

@@ -16,6 +16,7 @@ import dev.bnorm.arcade.service.api.SeasonCreateRequest
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
 import dev.bnorm.arcade.service.api.SeasonResponse
+import dev.bnorm.arcade.service.api.TrackCreateRequest
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
 import dev.bnorm.arcade.service.api.Version
@@ -174,12 +175,12 @@ internal class HttpArcadeClient(
         return get("tracks")
     }
 
-    override suspend fun getTrack(id: TrackId): TrackResponse {
-        return get("tracks/$id")
+    override suspend fun createTrack(request: TrackCreateRequest): TrackResponse {
+        return post("tracks", request)
     }
 
-    override suspend fun downloadTrack(id: TrackId): ByteArray {
-        return get("tracks/$id/download")
+    override suspend fun getTrack(id: TrackId): TrackResponse {
+        return get("tracks/$id")
     }
 
     override fun listen(): Flow<RaceProcessEvent> = channelFlow {

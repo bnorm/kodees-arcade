@@ -7,12 +7,16 @@ import kotlin.math.sqrt
 class Segment(
     val start: Point,
     val end: Point,
-)
+) {
+    override fun toString(): String {
+        return "[$start..$end]"
+    }
+}
 
 val Segment.center: Point
     get() = Point(
-        x = start.x + (end.x - start.x) / 2.0,
-        y = start.y + (end.y - start.y) / 2.0,
+        x = (start.x + end.x) / 2.0,
+        y = (start.y + end.y) / 2.0,
     )
 
 val Segment.length: Double

@@ -66,7 +66,7 @@ class RaceService(
             TODO("bad request - an unknown driver or version")
         }
 
-        val entity = races.createRace(seasonId = null, request.trackId, driverVersionIds)
+        val entity = races.createRace(seasonId = null, request.trackId, driverVersionIds, request.laps)
         submitRaceForProcessing(entity)
         return entity.toResponse()
     }
@@ -94,7 +94,7 @@ class RaceService(
 
         // TODO check track positions vs participants size
 
-        val entity = races.createRace(seasonId, request.trackId, participants)
+        val entity = races.createRace(seasonId, request.trackId, participants, request.laps)
         submitRaceForProcessing(entity)
         return entity.toResponse()
     }
@@ -164,8 +164,7 @@ class RaceService(
         return RaceResponse(
             id = this.id,
             trackId = this.trackId,
-            startTime = this.startTime,
-            endTime = this.endTime,
+            laps = this.laps,
             positions = this.positions.map {
                 RaceResponse.Position(
                     position = it.position,
@@ -173,7 +172,9 @@ class RaceService(
                     name = it.name,
                     version = it.version,
                 )
-            }
+            },
+            startTime = this.startTime,
+            endTime = this.endTime,
         )
     }
 }

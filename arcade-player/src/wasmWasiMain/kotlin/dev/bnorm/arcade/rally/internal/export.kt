@@ -5,6 +5,7 @@ package dev.bnorm.arcade.rally.internal
 import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Controls
 import dev.bnorm.arcade.rally.Driver
+import dev.bnorm.arcade.rally.Race
 import dev.bnorm.arcade.rally.Track
 import kotlin.wasm.unsafe.Pointer
 import kotlin.wasm.unsafe.UnsafeWasmMemoryApi
@@ -21,8 +22,8 @@ annotation class DriverExport
 @DriverExport
 fun driverOnRace(driver: Driver) {
     try {
-        val track = Pointer(0u).loadProtoBuf(Track.serializer())
-        driver.onRace(track)
+        val race = Pointer(0u).loadProtoBuf(Race.serializer())
+        driver.onRace(race)
     } catch (e: Throwable) {
         e.printStackTrace()
     }

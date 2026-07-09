@@ -51,6 +51,7 @@ fun RaceWizard(
 ) {
     val scope = rememberCoroutineScope()
 
+    // TODO entered laps
     val drivers = remember { mutableStateListOf<WasmDriver>() }
 
     fun pickDriverName(baseName: String): String {
@@ -64,7 +65,7 @@ fun RaceWizard(
         return name
     }
 
-    fun canAddDriver(): Boolean = drivers.size < 6
+    fun canAddDriver(): Boolean = drivers.size < track.positions.size
 
     val driversLauncher = rememberFilePickerLauncher(
         mode = FileKitMode.Single,
@@ -190,7 +191,7 @@ fun RaceWizard(
         Button(
             enabled = drivers.isNotEmpty(),
             onClick = {
-                onStart(WasmRace(track, drivers.toList()))
+                onStart(WasmRace(track, drivers.toList(), laps = 25))
             }
         ) {
             Text("Start!")

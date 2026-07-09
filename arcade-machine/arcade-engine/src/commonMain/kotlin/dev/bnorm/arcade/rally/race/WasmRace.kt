@@ -3,6 +3,7 @@ package dev.bnorm.arcade.rally.race
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.machine.Race
+import dev.bnorm.arcade.rally.Race as DriverRaceModel
 import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.engine.DriverControlState
@@ -17,17 +18,25 @@ import kotlinx.coroutines.channels.ReceiveChannel
 class WasmRace(
     private val track: Track,
     private val drivers: List<WasmDriver>,
+    private val laps: Int,
 ) : Race {
+    init {
+        require(drivers.size <= track.positions.size)
+    }
+
     override val events: ReceiveChannel<Race.Event>
         field = Channel()
 
     override suspend fun start() {
+        val raceModel = DriverRaceModel(track, laps)
+
         try {
             events.send(Race.Event.Start(track, drivers.map { it.name }))
 
             val gameState = RallyGameState(
                 trackWidth = track.width,
                 trackHeight = track.height,
+                laps = laps,
                 finished = false,
                 time = 0,
                 drivers = List(drivers.size) {
@@ -51,7 +60,7 @@ class WasmRace(
 
                 try {
                     for (driver in drivers) {
-                        driver.onRace(track)
+                        driver.onRace(raceModel)
                     }
 
                     while (!gameState.finished) {

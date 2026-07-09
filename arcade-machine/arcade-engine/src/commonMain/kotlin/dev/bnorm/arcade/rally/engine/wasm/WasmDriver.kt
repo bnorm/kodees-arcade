@@ -1,7 +1,7 @@
 package dev.bnorm.arcade.rally.engine.wasm
 
 import dev.bnorm.arcade.rally.Car
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.rally.Race
 import dev.bnorm.arcade.rally.engine.DriverControlState
 
 expect suspend fun WasmEngine.createWasmDriver(
@@ -21,8 +21,8 @@ class WasmDriver(
         moveFunction.invoke()
     }
 
-    fun onRace(track: Track) {
-        memory.writeProto(0, Track.serializer(), track)
+    fun onRace(race: Race) {
+        memory.writeProto(0, Race.serializer(), race)
         onRaceFunction.invoke()
     }
 

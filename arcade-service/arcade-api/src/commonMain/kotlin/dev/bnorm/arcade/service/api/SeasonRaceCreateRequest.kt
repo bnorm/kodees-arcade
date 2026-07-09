@@ -6,4 +6,5 @@ import kotlinx.serialization.Serializable
 class SeasonRaceCreateRequest(
     val trackId: TrackId,
     val positions: List<ParticipantId>,
+    val laps: Int,
 )
