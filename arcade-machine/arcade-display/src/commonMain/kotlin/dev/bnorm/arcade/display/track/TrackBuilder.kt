@@ -338,7 +338,7 @@ private fun computePositions(checkpoints: List<Segment>): List<Position> {
             repeat((total / dist).toInt()) {
                 val point = start + distVector * it.toDouble()
                 add(Position(point + offsetVector, heading))
-                add(Position(point - offsetVector, heading))
+                add(Position(point - offsetVector + distVector / 2.0, heading))
             }
         }
 
@@ -352,10 +352,20 @@ private fun computePositions(checkpoints: List<Segment>): List<Position> {
 
             val available = (total / distAngle).toInt()
             repeat(abs(available)) {
-                val angle = start - paddingAngle - distAngle * it.toDouble()
-                val heading = angle + sign * Angle.QUARTER_CIRCLE
-                add(Position(center + Vector(angle, innerRadius), heading))
-                add(Position(center + Vector(angle, outerRadius), heading))
+                val angleInner = start - paddingAngle - distAngle * it.toDouble()
+                add(
+                    Position(
+                        location = center + Vector(angleInner, innerRadius),
+                        heading = angleInner + sign * Angle.QUARTER_CIRCLE
+                    )
+                )
+                val angleOuter = angleInner - distAngle / 2.0
+                add(
+                    Position(
+                        location = center + Vector(angleOuter, outerRadius),
+                        heading = angleOuter + sign * Angle.QUARTER_CIRCLE
+                    )
+                )
             }
         }
 
