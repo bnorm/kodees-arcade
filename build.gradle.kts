@@ -67,3 +67,7 @@ tasks.register<Sync>("site") {
     into(project.layout.buildDirectory.dir("_site"))
     from(project(":arcade-machine:arcade-app").tasks.named("wasmJsBrowserDistribution"))
 }
+
+tasks.register("arcadeRun") {
+    dependsOn(project(":arcade-machine:arcade-app").tasks.named("run"))
+}
