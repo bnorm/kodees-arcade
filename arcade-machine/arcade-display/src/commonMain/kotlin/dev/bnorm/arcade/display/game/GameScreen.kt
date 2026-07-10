@@ -44,7 +44,18 @@ import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.display.internal.LogarithmicSlider
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.display.track.TrackImage
+import dev.zacsweers.metro.Inject
 import org.jetbrains.compose.resources.imageResource
+
+@Inject
+class GameScreen(
+    private val gameViewModel: GameViewModel,
+) {
+    @Composable
+    fun Content() {
+        GameScreen(gameViewModel, modifier = Modifier.fillMaxSize())
+    }
+}
 
 @Composable
 fun GameScreen(
@@ -57,7 +68,10 @@ fun GameScreen(
     model.complete?.let {
         if (showResults) {
             BasicAlertDialog(
-                onDismissRequest = { showResults = false },
+                onDismissRequest = {
+                    showResults = false
+                    gameViewModel.clear()
+                },
             ) {
                 Surface {
                     RaceResults(it)

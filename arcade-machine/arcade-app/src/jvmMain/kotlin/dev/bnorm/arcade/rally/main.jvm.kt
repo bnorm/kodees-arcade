@@ -1,17 +1,11 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package dev.bnorm.arcade.rally
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.display.InstallMenuItems
 import dev.bnorm.arcade.display.MenuItem
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
@@ -29,7 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 interface AppGraph {
     val windowGraphFactory: WindowGraph.Factory
 
-    val gameViewFactory: GameViewModel
+    val gameScreen: GameScreen
 
     @SingleIn(AppScope::class)
     @Provides
@@ -69,14 +63,9 @@ fun main() {
             onCloseRequest = ::exitApplication,
         ) {
             val windowGraph = appGraph.windowGraphFactory.create(this@Window)
-
             InstallMenuItems(windowGraph.items)
 
-            GameScreen(
-                gameViewModel = appGraph.gameViewFactory,
-                modifier = Modifier
-                    .fillMaxSize()
-            )
+            appGraph.gameScreen.Content()
         }
     }
 }
