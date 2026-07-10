@@ -9,11 +9,16 @@ import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Position
 import dev.bnorm.arcade.geometry.Segment
 import dev.bnorm.arcade.rally.Track
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 
+@SingleIn(AppScope::class)
+@Inject
 class TrackViewModel(
-    scope: CoroutineScope,
+    @ViewModelCoroutineScope scope: CoroutineScope,
 ) : ViewModel<TrackViewEvent, TrackModel>(scope) {
     companion object {
         val INITIAL_TRACK = Track(

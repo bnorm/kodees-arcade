@@ -9,6 +9,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.rally.Track
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
@@ -18,9 +21,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
+@SingleIn(AppScope::class)
+@Inject
 class GameViewModel(
-    private val initialTrack: Track,
-    scope: CoroutineScope,
+    private val initialTrack: Track = TrackViewModel.INITIAL_TRACK,
+    @ViewModelCoroutineScope scope: CoroutineScope,
 ) : ViewModel<GameViewEvent, GameModel>(scope) {
     fun clear() {
         take(GameViewEvent.Clear)
@@ -102,8 +107,9 @@ fun GamePresenter(
     }
 
     LaunchedEffect(game) {
-        // TODO automatically start?
-        game?.start()
+        withContext(Dispatchers.Default) {
+            game?.start()
+        }
     }
 
     LaunchedEffect(game, running, desiredUps) {
