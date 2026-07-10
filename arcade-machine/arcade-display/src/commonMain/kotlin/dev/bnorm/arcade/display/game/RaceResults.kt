@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.display.game
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

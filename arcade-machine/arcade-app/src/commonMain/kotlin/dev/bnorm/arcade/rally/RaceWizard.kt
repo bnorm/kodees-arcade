@@ -15,10 +15,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -33,14 +36,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.bnorm.arcade.arcade_player_samples.generated.resources.BundledDrivers
-import dev.bnorm.arcade.display.TrackViewModel
+import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.rally.race.WasmGame
 import dev.bnorm.arcade.rally.race.WasmDriver
-import dev.bnorm.arcade.rally.track.Track
+import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.Version
@@ -61,8 +65,11 @@ fun RaceWizard(
 ) {
     val scope = rememberCoroutineScope()
 
-    // TODO entered laps
     val selectedTrack = remember { mutableStateOf<Track?>(null) }
+
+    val lapsTextState = rememberTextFieldState("25")
+    val laps = lapsTextState.text.toString().toIntOrNull()
+
     val drivers = remember { mutableStateListOf<WasmDriver>() }
 
     fun pickDriverName(baseName: String): String {
@@ -154,6 +161,15 @@ fun RaceWizard(
 
         Spacer(Modifier.width(8.dp))
 
+        Text("Laps:", style = MaterialTheme.typography.titleLarge)
+        TextField(
+            state = lapsTextState,
+            isError = laps == null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+
+        Spacer(Modifier.width(8.dp))
+
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 enabled = canAddDriver(),
@@ -213,9 +229,9 @@ fun RaceWizard(
         Spacer(Modifier.weight(1f))
 
         Button(
-            enabled = drivers.isNotEmpty() && selectedTrack.value != null,
+            enabled = drivers.isNotEmpty() && selectedTrack.value != null && laps != null,
             onClick = {
-                onStart(WasmGame(selectedTrack.value!!, drivers.toList(), laps = 25))
+                onStart(WasmGame(selectedTrack.value!!, drivers.toList(), laps!!))
             },
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
@@ -249,7 +265,7 @@ private fun TrackSelector(
             for (track in tracks) {
                 key(track) {
                     val selected = selectedTrack.value == track
-                    Track(
+                    TrackImage(
                         track = track,
                         modifier = Modifier
                             .size(200.dp, 200.dp)

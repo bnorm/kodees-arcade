@@ -1,9 +1,11 @@
-package dev.bnorm.arcade.display
+package dev.bnorm.arcade.display.track
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import dev.bnorm.arcade.display.ViewModel
+import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Position

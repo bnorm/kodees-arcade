@@ -12,9 +12,9 @@ import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.rememberDialogState
-import dev.bnorm.arcade.display.GameViewModel
 import dev.bnorm.arcade.display.MenuItem
-import dev.bnorm.arcade.display.TrackViewModel
+import dev.bnorm.arcade.display.game.GameViewModel
+import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.RecordGame
 import dev.bnorm.arcade.rally.RaceWizard
 import dev.bnorm.arcade.server.client.ArcadeClient
@@ -58,7 +58,6 @@ class RaceWizardItem(
         Item(
             text = "New",
             onClick = {
-                gameViewModel.clear()
                 visible = true
             }
         )

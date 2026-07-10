@@ -5,12 +5,9 @@ package dev.bnorm.arcade.rally
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,9 +17,9 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.display.GameViewModel
-import dev.bnorm.arcade.display.TrackViewModel
-import dev.bnorm.arcade.machine.Game
+import dev.bnorm.arcade.display.game.GameScreen
+import dev.bnorm.arcade.display.game.GameViewModel
+import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.ReplayGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import io.github.vinceglb.filekit.dialogs.FileKitMode
@@ -84,24 +81,7 @@ fun main() {
 
             RaceWizard(client, trackViewModel, onStart = { gameViewModel.new(it) })
 
-            var complete by remember { mutableStateOf<Game.Event.Complete?>(null) }
-            complete?.let {
-                BasicAlertDialog(
-                    onDismissRequest = { complete = null },
-                ) {
-                    Surface {
-                        RaceResults(it)
-                    }
-                }
-            }
-
-            Game(
-                gameViewModel = gameViewModel,
-                onComplete = {
-                    complete = it
-                    gameViewModel.clear()
-                },
-            )
+            GameScreen(gameViewModel)
         }
     }
 }

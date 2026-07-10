@@ -3,7 +3,7 @@ package dev.bnorm.arcade.display.menu
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowScope
-import dev.bnorm.arcade.display.GameViewModel
+import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.display.MenuItem
 import dev.bnorm.arcade.machine.ReplayGame
 import dev.zacsweers.metro.ContributesIntoSet

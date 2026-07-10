@@ -39,12 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.display.GameViewModel
-import dev.bnorm.arcade.display.TrackViewModel
+import dev.bnorm.arcade.display.game.GameViewModel
+import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.icons.play_arrow
 import dev.bnorm.arcade.icons.replay
 import dev.bnorm.arcade.icons.sports_motorsports
-import dev.bnorm.arcade.rally.Game
+import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.rally.race.DownloadGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
@@ -127,7 +127,7 @@ private fun WatchRaceDialog(client: ArcadeClient, raceId: RaceId?, onDismiss: ()
         }
 
         Card {
-            Game(gameViewModel, onComplete = {}, modifier = Modifier.padding(16.dp))
+            GameScreen(gameViewModel, modifier = Modifier.padding(16.dp))
         }
     }
 }

@@ -12,7 +12,7 @@ import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.rememberDialogState
-import dev.bnorm.arcade.display.GameViewModel
+import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.display.MenuItem
 import dev.bnorm.arcade.rally.RaceDownloader
 import dev.bnorm.arcade.server.client.ArcadeClient

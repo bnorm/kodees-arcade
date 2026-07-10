@@ -3,25 +3,19 @@
 package dev.bnorm.arcade.rally
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import dev.bnorm.arcade.display.GameViewModel
+import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.display.InstallMenuItems
 import dev.bnorm.arcade.display.MenuItem
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
-import dev.bnorm.arcade.machine.Game
+import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
@@ -78,24 +72,8 @@ fun main() {
 
             InstallMenuItems(windowGraph.items)
 
-            var complete by remember { mutableStateOf<Game.Event.Complete?>(null) }
-            complete?.let {
-                BasicAlertDialog(
-                    onDismissRequest = { complete = null },
-                ) {
-                    Surface {
-                        RaceResults(it)
-                    }
-                }
-            }
-
-            val gameViewModel = appGraph.gameViewFactory
-            Game(
-                gameViewModel = gameViewModel,
-                onComplete = {
-                    complete = it
-                    gameViewModel.clear()
-                },
+            GameScreen(
+                gameViewModel = appGraph.gameViewFactory,
                 modifier = Modifier
                     .fillMaxSize()
             )

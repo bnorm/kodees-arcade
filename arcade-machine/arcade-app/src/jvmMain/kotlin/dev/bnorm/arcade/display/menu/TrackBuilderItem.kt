@@ -14,8 +14,8 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.rememberDialogState
 import dev.bnorm.arcade.display.MenuItem
-import dev.bnorm.arcade.display.TrackViewModel
-import dev.bnorm.arcade.rally.track.TrackBuilder
+import dev.bnorm.arcade.display.track.TrackViewModel
+import dev.bnorm.arcade.display.track.TrackBuilder
 import dev.zacsweers.metro.ContributesIntoSet
 
 @ContributesIntoSet(WindowScope::class)

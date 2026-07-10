@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.display.game
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -10,13 +10,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -36,27 +40,38 @@ import dev.bnorm.arcade.arcade_display.generated.resources.car_purple
 import dev.bnorm.arcade.arcade_display.generated.resources.car_red
 import dev.bnorm.arcade.arcade_display.generated.resources.car_teal
 import dev.bnorm.arcade.arcade_display.generated.resources.car_yellow
-import dev.bnorm.arcade.display.GameModel
-import dev.bnorm.arcade.display.GameViewModel
+import dev.bnorm.arcade.display.internal.FixedSize
+import dev.bnorm.arcade.display.internal.LogarithmicSlider
 import dev.bnorm.arcade.geometry.toRelative
-import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.track.Track
+import dev.bnorm.arcade.display.track.TrackImage
 import org.jetbrains.compose.resources.imageResource
 
 @Composable
-fun Game(
+fun GameScreen(
     gameViewModel: GameViewModel,
-    onComplete: (Game.Event.Complete) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val model by gameViewModel.models.collectAsState()
+
+    var showResults by remember(model.complete) { mutableStateOf(true) }
+    model.complete?.let {
+        if (showResults) {
+            BasicAlertDialog(
+                onDismissRequest = { showResults = false },
+            ) {
+                Surface {
+                    RaceResults(it)
+                }
+            }
+        }
+    }
+
     Column(
         modifier
             .height(IntrinsicSize.Min)
     ) {
         Game(
             model = model,
-            onComplete = onComplete,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -102,7 +117,6 @@ fun Game(
 @Composable
 private fun Game(
     model: GameModel,
-    onComplete: (Game.Event.Complete) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val images = remember {
@@ -127,7 +141,7 @@ private fun Game(
         density = Density(1f),
         modifier = modifier
     ) {
-        Track(track, modifier = Modifier.fillMaxSize())
+        TrackImage(track, modifier = Modifier.fillMaxSize())
 
         val textMeasurer = rememberTextMeasurer()
         val nameMeasureResults = remember(names) {

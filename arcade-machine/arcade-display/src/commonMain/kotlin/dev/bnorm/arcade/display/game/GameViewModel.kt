@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.display
+package dev.bnorm.arcade.display.game
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -7,6 +7,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import dev.bnorm.arcade.display.ViewModel
+import dev.bnorm.arcade.display.ViewModelCoroutineScope
+import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.rally.Track
 import dev.zacsweers.metro.AppScope
@@ -68,6 +71,7 @@ data class GameModel(
     val actualUps: Float,
     val start: Game.Event.Start,
     val update: Game.Event.Update?,
+    val complete: Game.Event.Complete?,
 )
 
 @Composable
@@ -83,6 +87,7 @@ fun GamePresenter(
         mutableStateOf(Game.Event.Start(initialTrack, emptyList()))
     }
     var update by remember(game) { mutableStateOf<Game.Event.Update?>(null) }
+    var complete by remember(game) { mutableStateOf<Game.Event.Complete?>(null) }
 
     LaunchedEffect(events) {
         events.collect {
@@ -129,8 +134,7 @@ fun GamePresenter(
 
                 when (event) {
                     is Game.Event.Complete -> {
-//                        onComplete(event)
-                        update = null
+                        complete = event
                         break
                     }
 
@@ -153,5 +157,6 @@ fun GamePresenter(
         actualUps = desiredUps,
         start = start,
         update = update,
+        complete = complete,
     )
 }

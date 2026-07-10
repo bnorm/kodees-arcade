@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.track
+package dev.bnorm.arcade.display.track
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

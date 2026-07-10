@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.track
+package dev.bnorm.arcade.display.track
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
@@ -56,7 +56,7 @@ import dev.bnorm.arcade.geometry.toNormal
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
-import dev.bnorm.arcade.rally.FixedSize
+import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.rally.Track
 import kotlin.math.abs
 import kotlin.math.sqrt
