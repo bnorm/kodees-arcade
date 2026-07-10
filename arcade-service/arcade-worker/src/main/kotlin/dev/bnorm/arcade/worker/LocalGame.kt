@@ -1,8 +1,8 @@
 package dev.bnorm.arcade.worker
 
-import dev.bnorm.arcade.machine.Race
+import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.rally.race.WasmDriver
-import dev.bnorm.arcade.rally.race.WasmRace
+import dev.bnorm.arcade.rally.race.WasmGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.TrackResponse
@@ -13,11 +13,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import dev.bnorm.arcade.rally.Track as RallyTrack
 
-class LocalRace(
+class LocalGame(
     private val client: ArcadeClient,
     private val id: RaceId,
-) : Race {
-    override val events: ReceiveChannel<Race.Event>
+) : Game {
+    override val events: ReceiveChannel<Game.Event>
         field = Channel()
 
     override suspend fun start() {
@@ -34,7 +34,7 @@ class LocalRace(
             }
 
             coroutineScope {
-                val wasmRace = WasmRace(track.toRallyTrack(), rallyDrivers, race.laps)
+                val wasmRace = WasmGame(track.toRallyTrack(), rallyDrivers, race.laps)
                 launch { wasmRace.start() }
                 wasmRace.events.consumeEach {
                     events.send(it)

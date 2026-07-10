@@ -1,11 +1,12 @@
 package dev.bnorm.arcade.rally.engine
 
 import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.atan2
-import dev.bnorm.arcade.geometry.center
 import dev.bnorm.arcade.geometry.cos
-import dev.bnorm.arcade.geometry.length
+import dev.bnorm.arcade.geometry.nearest
 import dev.bnorm.arcade.geometry.sin
+import dev.bnorm.arcade.rally.MAX_SPEED
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.simulateHeading
 import dev.bnorm.arcade.rally.simulateSpeed
@@ -13,6 +14,7 @@ import kotlin.math.sqrt
 
 val carWidth = 12.0
 val carHeight = 16.0
+
 //val impactDist = carHeight / 2.0
 val impactDist = (68.0 * 0.4f)
 val impactDistSq = impactDist * impactDist
@@ -20,48 +22,45 @@ val impactDistSq = impactDist * impactDist
 fun update(gameState: RallyGameState, track: Track) {
     gameState.time++
 
+    // TODO consider drafting behind another car
+    //  - find cars which are located "behind" another car based on heading
+    //  - give a max speed boost (and acceleration?) to those cars
+    //    based on the leading car's speed
+    //     - can't weave behind a car that is going slower to gain a speed boost
+    //  - a car receives the largest of all available speed boosts
+    //  - speed boost should slowly decay, slow enough to allow following car to overtake
+    //     - boosted speed should increase understeer!
+
     val drivers = gameState.drivers
-    for (driverState in drivers) {
+    for (state in drivers) {
         // Skip updating drivers which are finished.
-        if (driverState.lap >= gameState.laps && driverState.checkpoint > 0) {
-            if (driverState.finished == null) {
-                driverState.finished = gameState.time
+        if (state.lap >= gameState.laps && state.checkpoint > 0) {
+            if (state.finished == null) {
+                state.finished = gameState.time
             }
             continue
         }
 
-        val controls = driverState.controls
+        val controls = state.controls
         val steering = controls.steering
         val throttle = controls.throttle
 
-        val oldHeading = driverState.heading
-        val oldSpeed = driverState.speed
+        val oldHeading = state.heading
+        val oldSpeed = state.speed
 
         // TODO consider traction of track
+        //  - is there an official curb for the track so a little run-off or corner cutting is okay?
+        //  - does the "weight" of the car on each tire, caused by breaking and/or turning,
+        //    impact the traction contribution of each tire?
+
         val newHeading = simulateHeading(oldHeading, oldSpeed, steering, traction = 1.0)
         var newSpeed = simulateSpeed(oldSpeed, throttle)
-        if (updatePosition(driverState, newSpeed, newHeading, gameState)) {
+        if (updatePosition(state, newSpeed, newHeading, gameState)) {
             newSpeed = 0.0
         }
 
-        driverState.heading = newHeading
-        driverState.speed = newSpeed
-
-        // Update target checkpoint.
-        val checkpoint = track.checkpoints[driverState.checkpoint]
-        val target = checkpoint.center
-        val radius = checkpoint.length / 2
-
-        val dx = target.x - driverState.x
-        val dy = target.y - driverState.y
-        val dist = sqrt(dx * dx + dy * dy)
-        if (dist < radius) {
-            driverState.checkpoint += 1
-            if (driverState.checkpoint >= track.checkpoints.size) {
-                driverState.lap += 1
-                driverState.checkpoint = 0
-            }
-        }
+        state.heading = newHeading
+        state.speed = newSpeed
     }
 
     // TODO optimize driver collisions
@@ -76,12 +75,12 @@ fun update(gameState: RallyGameState, track: Track) {
 
     for ((i, driver1) in drivers.withIndex()) {
         // Skip updating drivers which are finished.
-        if (driver1.lap >= gameState.laps) continue
+        if (driver1.finished != null) continue
 
         for (j in (i + 1)..<drivers.size) {
             val driver2 = drivers[j]
             // Skip updating drivers which are finished.
-            if (driver2.lap >= gameState.laps) continue
+            if (driver2.finished != null) continue
 
             val dx = driver1.x - driver2.x
             val dy = driver1.y - driver2.y
@@ -96,6 +95,25 @@ fun update(gameState: RallyGameState, track: Track) {
                 if (updatePosition(driver2, impulse, angle + Angle.HALF_CIRCLE, gameState)) {
                     driver2.speed = 0.0
                 }
+            }
+        }
+    }
+
+    // Update driver checkpoints.
+    for (driverState in drivers) {
+        val checkpoint = track.checkpoints[driverState.checkpoint]
+        val radius = (MAX_SPEED + 1)
+
+        // Calculate distance to the checkpoint by
+        // finding the nearest point on the checkpoint segment.
+        val location = Point(driverState.x, driverState.y)
+        val distSq = location.distanceSquaredTo(location.nearest(checkpoint))
+
+        if (distSq < radius * radius) {
+            driverState.checkpoint += 1
+            if (driverState.checkpoint >= track.checkpoints.size) {
+                driverState.lap += 1
+                driverState.checkpoint = 0
             }
         }
     }

@@ -14,11 +14,11 @@ import kotlinx.serialization.protobuf.ProtoBuf
 // TODO is there a way to create this with JS as well?
 //  - filekit is great for desktop
 //  - but the API is not great for dealing with large files...
-class RecordRace(
-    private val race: Race,
+class RecordGame(
+    private val game: Game,
     private val path: Path,
-) : Race {
-    override val events: ReceiveChannel<Race.Event>
+) : Game {
+    override val events: ReceiveChannel<Game.Event>
         field = Channel(capacity = 1_000)
 
     override suspend fun start() {
@@ -26,8 +26,8 @@ class RecordRace(
             coroutineScope {
                 launch {
                     path.toFile().writeChannel().use {
-                            for (event in race.events) {
-                                val bytes = ProtoBuf.encodeToByteArray(Race.Event.serializer(), event)
+                            for (event in game.events) {
+                                val bytes = ProtoBuf.encodeToByteArray(Game.Event.serializer(), event)
                                 writeInt(bytes.size)
                                 writeByteArray(bytes)
                                 events.send(event)
@@ -35,7 +35,7 @@ class RecordRace(
                     }
                 }
 
-                race.start()
+                game.start()
             }
         } finally {
             events.close()

@@ -1,6 +1,6 @@
 package dev.bnorm.arcade.geometry
 
- import kotlin.math.sqrt
+import kotlin.math.sqrt
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -32,12 +32,24 @@ data class Point(
         return Point(this.x * scalar, this.y * scalar)
     }
 
+    operator fun div(scalar: Double): Point {
+        return Point(this.x / scalar, this.y / scalar)
+    }
+
+    /**
+     * Calculate the distance *squared* to another point.
+     * This function avoids a costly [sqrt] call
+     * which may help optimize certain calculations.
+     */
     fun distanceSquaredTo(other: Point): Double {
         val dx = other.x - x
         val dy = other.y - y
         return dx * dx + dy * dy
     }
 
+    /**
+     * Calculates the exact distance to another point.
+     */
     fun distanceTo(other: Point): Double {
         return sqrt(distanceSquaredTo(other))
     }
@@ -73,4 +85,8 @@ fun Point.minus(angle: Angle, magnitude: Double): Point {
 
 operator fun Double.times(point: Point): Point {
     return point.times(this)
+}
+
+operator fun Double.div(point: Point): Point {
+    return point.div(this)
 }

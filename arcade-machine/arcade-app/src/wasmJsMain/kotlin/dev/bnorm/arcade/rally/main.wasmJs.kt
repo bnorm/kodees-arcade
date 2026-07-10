@@ -1,26 +1,27 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package dev.bnorm.arcade.rally
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.machine.Race
-import dev.bnorm.arcade.machine.ReplayRace
+import dev.bnorm.arcade.display.game.GameScreen
+import dev.bnorm.arcade.display.game.GameViewModel
+import dev.bnorm.arcade.display.track.TrackViewModel
+import dev.bnorm.arcade.machine.ReplayGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
@@ -30,6 +31,7 @@ import kotlinx.browser.window
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     ComposeViewport("composeApp") {
+        val scope = rememberCoroutineScope()
         val client = remember {
             val hostname = window.location.hostname
             val port = window.location.port.toIntOrNull() ?: 8080
@@ -40,73 +42,70 @@ fun main() {
             }
         }
 
-        val track: Track? = null
-        if (track != null) {
-            Column {
-                var race by remember { mutableStateOf<Race?>(null) }
-                LaunchedEffect(race) {
-                    race?.start()
-                }
+        val trackViewModel = remember(scope) { TrackViewModel(scope) }
+        val gameViewModel = remember(scope) { GameViewModel(TrackViewModel.INITIAL_TRACK, scope) }
+        val gameScreen = remember(gameViewModel) { GameScreen(gameViewModel) }
 
-                val recordingPicker = rememberFilePickerLauncher(
-                    mode = FileKitMode.Single,
-                    type = FileKitType.File("race"),
-                ) { file ->
-                    if (file != null) {
-                        race = ReplayRace(file)
+        Column {
+            var showWizard by remember { mutableStateOf(false) }
+
+            val recordingPicker = rememberFilePickerLauncher(
+                mode = FileKitMode.Single,
+                type = FileKitType.File("race"),
+            ) { file ->
+                if (file != null) {
+                    gameViewModel.new(ReplayGame(file))
+                }
+            }
+
+            var showDownloader by remember { mutableStateOf(false) }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { showWizard = true }) {
+                    Text("New Race")
+                }
+                Button(onClick = { recordingPicker.launch() }) {
+                    Text("Load Recording")
+                }
+                if (client != null) {
+                    Button(onClick = { gameViewModel.clear(); showDownloader = true }) {
+                        Text("Download")
                     }
                 }
+            }
 
-                var showDownloader by remember { mutableStateOf(false) }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { recordingPicker.launch() }) {
-                        Text("Load Recording")
-                    }
-                    if (client != null) {
-                        Button(onClick = { race = null; showDownloader = true }) {
-                            Text("Download")
-                        }
-                    }
-                }
-
-                if (showDownloader && client != null) {
-                    Dialog(onDismissRequest = { showDownloader = false }) {
-                        RaceDownloader(
+            if (showWizard) {
+                Dialog(
+                    onDismissRequest = { showWizard = false }
+                ) {
+                    Surface(modifier = Modifier.height(IntrinsicSize.Min)) {
+                        RaceWizard(
                             client,
+                            trackViewModel,
                             onStart = {
-                                race = it
-                                showDownloader = false
+                                gameViewModel.new(it)
+                                showWizard = false
                             }
                         )
                     }
                 }
-
-                RaceWizard(client, track, onStart = { race = it })
-
-                var complete by remember { mutableStateOf<Race.Event.Complete?>(null) }
-                complete?.let {
-                    BasicAlertDialog(
-                        onDismissRequest = { complete = null },
-                    ) {
-                        Surface {
-                            RaceResults(it)
-                        }
-                    }
-                }
-
-                RaceTrack(
-                    track = track,
-                    race = race,
-                    onComplete = {
-                        complete = it
-                        race = null
-                    },
-                    onStop = {
-                        race = null
-                    },
-                )
             }
+
+            if (showDownloader && client != null) {
+                Dialog(
+                    onDismissRequest = { showDownloader = false },
+                ) {
+                    RaceDownloader(
+                        client,
+                        onStart = {
+                            gameViewModel.new(it)
+                            showDownloader = false
+                        }
+                    )
+                }
+            }
+
+            gameScreen.Content()
         }
     }
 }

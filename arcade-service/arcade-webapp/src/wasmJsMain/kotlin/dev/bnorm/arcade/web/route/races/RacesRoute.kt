@@ -39,12 +39,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import dev.bnorm.arcade.display.game.GameViewModel
+import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.icons.play_arrow
 import dev.bnorm.arcade.icons.replay
 import dev.bnorm.arcade.icons.sports_motorsports
-import dev.bnorm.arcade.rally.RaceTrack
-import dev.bnorm.arcade.rally.race.DownloadRace
-import dev.bnorm.arcade.rally.track.toTrack
+import dev.bnorm.arcade.display.game.GameScreen
+import dev.bnorm.arcade.rally.race.DownloadGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
@@ -115,23 +116,18 @@ class RacesRoute(
 private fun WatchRaceDialog(client: ArcadeClient, raceId: RaceId?, onDismiss: () -> Unit) {
     if (raceId == null) return
 
-    var track by remember { mutableStateOf<TrackResponse?>(null) }
-    LaunchedEffect(Unit) {
-        track = client.getTrack(client.getRace(raceId).trackId)
-    }
-
-    if (track != null) {
-        Dialog(onDismissRequest = {
-            onDismiss()
-        }) {
-            val race = remember(raceId) { DownloadRace(client, raceId) }
-            LaunchedEffect(race) {
-                race.start()
+    Dialog(onDismissRequest = {
+        onDismiss()
+    }) {
+        val scope = rememberCoroutineScope()
+        val gameViewModel = remember {
+            GameViewModel(TrackViewModel.INITIAL_TRACK, scope).apply {
+                new(DownloadGame(client, raceId))
             }
+        }
 
-            Card {
-                RaceTrack(track!!.toTrack(), race, onComplete = {}, onStop = {}, modifier = Modifier.padding(16.dp))
-            }
+        Card {
+            GameScreen(gameViewModel, modifier = Modifier.padding(16.dp))
         }
     }
 }

@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.track
+package dev.bnorm.arcade.display.track
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -11,6 +11,7 @@ import dev.bnorm.arcade.geometry.Segment
 import dev.bnorm.arcade.geometry.intersect
 import dev.bnorm.arcade.geometry.toLine
 import dev.bnorm.arcade.geometry.toRelative
+import dev.bnorm.arcade.machine.Game
 
 internal const val VISUALLY_STRAIGHT_ENOUGH = 1.0e12
 
@@ -102,5 +103,10 @@ internal fun DrawScope.drawSegment(
 
 context(scope: DrawScope)
 internal fun Point.toOffset(): Offset {
+    return Offset(x.toFloat(), scope.size.height - y.toFloat())
+}
+
+context(scope: DrawScope)
+internal fun Game.Event.Update.Driver.toOffset(): Offset {
     return Offset(x.toFloat(), scope.size.height - y.toFloat())
 }

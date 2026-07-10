@@ -6,7 +6,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-interface Race {
+interface Game {
     val events: ReceiveChannel<Event>
     suspend fun start()
 

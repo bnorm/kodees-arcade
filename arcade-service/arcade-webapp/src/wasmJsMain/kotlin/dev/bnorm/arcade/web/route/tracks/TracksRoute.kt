@@ -18,8 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import dev.bnorm.arcade.rally.track.TrackBuilder
-import dev.bnorm.arcade.rally.track.TrackSize
+import dev.bnorm.arcade.display.track.TrackBuilder
+import dev.bnorm.arcade.display.track.TrackSize
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.TrackCreateRequest
 import dev.bnorm.arcade.web.route.Route

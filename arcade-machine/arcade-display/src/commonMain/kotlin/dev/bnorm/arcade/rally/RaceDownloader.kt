@@ -21,8 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import dev.bnorm.arcade.machine.Race
-import dev.bnorm.arcade.rally.race.DownloadRace
+import dev.bnorm.arcade.machine.Game
+import dev.bnorm.arcade.rally.race.DownloadGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 
@@ -34,7 +34,7 @@ private data class RaceDisplay(
 @Composable
 fun RaceDownloader(
     client: ArcadeClient,
-    onStart: (Race) -> Unit,
+    onStart: (Game) -> Unit,
 ) {
     val races = remember { mutableStateListOf<RaceDisplay>() }
 
@@ -71,7 +71,7 @@ fun RaceDownloader(
         Button(
             enabled = selectedRace != null,
             onClick = {
-                onStart(DownloadRace(client, selectedRace!!))
+                onStart(DownloadGame(client, selectedRace!!))
             }
         ) {
             Text("Start!")

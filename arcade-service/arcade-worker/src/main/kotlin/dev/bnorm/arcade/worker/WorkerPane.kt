@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.protobuf.ProtoBuf
-import dev.bnorm.arcade.machine.Race as RallyRace
+import dev.bnorm.arcade.machine.Game as RallyRace
 
 sealed class ServerConnection {
     data object Connecting : ServerConnection()
@@ -74,7 +74,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
                     client = client,
                     id = event.id,
                     nonce = event.nonce,
-                    race = LocalRace(client, event.id),
+                    race = LocalGame(client, event.id),
                     state = state,
                 ) ?: continue
             } finally {

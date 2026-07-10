@@ -8,10 +8,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.protobuf.ProtoBuf
 
-class ReplayRace(
+class ReplayGame(
     private val path: PlatformFile
-) : Race {
-    override val events: ReceiveChannel<Race.Event>
+) : Game {
+    override val events: ReceiveChannel<Game.Event>
         field = Channel(capacity = 1_000)
 
     override suspend fun start() {
@@ -19,7 +19,7 @@ class ReplayRace(
             val channel = path.readChannel()
             while (channel.awaitContent()) {
                 val size = channel.readInt()
-                events.send(ProtoBuf.decodeFromByteArray(Race.Event.serializer(), channel.readByteArray(size)))
+                events.send(ProtoBuf.decodeFromByteArray(Game.Event.serializer(), channel.readByteArray(size)))
             }
         } finally {
             events.close()

@@ -2,7 +2,7 @@ package dev.bnorm.arcade.rally.race
 
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Vector
-import dev.bnorm.arcade.machine.Race
+import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.rally.Race as DriverRaceModel
 import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Track
@@ -15,23 +15,23 @@ import dev.bnorm.arcade.rally.engine.wasm.withEngine
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 
-class WasmRace(
+class WasmGame(
     private val track: Track,
     private val drivers: List<WasmDriver>,
     private val laps: Int,
-) : Race {
+) : Game {
     init {
         require(drivers.size <= track.positions.size)
     }
 
-    override val events: ReceiveChannel<Race.Event>
+    override val events: ReceiveChannel<Game.Event>
         field = Channel()
 
     override suspend fun start() {
         val raceModel = DriverRaceModel(track, laps)
 
         try {
-            events.send(Race.Event.Start(track, drivers.map { it.name }))
+            events.send(Game.Event.Start(track, drivers.map { it.name }))
 
             val gameState = RallyGameState(
                 trackWidth = track.width,
@@ -94,9 +94,9 @@ class WasmRace(
                 val results = gameState.drivers
                     .sortedBy { it.finished }.withIndex()
                     .associate { (place, state) ->
-                        state.name to Race.Event.Complete.Result(place + 1, state.finished!!)
+                        state.name to Game.Event.Complete.Result(place + 1, state.finished!!)
                     }
-                events.send(Race.Event.Complete(results))
+                events.send(Game.Event.Complete(results))
             }
         } catch (t: Throwable) {
             events.close(t)
@@ -106,16 +106,16 @@ class WasmRace(
     }
 }
 
-private fun RallyGameState.toUpdate(): Race.Event {
-    fun RallyCarState.toDriver(): Race.Event.Update.Driver {
-        return Race.Event.Update.Driver(
+private fun RallyGameState.toUpdate(): Game.Event {
+    fun RallyCarState.toDriver(): Game.Event.Update.Driver {
+        return Game.Event.Update.Driver(
             x = x,
             y = y,
             heading = heading
         )
     }
 
-    return Race.Event.Update(
+    return Game.Event.Update(
         drivers = drivers.map { it.toDriver() },
     )
 }

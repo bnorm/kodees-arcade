@@ -17,7 +17,7 @@ import kotlin.wasm.unsafe.UnsafeWasmMemoryApi
 annotation class DriverExport
 
 /**
- * Helper function to use Wasm memory for a [Track].
+ * Helper function to use Wasm memory for a [Race].
  */
 @DriverExport
 fun driverOnRace(driver: Driver) {

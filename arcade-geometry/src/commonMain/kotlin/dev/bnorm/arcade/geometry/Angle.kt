@@ -61,7 +61,7 @@ fun Angle.toAbsolute(): Angle {
 
 fun Angle.toRelative(): Angle {
     val normalized = (radians + PI) % (2 * PI)
-    return Angle.ofRadians(if (normalized >= 0.0) normalized - PI else normalized + PI)
+    return Angle.ofRadians(if (normalized > 0.0) normalized - PI else normalized + PI)
 }
 
 fun abs(angle: Angle) = Angle.ofRadians(abs(angle.radians))

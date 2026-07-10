@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.track
+package dev.bnorm.arcade.display.track
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
@@ -56,7 +56,7 @@ import dev.bnorm.arcade.geometry.toNormal
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
-import dev.bnorm.arcade.rally.FixedSize
+import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.rally.Track
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -83,6 +83,9 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
     // the first and second checkpoints define the starting grid and how many positions are possible
     var complete by remember { mutableStateOf(false) }
     val checkpoints = remember { mutableStateListOf<Segment>() }
+    val positions by derivedStateOf {
+        computePositions(checkpoints)
+    }
 
     var mouse by remember { mutableStateOf<Point?>(null) }
     var addMode by remember { mutableStateOf(AddMode.Curve) }
@@ -174,7 +177,7 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                         height = size.height.toDouble(),
                         // Rotate checkpoints so the first defines the starting line.
                         checkpoints = List(checkpoints.size) { checkpoints[(it + 1) % checkpoints.size] },
-                        positions = computePositions(checkpoints),
+                        positions = positions,
                     )
                     onSave(track)
                 }
@@ -243,7 +246,12 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                         }
                     }
             ) {
-                drawTrack(checkpoints, complete)
+                drawTrack(
+                    checkpoints = checkpoints,
+                    startingLine = checkpoints.getOrNull(1),
+                    positions = positions,
+                    complete = complete,
+                )
 
                 for (segment in checkpoints) {
                     drawLine(
@@ -330,7 +338,7 @@ private fun computePositions(checkpoints: List<Segment>): List<Position> {
             repeat((total / dist).toInt()) {
                 val point = start + distVector * it.toDouble()
                 add(Position(point + offsetVector, heading))
-                add(Position(point - offsetVector, heading))
+                add(Position(point - offsetVector + distVector / 2.0, heading))
             }
         }
 
@@ -344,10 +352,20 @@ private fun computePositions(checkpoints: List<Segment>): List<Position> {
 
             val available = (total / distAngle).toInt()
             repeat(abs(available)) {
-                val angle = start - paddingAngle - distAngle * it.toDouble()
-                val heading = angle + sign * Angle.QUARTER_CIRCLE
-                add(Position(center + Vector(angle, innerRadius), heading))
-                add(Position(center + Vector(angle, outerRadius), heading))
+                val angleInner = start - paddingAngle - distAngle * it.toDouble()
+                add(
+                    Position(
+                        location = center + Vector(angleInner, innerRadius),
+                        heading = angleInner + sign * Angle.QUARTER_CIRCLE
+                    )
+                )
+                val angleOuter = angleInner - distAngle / 2.0
+                add(
+                    Position(
+                        location = center + Vector(angleOuter, outerRadius),
+                        heading = angleOuter + sign * Angle.QUARTER_CIRCLE
+                    )
+                )
             }
         }
 

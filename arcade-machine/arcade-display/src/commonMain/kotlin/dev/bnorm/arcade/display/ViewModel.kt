@@ -3,10 +3,14 @@ package dev.bnorm.arcade.display
 import androidx.compose.runtime.Composable
 import app.cash.molecule.RecompositionMode
 import app.cash.molecule.launchMolecule
+import dev.zacsweers.metro.Qualifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
+
+@Qualifier
+annotation class ViewModelCoroutineScope
 
 abstract class ViewModel<Event, Model>(
     private val scope: CoroutineScope

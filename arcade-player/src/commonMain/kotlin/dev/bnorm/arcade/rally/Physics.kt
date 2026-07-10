@@ -1,6 +1,7 @@
 package dev.bnorm.arcade.rally
 
 import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.abs
 import dev.bnorm.arcade.geometry.times
 import dev.bnorm.arcade.geometry.toAbsolute
 import kotlin.math.abs
@@ -16,6 +17,11 @@ const val MAX_SPEED: Double = 8.0
 const val MIN_SPEED: Double = -4.0
 
 fun simulateSpeed(speed: Double, throttle: Double): Double {
+    // TODO should there be burnout?
+    //  - hard acceleration causes speed increase to be lower?
+    // TODO should there be skidding?
+    //  - hard deceleration causes speed decrease to be lower?
+
     fun simulateAcceleration(actualSpeed: Double, targetSpeed: Double): Double {
         // Let's deal with only positive target speed...
         if (targetSpeed < 0.0) return -simulateAcceleration(-actualSpeed, -targetSpeed)
@@ -55,7 +61,7 @@ const val MIN_STEER = -1.0
 val MAX_TURN_RATE = Angle.ofDegrees(8.0)
 val MAX_TURN_SPEED_MULTIPLE = Angle.ofDegrees(0.75)
 
-fun getTurn(speed: Double, steering: Double, traction: Double): Angle {
+fun getTurn(speed: Double, steering: Double, traction: Double = 1.0): Angle {
     val speed = abs(speed)
     val targetTurn = MAX_TURN_RATE * abs(steering)
 
@@ -94,7 +100,7 @@ fun getTurn(speed: Double, steering: Double, traction: Double): Angle {
     // If the target turn is greater than the max turn => understeer.
     val understeerPenalty = (targetTurn - maxTurn).coerceIn(
         Angle.ZERO,
-        dev.bnorm.arcade.geometry.abs(targetTurn)
+        abs(targetTurn)
     )
     return sign(steering) * (targetTurn - understeerPenalty)
 }

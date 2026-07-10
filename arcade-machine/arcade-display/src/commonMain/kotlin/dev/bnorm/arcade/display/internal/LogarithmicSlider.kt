@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.display.internal
 
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.*
