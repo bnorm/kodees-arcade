@@ -25,6 +25,19 @@ import dev.bnorm.arcade.geometry.toVector
 internal const val TRACK_WIDTH = 90.0
 internal const val CAR_WIDTH = 20.0
 
+
+private val OFF_WHITE = Color(red = 0xDD, green = 0xDD, blue = 0xDD)
+private val CURB_COLOR_1 = Color(red = 0x88, green = 0x00, blue = 0x00)
+private val CURB_COLOR_2 = OFF_WHITE
+private val PAVEMENT_COLOR = Color(red = 0x44, green = 0x44, blue = 0x44)
+private val BORDER_COLOR = Color(red = 0x00, green = 0x00, blue = 0x00)
+
+private const val CURB_WIDTH = 6f
+private const val CURB_DASH_LENGTH = 25f
+private val DASH_PATH_EFFECT = PathEffect.dashPathEffect(
+    intervals = floatArrayOf(CURB_DASH_LENGTH, CURB_DASH_LENGTH),
+)
+
 private val STARTING_GRID = Path().apply {
     val size = CAR_WIDTH.toFloat()
     moveTo(size / 4, size / 2)
@@ -55,18 +68,21 @@ private fun DrawScope.drawPavement(
     //    Maybe it's a problem with Skia?
     //  - Maybe it's a Path problem, and we should go back to drawing everything manually?
     val centerLine = checkpoints.toCenterLine(this.size, complete = complete)
-    val dashLength = 25f
-    drawPath(centerLine, color = Color.Black, style = Stroke(width = TRACK_WIDTH.toFloat() + 6f))
-    drawPath(
-        centerLine,
-        color = Color.White,
-        style = Stroke(
-            width = TRACK_WIDTH.toFloat() + 5f,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, dashLength), phase = dashLength)
-        )
-    )
-    drawPath(centerLine, color = Color.Black, style = Stroke(width = TRACK_WIDTH.toFloat() + 1f))
-    drawPath(centerLine, color = Color.DarkGray, style = Stroke(width = TRACK_WIDTH.toFloat()))
+    val trackWidth = TRACK_WIDTH.toFloat()
+
+    // TODO should there be a black line between each each dash?
+    // TODO only draw curb at tight corners and runoffs?
+    //  - would require calculating the racing line to determine where they should appear
+    //  - could make the curb start/end rounded
+
+    // Draw curb
+    drawPath(centerLine, color = BORDER_COLOR, style = Stroke(width = trackWidth + CURB_WIDTH))
+    drawPath(centerLine, color = CURB_COLOR_1, style = Stroke(width = trackWidth + CURB_WIDTH - 1f))
+    drawPath(centerLine, color = CURB_COLOR_2, style = Stroke(width = trackWidth + 5f, pathEffect = DASH_PATH_EFFECT))
+    drawPath(centerLine, color = BORDER_COLOR, style = Stroke(width = trackWidth + 1f))
+
+    // Draw pavement
+    drawPath(centerLine, color = PAVEMENT_COLOR, style = Stroke(width = trackWidth))
 }
 
 private fun DrawScope.drawStartingLine(segment: Segment) {
@@ -81,13 +97,13 @@ private fun DrawScope.drawStartingLine(segment: Segment) {
         val start = segment.start + move * it.toDouble()
         val stop = segment.start + move * (it + 1).toDouble()
         drawLine(
-            if (flip) Color.Black else Color.White,
+            if (flip) Color.Black else OFF_WHITE,
             start = (start + offset).toOffset(),
             end = (stop + offset).toOffset(),
             strokeWidth = 8f,
         )
         drawLine(
-            if (flip) Color.White else Color.Black,
+            if (flip) OFF_WHITE else Color.Black,
             start = (start - offset).toOffset(),
             end = (stop - offset).toOffset(),
             strokeWidth = 8f,
@@ -101,7 +117,7 @@ private fun DrawScope.drawStartingGrid(positions: List<Position>) {
         val location = position.location.toOffset()
         rotate(-position.heading.degrees.toFloat(), location) {
             translate(location.x, location.y) {
-                drawPath(STARTING_GRID, color = Color.LightGray, style = Stroke(width = 2f))
+                drawPath(STARTING_GRID, color = OFF_WHITE, style = Stroke(width = 2f))
             }
         }
     }
