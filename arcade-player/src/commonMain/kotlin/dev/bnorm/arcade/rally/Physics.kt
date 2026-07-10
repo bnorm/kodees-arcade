@@ -16,6 +16,11 @@ const val MAX_SPEED: Double = 8.0
 const val MIN_SPEED: Double = -4.0
 
 fun simulateSpeed(speed: Double, throttle: Double): Double {
+    // TODO should there be burnout?
+    //  - hard acceleration causes speed increase to be lower?
+    // TODO should there be skidding?
+    //  - hard deceleration causes speed decrease to be lower?
+
     fun simulateAcceleration(actualSpeed: Double, targetSpeed: Double): Double {
         // Let's deal with only positive target speed...
         if (targetSpeed < 0.0) return -simulateAcceleration(-actualSpeed, -targetSpeed)

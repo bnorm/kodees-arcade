@@ -20,11 +20,10 @@ val Segment.center: Point
     )
 
 val Segment.length: Double
-    get() {
-        val dx = end.x - start.x
-        val dy = end.y - start.y
-        return sqrt(dx * dx + dy * dy)
-    }
+    get() = sqrt(lengthSquared)
+
+val Segment.lengthSquared: Double
+    get() = start.distanceSquaredTo(end)
 
 operator fun Segment.contains(p: Point): Boolean {
     return contains(p.x, p.y)
