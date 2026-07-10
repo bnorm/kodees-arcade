@@ -11,9 +11,6 @@ plugins {
 dependencies {
     implementation(project(":arcade-service:arcade-api"))
 
-    implementation(project(":arcade-player"))
-    implementation(project(":arcade-machine:arcade-engine"))
-
     implementation(dependencies.platform(libs.ktor.bom))
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.server.auth)
