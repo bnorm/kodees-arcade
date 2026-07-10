@@ -24,28 +24,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import dev.bnorm.arcade.arcade_display.generated.resources.Res
-import dev.bnorm.arcade.arcade_display.generated.resources.car_blue
-import dev.bnorm.arcade.arcade_display.generated.resources.car_grey
-import dev.bnorm.arcade.arcade_display.generated.resources.car_orange
-import dev.bnorm.arcade.arcade_display.generated.resources.car_purple
-import dev.bnorm.arcade.arcade_display.generated.resources.car_red
-import dev.bnorm.arcade.arcade_display.generated.resources.car_teal
-import dev.bnorm.arcade.arcade_display.generated.resources.car_yellow
+import dev.bnorm.arcade.display.car.CarBackground
+import dev.bnorm.arcade.display.car.CarColor
+import dev.bnorm.arcade.display.car.CarTop
 import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.display.internal.LogarithmicSlider
-import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.display.track.TrackImage
+import dev.bnorm.arcade.display.track.toOffset
 import dev.zacsweers.metro.Inject
-import org.jetbrains.compose.resources.imageResource
 
 @Inject
 class GameScreen(
@@ -133,17 +131,24 @@ private fun Game(
     model: GameModel,
     modifier: Modifier = Modifier,
 ) {
-    val images = remember {
+    // TODO FixedSize is causing the Canvas rotate+translate on the car vector to be incredibly blurry.
+    //  Instead, we should do all the translation math needed to correctly scale and locate.
+    //  Or maybe adjust density?
+    val carBackground = rememberVectorPainter(image = CarBackground)
+    val carColor = rememberVectorPainter(image = CarColor)
+    val carTop = rememberVectorPainter(image = CarTop)
+    val colors = remember {
+        // TODO add more colors!
+        // TODO allow driver to pick colors?!
         listOf(
-            Res.drawable.car_blue,
-            Res.drawable.car_grey,
-            Res.drawable.car_orange,
-            Res.drawable.car_purple,
-            Res.drawable.car_red,
-            Res.drawable.car_teal,
-            Res.drawable.car_yellow,
+            Color.Blue,
+            Color.Green,
+            Color.Magenta,
+            Color.Red,
+            Color.Cyan,
+            Color.Yellow,
         )
-    }.map { imageResource(it) }
+    }
 
     val track = model.start.track
     val names = model.start.drivers
@@ -161,6 +166,8 @@ private fun Game(
         val nameMeasureResults = remember(names) {
             names.map { textMeasurer.measure(it) }
         }
+
+        val carSize = Size(27.2f, 20f)
         Canvas(Modifier.fillMaxSize()) {
             val positions = model.update?.drivers.orEmpty()
             for ((index, position) in positions.withIndex()) {
@@ -168,32 +175,23 @@ private fun Game(
                 val y = size.height - position.y.toFloat()
                 val center = Offset(x, y)
 
-                val image = images[index % images.size]
 
                 val result = nameMeasureResults[index]
                 val textOffset = Offset(
                     x = -result.size.width / 2f,
-                    y = image.height.toFloat() / 2f * 0.4f,
+                    y = carSize.height / 2f * 0.4f,
                 )
                 drawText(result, color = Color.Black, topLeft = center + textOffset)
             }
 
             for ((index, position) in positions.withIndex()) {
-                val x = position.x.toFloat()
-                val y = size.height - position.y.toFloat()
-                val center = Offset(x, y)
-
-                val heading = 90f - position.heading.toRelative().degrees.toFloat()
-
-                val image = images[index % images.size]
-                val imageSize = Offset(
-                    x = image.width.toFloat(),
-                    y = image.height.toFloat(),
-                )
-
-                rotate(degrees = heading, pivot = center) {
-                    scale(scale = 0.4f, pivot = center) {
-                        drawImage(image, topLeft = center - (imageSize / 2f))
+                val center = position.toOffset()
+                rotate(degrees = -position.heading.degrees.toFloat(), pivot = center) {
+                    val tint = ColorFilter.tint(color = colors[index % colors.size], BlendMode.SrcIn)
+                    translate(left = center.x - carSize.width / 2, top = center.y - carSize.height / 2) {
+                        with(carBackground) { draw(carSize) }
+                        with(carColor) { draw(carSize, colorFilter = tint) }
+                        with(carTop) { draw(carSize) }
                     }
                 }
             }
