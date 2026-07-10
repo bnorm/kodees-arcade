@@ -1,12 +1,12 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package dev.bnorm.arcade.rally
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import androidx.compose.ui.window.Dialog
@@ -41,10 +42,13 @@ fun main() {
             }
         }
 
-        val trackViewModel = TrackViewModel(scope)
-        val gameViewModel = GameViewModel(TrackViewModel.INITIAL_TRACK, scope)
+        val trackViewModel = remember(scope) { TrackViewModel(scope) }
+        val gameViewModel = remember(scope) { GameViewModel(TrackViewModel.INITIAL_TRACK, scope) }
+        val gameScreen = remember(gameViewModel) { GameScreen(gameViewModel) }
 
         Column {
+            var showWizard by remember { mutableStateOf(false) }
+
             val recordingPicker = rememberFilePickerLauncher(
                 mode = FileKitMode.Single,
                 type = FileKitType.File("race"),
@@ -57,6 +61,9 @@ fun main() {
             var showDownloader by remember { mutableStateOf(false) }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { showWizard = true }) {
+                    Text("New Race")
+                }
                 Button(onClick = { recordingPicker.launch() }) {
                     Text("Load Recording")
                 }
@@ -67,8 +74,27 @@ fun main() {
                 }
             }
 
+            if (showWizard) {
+                Dialog(
+                    onDismissRequest = { showWizard = false }
+                ) {
+                    Surface(modifier = Modifier.height(IntrinsicSize.Min)) {
+                        RaceWizard(
+                            client,
+                            trackViewModel,
+                            onStart = {
+                                gameViewModel.new(it)
+                                showWizard = false
+                            }
+                        )
+                    }
+                }
+            }
+
             if (showDownloader && client != null) {
-                Dialog(onDismissRequest = { showDownloader = false }) {
+                Dialog(
+                    onDismissRequest = { showDownloader = false },
+                ) {
                     RaceDownloader(
                         client,
                         onStart = {
@@ -79,9 +105,7 @@ fun main() {
                 }
             }
 
-            RaceWizard(client, trackViewModel, onStart = { gameViewModel.new(it) })
-
-            GameScreen(gameViewModel)
+            gameScreen.Content()
         }
     }
 }

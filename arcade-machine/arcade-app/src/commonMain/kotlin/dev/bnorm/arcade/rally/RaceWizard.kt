@@ -62,6 +62,7 @@ fun RaceWizard(
     client: ArcadeClient?,
     trackViewModel: TrackViewModel,
     onStart: (Game) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -153,7 +154,7 @@ fun RaceWizard(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .padding(8.dp)
     ) {
         val model by trackViewModel.models.collectAsState()

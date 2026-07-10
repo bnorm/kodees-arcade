@@ -1,5 +1,6 @@
 package dev.bnorm.arcade.rally
 
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -54,17 +55,22 @@ interface WindowGraph {
 fun main() {
     application {
         val scope = rememberCoroutineScope()
-        val appGraph = createGraphFactory<AppGraph.Factory>()
-            .create(scope)
+        val appGraph = remember(scope) {
+            createGraphFactory<AppGraph.Factory>()
+                .create(scope)
+        }
 
         Window(
             title = "Rally",
             state = rememberWindowState(width = 800.dp, height = 1000.dp),
             onCloseRequest = ::exitApplication,
         ) {
-            val windowGraph = appGraph.windowGraphFactory.create(this@Window)
-            InstallMenuItems(windowGraph.items)
+            val windowGraph = remember(appGraph) {
+                appGraph.windowGraphFactory
+                    .create(this@Window)
+            }
 
+            InstallMenuItems(windowGraph.items)
             appGraph.gameScreen.Content()
         }
     }
