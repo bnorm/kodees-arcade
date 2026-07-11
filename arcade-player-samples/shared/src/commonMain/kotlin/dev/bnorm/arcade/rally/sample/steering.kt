@@ -5,6 +5,7 @@ import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.geometry.sign
 import dev.bnorm.arcade.geometry.toRelative
+import kotlin.math.abs
 
 fun steeringToHeading(
     heading: Angle,
@@ -23,6 +24,13 @@ fun steeringToBearing(
     val sign = sign(bearing)
     if (sign == 0.0) return 0.0
 
-    val turn = getTurn(velocity.magnitude, steering = sign, traction = 1.0)
-    return sign * (bearing / turn).coerceAtMost(1.0)
+    val maxSteering = getMaxSteering(velocity.magnitude)
+    val turn = getTurn(velocity.magnitude, steering = maxSteering, traction = 1.0)
+    return sign * abs(bearing / turn).coerceAtMost(1.0)
+}
+
+fun getMaxSteering(speed: Double, traction: Double = 1.0): Double {
+    if (speed == 0.0) return MAX_STEER
+    val optimalRadius = speed * speed / (CORNERING * traction)
+    return (TURNING_RADIUS / optimalRadius).coerceAtMost(1.0)
 }
