@@ -6,6 +6,7 @@ import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Segment
 import dev.bnorm.arcade.geometry.abs
 import dev.bnorm.arcade.geometry.center
+import dev.bnorm.arcade.geometry.cos
 import dev.bnorm.arcade.geometry.intersect
 import dev.bnorm.arcade.geometry.plus
 import dev.bnorm.arcade.geometry.sign
@@ -13,11 +14,13 @@ import dev.bnorm.arcade.geometry.times
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Controls
+import dev.bnorm.arcade.rally.DECELERATION
 import dev.bnorm.arcade.rally.Driver
 import dev.bnorm.arcade.rally.MAX_SPEED
 import dev.bnorm.arcade.rally.Race
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.getTurningRadius
+import kotlin.math.ceil
 
 /**
  * Our driver! Kodee!
@@ -70,21 +73,39 @@ object Kodee : Driver() {
 
     override fun move(car: Car, controls: Controls) {
         val velocity = car.velocity
-        val target = targets[car.nextCheckpoint]
+        val current = targets[car.nextCheckpoint]
 
         // Compute required steering for turning to target point.
-        val bearing = car.bearingTo(target)
+        val bearing = car.bearingTo(current)
         val steering = getSteeringForTurn(bearing, velocity.magnitude)
         controls.steering = steering
 
-        // TODO should we consider the next checkpoint?
-        //  try and slow down a little early,
-        //  so we can make the next turning radius?
-
         // Compute required throttle to make that turn.
-        if (steering == 0.0) {
-            // Pointed directly at target! Full speed ahead!
+        if (abs(bearing) < Angle.ofDegrees(0.1)) {
+            // Pointed "directly" at the target! Full speed ahead!
             controls.throttle = 1.0
+
+            // Let's check how we're lined up for the *next* checkpoint.
+            val next = targets[(car.nextCheckpoint + 1) % targets.size]
+            val nextAngle = current.angleTo(next)
+            val nextAbsBearing = abs((nextAngle - car.velocity.angle).toRelative())
+            if (nextAbsBearing < Angle.QUARTER_CIRCLE) {
+                // This is the speed we need to be going when we reach the checkpoint so we can make the next turn.
+                val nextDistance = current.distanceTo(next)
+                val targetRadius = nextDistance / (2.0 * cos(Angle.QUARTER_CIRCLE - nextAbsBearing))
+                val targetSpeed = getMaxThrottle(targetRadius)
+
+                // How much time will it take to decelerate?
+                val time = ceil((velocity.magnitude - targetSpeed) / DECELERATION)
+                if (time > 0) {
+                    val decelerationDist = (time * (time + 1.0) / 2.0) * DECELERATION + time * targetSpeed
+                    // Are we close enough that we need to start decelerating?
+                    if (car.location.distanceSquaredTo(current) <= decelerationDist * decelerationDist) {
+                        // Slam on the breaks!
+                        controls.throttle = 0.0
+                    }
+                }
+            }
         } else {
             // Calculate our car's pivot point.
             val radius = getTurningRadius(velocity.magnitude)
@@ -98,7 +119,7 @@ object Kodee : Driver() {
             //  - what we really want is to optimize *time* it takes to get to the next checkpoint!
             //  - so is it faster to slow down to make a tighter turn and then speed up again,
             //    also covering a smaller amount of total distance?
-            val dist = pivot.distanceTo(target)
+            val dist = pivot.distanceTo(current)
             val turnRatio = 1.0 - abs(bearing) / Angle.HALF_CIRCLE
             val throttle = getMaxThrottle(dist) * turnRatio * turnRatio
 
