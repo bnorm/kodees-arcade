@@ -25,13 +25,14 @@ const val MIN_THROTTLE = -1.0
 const val ACCELERATION = 30.0 / (UPS_TARGET * UPS_TARGET) * SCALE
 const val DECELERATION = 60.0 / (UPS_TARGET * UPS_TARGET) * SCALE
 const val CORNERING = 65.0 / (UPS_TARGET * UPS_TARGET) * SCALE
+const val BOOST_DEGRADE = 0.5 / (UPS_TARGET * UPS_TARGET) * SCALE
 
 // Measurements in meters per second (m/s).
 const val MAX_SPEED = 50.0 / UPS_TARGET * SCALE
-const val MAX_SPEED_BOOST = 2.5 / UPS_TARGET * SCALE
+const val MAX_SPEED_BOOST = 5.0 / UPS_TARGET * SCALE
 const val MIN_SPEED = -10.0 / UPS_TARGET * SCALE
 
-fun simulateSpeed(speed: Double, throttle: Double): Double {
+fun simulateSpeed(speed: Double, boost: Double, throttle: Double): Double {
     // TODO should there be burnout?
     //  - hard acceleration causes speed increase to be lower?
     // TODO should there be skidding?
@@ -55,6 +56,9 @@ fun simulateSpeed(speed: Double, throttle: Double): Double {
             if (targetSpeed > actualSpeed) {
                 // Need to accelerate.
                 minOf(actualSpeed + ACCELERATION, targetSpeed)
+            } else if (actualSpeed >= MAX_SPEED && targetSpeed >= MAX_SPEED) {
+                // Let any speed boost slowly degrade.
+                maxOf(actualSpeed - BOOST_DEGRADE, targetSpeed)
             } else {
                 // Need to decelerate.
                 maxOf(actualSpeed - DECELERATION, targetSpeed)
@@ -64,7 +68,7 @@ fun simulateSpeed(speed: Double, throttle: Double): Double {
 
     return when {
         throttle == 0.0 -> simulateAcceleration(speed, 0.0)
-        throttle > 0.0 -> simulateAcceleration(speed, throttle * MAX_SPEED)
+        throttle > 0.0 -> simulateAcceleration(speed, throttle * MAX_SPEED + boost)
         else -> simulateAcceleration(speed, -throttle * MIN_SPEED)
     }
 }
