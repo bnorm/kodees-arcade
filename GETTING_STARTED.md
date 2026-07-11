@@ -50,9 +50,9 @@ Your driver has two ways to control its car: throttle and steering.
 Controls how fast a car moves.
 However, unlike a real car, the throttle is used here to contorl both acceleration and deceleration.
 The throttle is specified as a floating-point number (`Double`) between `1.0` and `-1.0`,
-where `1.0` means maximum acceleration and `-1.0` means maximum deceleration.
+where `1.0` means maximum speed and `-1.0` means maximum reverse speed.
 
-For the specific speed physics, [take a look at the code](/arcade-player/src/commonMain/kotlin/dev/bnorm/arcade/rally/Physics.kt#L9). 
+For the specific speed physics, [take a look at the code](/arcade-player/src/commonMain/kotlin/dev/bnorm/arcade/rally/Physics.kt#L18). 
 
 #### Steering
 
@@ -62,7 +62,7 @@ which determines how far left (`1.0`) or right (`-1.0`) the wheels are turned.
 Note that depending on the car's speed, some understeer may occur if the steering is too far in either direction.
 This means that to achieve the optimal turning radius, a smaller steering value may need to be specified.
 
-For the specific turning physics, [take a look at the code](/arcade-player/src/commonMain/kotlin/dev/bnorm/arcade/rally/Physics.kt#L56).
+For the specific turning physics, [take a look at the code](/arcade-player/src/commonMain/kotlin/dev/bnorm/arcade/rally/Physics.kt#L76).
 
 ### Checkpoints
 

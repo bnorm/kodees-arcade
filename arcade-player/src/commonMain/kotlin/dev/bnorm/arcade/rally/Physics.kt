@@ -1,22 +1,38 @@
 package dev.bnorm.arcade.rally
 
 import dev.bnorm.arcade.geometry.Angle
-import dev.bnorm.arcade.geometry.abs
 import dev.bnorm.arcade.geometry.times
 import dev.bnorm.arcade.geometry.toAbsolute
 import kotlin.math.abs
 import kotlin.math.sign
 
+// Target about 30 updates per second to appear realistic.
+private const val UPS_TARGET = 30.0
+
+// Scale everything so there are about 6 pixels per meter.
+// (Based on the track width (90px) being about 15 meters.)
+// TODO consider adjusting the scale
+//  - also make sure more things are dependent on this number
+private const val SCALE = 6.0
+
 // THROTTLE AND SPEED
 
+// Limits
 const val MAX_THROTTLE = 1.0
 const val MIN_THROTTLE = -1.0
-const val ACCELERATION: Double = 0.1
-const val DECELERATION: Double = 0.2
-const val MAX_SPEED: Double = 8.0
-const val MIN_SPEED: Double = -4.0
 
-fun simulateSpeed(speed: Double, throttle: Double): Double {
+// Measurements in meters per second squared (m/s^2).
+const val ACCELERATION = 30.0 / (UPS_TARGET * UPS_TARGET) * SCALE
+const val DECELERATION = 60.0 / (UPS_TARGET * UPS_TARGET) * SCALE
+const val CORNERING = 65.0 / (UPS_TARGET * UPS_TARGET) * SCALE
+const val BOOST_DEGRADE = 0.5 / (UPS_TARGET * UPS_TARGET) * SCALE
+
+// Measurements in meters per second (m/s).
+const val MAX_SPEED = 50.0 / UPS_TARGET * SCALE
+const val MAX_SPEED_BOOST = 5.0 / UPS_TARGET * SCALE
+const val MIN_SPEED = -10.0 / UPS_TARGET * SCALE
+
+fun simulateSpeed(speed: Double, boost: Double, throttle: Double): Double {
     // TODO should there be burnout?
     //  - hard acceleration causes speed increase to be lower?
     // TODO should there be skidding?
@@ -40,6 +56,9 @@ fun simulateSpeed(speed: Double, throttle: Double): Double {
             if (targetSpeed > actualSpeed) {
                 // Need to accelerate.
                 minOf(actualSpeed + ACCELERATION, targetSpeed)
+            } else if (actualSpeed >= MAX_SPEED && targetSpeed >= MAX_SPEED) {
+                // Let any speed boost slowly degrade.
+                maxOf(actualSpeed - BOOST_DEGRADE, targetSpeed)
             } else {
                 // Need to decelerate.
                 maxOf(actualSpeed - DECELERATION, targetSpeed)
@@ -49,62 +68,50 @@ fun simulateSpeed(speed: Double, throttle: Double): Double {
 
     return when {
         throttle == 0.0 -> simulateAcceleration(speed, 0.0)
-        throttle > 0.0 -> simulateAcceleration(speed, throttle * MAX_SPEED)
+        throttle > 0.0 -> simulateAcceleration(speed, throttle * MAX_SPEED + boost)
         else -> simulateAcceleration(speed, -throttle * MIN_SPEED)
     }
 }
 
 // STEERING AND HEADING
 
+// Limits
 const val MAX_STEER = 1.0
 const val MIN_STEER = -1.0
-val MAX_TURN_RATE = Angle.ofDegrees(8.0)
-val MAX_TURN_SPEED_MULTIPLE = Angle.ofDegrees(0.75)
+
+// Measurements in meters.
+const val TURNING_RADIUS = 5.0 * SCALE
+
+fun getTurningRadius(speed: Double, traction: Double = 1.0): Double {
+    return (speed * speed / (CORNERING * traction))
+        .coerceAtLeast(TURNING_RADIUS)
+}
 
 fun getTurn(speed: Double, steering: Double, traction: Double = 1.0): Angle {
-    val speed = abs(speed)
-    val targetTurn = MAX_TURN_RATE * abs(steering)
+    if (steering == 0.0) return Angle.ZERO
 
-    // TODO is there a minimum speed for turn as well?
-    //  zero speed should be no turn
-    //  high speeds (plus strong steering and low traction) should result in less turn
-    //  so is there a "sweet spot" for speed to get all of the turn possible?
-    //  at this sweet spot, should there still be a penalty for low traction?
+    // Compute optimal and target turning radius.
+    // Traction effects optimal turn radius by reducing cornering.
+    val optimalRadius = getTurningRadius(speed, traction)
+    val targetRadius = TURNING_RADIUS / abs(steering)
 
-    // TODO there should be a penalty based on strong steering.
-    //  at slow speeds, strong steering doesn't matter.
-    //  at high speeds, strong steering should cause "slipage" (lower turn).
-    //  does this mean exponential penalty to turn based on speed and steering?
+    val actualRadius = if (targetRadius >= optimalRadius) {
+        targetRadius
+    } else {
+        // Compute understeer based on:
+        //  - Current speed compared to max speed.
+        //  - Excess steering over the optimal radius.
+        targetRadius + sqr(optimalRadius - targetRadius) * sqr(speed / MAX_SPEED)
+    }
 
-    // TODO traction should limit turn in a more interesting way.
-    //  at slow speeds, traction shouldn't matter.
-    //  at high speeds with strong steering, low traction should cause "slipage" (lower turn).
-    //  does this mean exponential penalty to turn based on speed, steering, and traction?
-    //  does this double up with the normal speed+steering penalty?
-
-    // TODO what about backwards?!
-    //  does backwards speed have a completely different set of rules?
-    //  is there no penalty for driving backwards?
-
-    // Overdrive starts at 25% of max speed and means a turning penalty.
-    val overdrive = (speed - MAX_SPEED / 4.0)
-    val speedPenalty = (MAX_TURN_SPEED_MULTIPLE * overdrive).coerceAtLeast(Angle.ZERO)
-
-    // Traction directly impacts turning radius.
-    // But only if the speed ratio is greater than available traction.
-    val tractionPenalty = 1.0 - (speed / MAX_SPEED - traction).coerceAtLeast(0.0)
-
-    // This is the maximum turn that is available given the speed and traction.
-    val maxTurn = (MAX_TURN_RATE - speedPenalty) * tractionPenalty
-
-    // If the target turn is greater than the max turn => understeer.
-    val understeerPenalty = (targetTurn - maxTurn).coerceIn(
-        Angle.ZERO,
-        abs(targetTurn)
-    )
-    return sign(steering) * (targetTurn - understeerPenalty)
+    val turnSpeed = abs(speed).coerceAtLeast(ACCELERATION) // Allow a little turn in place...
+    val turn = Angle.ofRadians(turnSpeed / actualRadius)
+     return sign(steering) * sign(speed) * turn
 }
 
 fun simulateHeading(heading: Angle, speed: Double, steering: Double, traction: Double): Angle {
     return (heading + getTurn(speed, steering, traction)).toAbsolute()
 }
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun sqr(value: Double): Double = value * value

@@ -2,11 +2,14 @@ package dev.bnorm.arcade.rally.engine
 
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
+import dev.bnorm.arcade.geometry.abs
 import dev.bnorm.arcade.geometry.atan2
 import dev.bnorm.arcade.geometry.cos
 import dev.bnorm.arcade.geometry.nearest
 import dev.bnorm.arcade.geometry.sin
+import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.MAX_SPEED
+import dev.bnorm.arcade.rally.MAX_SPEED_BOOST
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.simulateHeading
 import dev.bnorm.arcade.rally.simulateSpeed
@@ -16,8 +19,11 @@ val carWidth = 12.0
 val carHeight = 16.0
 
 //val impactDist = carHeight / 2.0
-val impactDist = (68.0 * 0.4f)
-val impactDistSq = impactDist * impactDist
+private const val impactDist = (68.0 * 0.4f)
+private const val impactDistSq = impactDist * impactDist
+
+private val draftAngle = Angle.QUARTER_CIRCLE / 4.0 // 22.5 deg
+private const val draftDist = 10 * 6 + impactDist // 10 meters + impact
 
 fun update(gameState: RallyGameState, track: Track) {
     gameState.time++
@@ -53,8 +59,9 @@ fun update(gameState: RallyGameState, track: Track) {
         //  - does the "weight" of the car on each tire, caused by breaking and/or turning,
         //    impact the traction contribution of each tire?
 
+        val boost = drivers.maxOf { state.computeDraftBoost(it) }
         val newHeading = simulateHeading(oldHeading, oldSpeed, steering, traction = 1.0)
-        var newSpeed = simulateSpeed(oldSpeed, throttle)
+        var newSpeed = simulateSpeed(oldSpeed, boost, throttle)
         if (updatePosition(state, newSpeed, newHeading, gameState)) {
             newSpeed = 0.0
         }
@@ -119,6 +126,24 @@ fun update(gameState: RallyGameState, track: Track) {
     }
 
     gameState.finished = drivers.all { it.finished != null }
+}
+
+private fun RallyCarState.computeDraftBoost(other: RallyCarState): Double {
+    if (this === other) return 0.0
+    if (other.finished != null) return 0.0
+
+    val distSq = distanceSq(other)
+    if (distSq < draftDist * draftDist) {
+        // TODO should this bearing be from the perspective of the other car?
+        val absBearingTo = abs((angleTo(other) - heading).toRelative())
+        if (absBearingTo < draftAngle && abs(heading - other.heading) < draftAngle) {
+            return MAX_SPEED_BOOST *
+                (1.5 - sqrt(distSq) / (draftDist - impactDist)).coerceAtMost(1.0) *
+                (other.speed / MAX_SPEED).coerceAtMost(1.0)
+        }
+    }
+
+    return 0.0
 }
 
 /** @return if impacted with a wall. */
