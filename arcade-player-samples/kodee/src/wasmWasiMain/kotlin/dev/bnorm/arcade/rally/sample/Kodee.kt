@@ -7,8 +7,17 @@ import dev.bnorm.arcade.geometry.Segment
 import dev.bnorm.arcade.geometry.abs
 import dev.bnorm.arcade.geometry.center
 import dev.bnorm.arcade.geometry.intersect
+import dev.bnorm.arcade.geometry.plus
+import dev.bnorm.arcade.geometry.sign
+import dev.bnorm.arcade.geometry.times
 import dev.bnorm.arcade.geometry.toRelative
-import dev.bnorm.arcade.rally.*
+import dev.bnorm.arcade.rally.Car
+import dev.bnorm.arcade.rally.Controls
+import dev.bnorm.arcade.rally.Driver
+import dev.bnorm.arcade.rally.MAX_SPEED
+import dev.bnorm.arcade.rally.Race
+import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.rally.getTurningRadius
 
 /**
  * Our driver! Kodee!
@@ -63,25 +72,38 @@ object Kodee : Driver() {
         val velocity = car.velocity
         val target = targets[car.nextCheckpoint]
 
+        // Compute required steering for turning to target point.
         val bearing = car.bearingTo(target)
-        val steering = steeringToBearing(bearing, velocity)
+        val steering = getSteeringForTurn(bearing, velocity.magnitude)
         controls.steering = steering
 
-        fun turnGuess(throttle: Double): Angle = getTurn(throttle * MAX_SPEED, steering = 1.0, traction = 1.0)
+        // TODO should we consider the next checkpoint?
+        //  try and slow down a little early,
+        //  so we can make the next turning radius?
 
-        // TODO need to consider distance as well!!!
-        val requiredTurn = abs(bearing)
-        controls.throttle = when {
-            requiredTurn < turnGuess(1.0) -> 1.0
-            requiredTurn < turnGuess(0.9) -> 0.9
-            requiredTurn < turnGuess(0.8) -> 0.8
-            requiredTurn < turnGuess(0.7) -> 0.7
-            requiredTurn < turnGuess(0.6) -> 0.6
-            requiredTurn < turnGuess(0.5) -> 0.5
-            requiredTurn < turnGuess(0.4) -> 0.4
-            requiredTurn < turnGuess(0.3) -> 0.3
-            requiredTurn < turnGuess(0.2) -> 0.2
-            else -> 0.1
+        // Compute required throttle to make that turn.
+        if (steering == 0.0) {
+            // Pointed directly at target! Full speed ahead!
+            controls.throttle = 1.0
+        } else {
+            // Calculate our car's pivot point.
+            val radius = getTurningRadius(velocity.magnitude)
+            val normalHeading = velocity.angle + sign(bearing) * Angle.QUARTER_CIRCLE
+            val pivot = car.location.plus(normalHeading, radius)
+
+            // Compute speed based on distance of target from pivot.
+            // When the turn is severe, it's better to slow down a little
+            // TODO there's probably a better way to do this than a turn ratio...
+            //  - maybe a distance penalty instead?
+            //  - what we really want is to optimize *time* it takes to get to the next checkpoint!
+            //  - so is it faster to slow down to make a tighter turn and then speed up again,
+            //    also covering a smaller amount of total distance?
+            val dist = pivot.distanceTo(target)
+            val turnRatio = 1.0 - abs(bearing) / Angle.HALF_CIRCLE
+            val throttle = getMaxThrottle(dist) * turnRatio * turnRatio
+
+            // No point in going slower than the maximum speed for the minimum turning radius.
+            controls.throttle = throttle.coerceAtLeast(TURNING_RADIUS_SPEED / MAX_SPEED)
         }
     }
 }

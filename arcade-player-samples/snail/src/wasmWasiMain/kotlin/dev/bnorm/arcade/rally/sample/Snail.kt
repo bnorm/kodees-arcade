@@ -1,8 +1,12 @@
 package dev.bnorm.arcade.rally.sample
 
-import dev.bnorm.arcade.rally.*
 import dev.bnorm.arcade.geometry.atan2
 import dev.bnorm.arcade.geometry.center
+import dev.bnorm.arcade.rally.Car
+import dev.bnorm.arcade.rally.Controls
+import dev.bnorm.arcade.rally.Driver
+import dev.bnorm.arcade.rally.Race
+import dev.bnorm.arcade.rally.Track
 import kotlin.random.Random
 
 object Snail : Driver() {

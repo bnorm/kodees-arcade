@@ -82,25 +82,36 @@ const val MIN_STEER = -1.0
 // Measurements in meters.
 const val TURNING_RADIUS = 5.0 * SCALE
 
+fun getTurningRadius(speed: Double, traction: Double = 1.0): Double {
+    return (speed * speed / (CORNERING * traction))
+        .coerceAtLeast(TURNING_RADIUS)
+}
+
 fun getTurn(speed: Double, steering: Double, traction: Double = 1.0): Angle {
     if (steering == 0.0) return Angle.ZERO
 
     // Compute optimal and target turning radius.
     // Traction effects optimal turn radius by reducing cornering.
-    val optimalRadius = speed * speed / (CORNERING * traction)
+    val optimalRadius = getTurningRadius(speed, traction)
     val targetRadius = TURNING_RADIUS / abs(steering)
 
-    // Compute oversteer based on:
-    //  - Current speed.
-    //  - Excess steering over the optimal radius.
-    val speedRatio = speed / (MAX_SPEED + MAX_SPEED_BOOST)
-    val oversteer = (optimalRadius - targetRadius).coerceAtLeast(0.0)
-    val actualRadius = targetRadius + oversteer * oversteer * speedRatio * speedRatio
+    val actualRadius = if (targetRadius >= optimalRadius) {
+        targetRadius
+    } else {
+        // Compute understeer based on:
+        //  - Current speed compared to max speed.
+        //  - Excess steering over the optimal radius.
+        targetRadius + sqr(optimalRadius - targetRadius) * sqr(speed / MAX_SPEED)
+    }
 
-    val theta = Angle.ofRadians(abs(speed) / actualRadius)
-    return sign(steering) * theta
+    val turnSpeed = abs(speed).coerceAtLeast(ACCELERATION) // Allow a little turn in place...
+    val turn = Angle.ofRadians(turnSpeed / actualRadius)
+    return sign(steering) * turn
 }
 
 fun simulateHeading(heading: Angle, speed: Double, steering: Double, traction: Double): Angle {
     return (heading + getTurn(speed, steering, traction)).toAbsolute()
 }
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun sqr(value: Double): Double = value * value
