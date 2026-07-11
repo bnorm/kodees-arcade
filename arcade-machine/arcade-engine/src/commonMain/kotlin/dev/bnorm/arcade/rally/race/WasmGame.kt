@@ -12,8 +12,11 @@ import dev.bnorm.arcade.rally.engine.RallyGameState
 import dev.bnorm.arcade.rally.engine.update
 import dev.bnorm.arcade.rally.engine.wasm.createWasmDriver
 import dev.bnorm.arcade.rally.engine.wasm.withEngine
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.coroutineScope
 
 class WasmGame(
     private val track: Track,
@@ -24,84 +27,78 @@ class WasmGame(
         require(drivers.size <= track.positions.size)
     }
 
-    override val events: ReceiveChannel<Game.Event>
-        field = Channel()
-
-    override suspend fun start() {
+    override suspend fun start(onEvent: suspend (Game.Event) -> Unit) {
         val raceModel = DriverRaceModel(track, laps)
 
-        try {
-            events.send(Game.Event.Start(track, drivers.map { it.name }))
+        onEvent(Game.Event.Start(track, drivers.map { it.name }))
 
-            val gameState = RallyGameState(
-                trackWidth = track.width,
-                trackHeight = track.height,
-                laps = laps,
-                finished = false,
-                time = 0,
-                drivers = List(drivers.size) {
-                    val position = track.positions[it]
-                    RallyCarState(
-                        name = drivers[it].name,
-                        controls = DriverControlState(),
-                        x = position.location.x,
-                        y = position.location.y,
-                        heading = position.heading,
-                    )
-                }
-            )
-
-            events.send(gameState.toUpdate())
-
-            withEngine { engine ->
-                val drivers = drivers.mapIndexed { index, driver ->
-                    engine.createWasmDriver(gameState.drivers[index].controls, driver.bytes, driver.name)
-                }
-
-                try {
-                    for (driver in drivers) {
-                        driver.onRace(raceModel)
-                    }
-
-                    while (!gameState.finished) {
-                        // Allow drivers to manipulate controls.
-                        repeat(drivers.size) { index ->
-                            // TODO stop calling when driver is finished.
-                            //  - should they be removed from the game entirely when they finish?
-
-                            val carState = gameState.drivers[index]
-                            val car = Car(
-                                time = gameState.time,
-                                location = Point(carState.x, carState.y),
-                                velocity = Vector(carState.heading, carState.speed),
-                                lap = carState.lap,
-                                nextCheckpoint = carState.checkpoint,
-                            )
-
-                            drivers[index].move(car)
-                        }
-
-                        // Update game state.
-                        update(gameState, track)
-                        events.send(gameState.toUpdate())
-                    }
-                } finally {
-                    for (driver in drivers) {
-                        driver.close()
-                    }
-                }
-
-                val results = gameState.drivers
-                    .sortedBy { it.finished }.withIndex()
-                    .associate { (place, state) ->
-                        state.name to Game.Event.Complete.Result(place + 1, state.finished!!)
-                    }
-                events.send(Game.Event.Complete(results))
+        val gameState = RallyGameState(
+            trackWidth = track.width,
+            trackHeight = track.height,
+            laps = laps,
+            finished = false,
+            time = 0,
+            drivers = List(drivers.size) {
+                val position = track.positions[it]
+                RallyCarState(
+                    name = drivers[it].name,
+                    controls = DriverControlState(),
+                    x = position.location.x,
+                    y = position.location.y,
+                    heading = position.heading,
+                )
             }
-        } catch (t: Throwable) {
-            events.close(t)
-        } finally {
-            events.close()
+        )
+
+        onEvent(gameState.toUpdate())
+
+        withEngine { engine ->
+            val drivers = coroutineScope {
+                drivers.mapIndexed { index, driver ->
+                    async { engine.createWasmDriver(gameState.drivers[index].controls, driver.bytes, driver.name) }
+                }
+            }.awaitAll()
+
+
+            try {
+                for (driver in drivers) {
+                    driver.onRace(raceModel)
+                }
+
+                while (!gameState.finished) {
+                    // Allow drivers to manipulate controls.
+                    repeat(drivers.size) { index ->
+                        // TODO stop calling when driver is finished.
+                        //  - should they be removed from the game entirely when they finish?
+
+                        val carState = gameState.drivers[index]
+                        val car = Car(
+                            time = gameState.time,
+                            location = Point(carState.x, carState.y),
+                            velocity = Vector(carState.heading, carState.speed),
+                            lap = carState.lap,
+                            nextCheckpoint = carState.checkpoint,
+                        )
+
+                        drivers[index].move(car)
+                    }
+
+                    // Update game state.
+                    update(gameState, track)
+                    onEvent(gameState.toUpdate())
+                }
+            } finally {
+                for (driver in drivers) {
+                    driver.close()
+                }
+            }
+
+            val results = gameState.drivers
+                .sortedBy { it.finished }.withIndex()
+                .associate { (place, state) ->
+                    state.name to Game.Event.Complete.Result(place + 1, state.finished!!)
+                }
+            onEvent(Game.Event.Complete(results))
         }
     }
 }

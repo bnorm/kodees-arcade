@@ -34,6 +34,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consume
+import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.consumeAsFlow
@@ -207,14 +208,12 @@ suspend fun process(
     state: RaceState,
 ): RaceResponse? {
     return coroutineScope {
-        launch { race.start() }
 
         var targetTime = Instant.DISTANT_PAST
         val updateFrequency = 200.milliseconds
 
-        val events = race.events
-            .consumeAsFlow()
-            .onEach {
+        val events = produce {
+            race.start {
                 when (it) {
                     is RallyRace.Event.Start -> {
                         val now = Clock.System.now()
@@ -239,9 +238,10 @@ suspend fun process(
                         state.ups = state.time / (elapsed.inWholeNanoseconds / 1_000_000_000.0)
                     }
                 }
+
+                send(ProtoBuf.encodeToByteArray(RallyRace.Event.serializer(), it))
             }
-            .map { ProtoBuf.encodeToByteArray(RallyRace.Event.serializer(), it) }
-            .produceIn(this)
+        }
 
         try {
             client.upload(id, nonce, events)

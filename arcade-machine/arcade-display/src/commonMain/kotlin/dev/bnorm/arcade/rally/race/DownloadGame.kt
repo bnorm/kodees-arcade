@@ -11,16 +11,9 @@ class DownloadGame(
     private val client: ArcadeClient,
     private val raceId: RaceId,
 ) : Game {
-    override val events: ReceiveChannel<Game.Event>
-        field = Channel(1_000)
-
-    override suspend fun start() {
-        try {
-            client.downloadRace(raceId).collect { line ->
-                events.send(ProtoBuf.decodeFromByteArray(Game.Event.serializer(), line))
-            }
-        } finally {
-            events.close()
+    override suspend fun start(onEvent: suspend (Game.Event) -> Unit) {
+        client.downloadRace(raceId).collect { line ->
+            onEvent(ProtoBuf.decodeFromByteArray(Game.Event.serializer(), line))
         }
     }
 }

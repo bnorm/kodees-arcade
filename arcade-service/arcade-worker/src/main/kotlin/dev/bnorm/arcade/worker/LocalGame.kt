@@ -17,34 +17,20 @@ class LocalGame(
     private val client: ArcadeClient,
     private val id: RaceId,
 ) : Game {
-    override val events: ReceiveChannel<Game.Event>
-        field = Channel()
+    override suspend fun start(onEvent: suspend (Game.Event) -> Unit) {
+        val race = client.getRace(id) // TODO error
+        val track = client.getTrack(race.trackId) // TODO error
+        require(race.positions.size <= track.positions.size)
 
-    override suspend fun start() {
-        try {
-            val race = client.getRace(id) // TODO error
-            val track = client.getTrack(race.trackId) // TODO error
-            require(race.positions.size <= track.positions.size)
-
-            val rallyDrivers = buildList {
-                for (driver in race.positions) {
-                    val blob = client.downloadDriverVersion(driver.driverId, driver.version) // TODO error
-                    add(WasmDriver(driver.name, blob))
-                }
+        val rallyDrivers = buildList {
+            for (driver in race.positions) {
+                val blob = client.downloadDriverVersion(driver.driverId, driver.version) // TODO error
+                add(WasmDriver(driver.name, blob))
             }
-
-            coroutineScope {
-                val wasmRace = WasmGame(track.toRallyTrack(), rallyDrivers, race.laps)
-                launch { wasmRace.start() }
-                wasmRace.events.consumeEach {
-                    events.send(it)
-                }
-            }
-        } catch (e: Throwable) {
-            events.close(e)
-        } finally {
-            events.close()
         }
+
+        val wasmRace = WasmGame(track.toRallyTrack(), rallyDrivers, race.laps)
+        wasmRace.start(onEvent)
     }
 }
 
