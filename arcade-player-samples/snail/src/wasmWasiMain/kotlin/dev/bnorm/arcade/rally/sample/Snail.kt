@@ -18,7 +18,7 @@ object Snail : Driver() {
         val target = next.center
 
         // Go a safe speed... for now!
-        controls.throttle = 0.5 - safety
+        controls.throttle = 0.4 - safety
 
         // Figure out how to steer.
         val targetHeading = atan2(target.y - car.location.y, target.x - car.location.x)
