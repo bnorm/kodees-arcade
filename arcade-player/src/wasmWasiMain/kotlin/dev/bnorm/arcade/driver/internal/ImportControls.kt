@@ -1,8 +1,8 @@
 @file:OptIn(ExperimentalWasmInterop::class)
 
-package dev.bnorm.arcade.rally.internal
+package dev.bnorm.arcade.driver.internal
 
-import dev.bnorm.arcade.rally.Controls
+import dev.bnorm.arcade.driver.Controls
 
 internal object ImportControls : Controls {
     override var throttle: Double

@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
+import dev.bnorm.arcade.geometry.Rectangle
 import dev.bnorm.arcade.geometry.Segment
 import dev.bnorm.arcade.geometry.intersect
 import dev.bnorm.arcade.geometry.toLine
@@ -110,3 +111,17 @@ context(scope: DrawScope)
 internal fun Game.Event.Update.Driver.toOffset(): Offset {
     return Offset(x.toFloat(), scope.size.height - y.toFloat())
 }
+
+internal val Rectangle.size: Size
+    get() = Size(width.toFloat(), height.toFloat())
+
+context(scope: DrawScope)
+internal val Rectangle.topLeft: Offset
+    get() {
+        val rectangle1 = this
+        return rectangle1.center.toOffset() -
+            Offset(
+                rectangle1.width.toFloat() / 2f,
+                rectangle1.height.toFloat() / 2f
+            )
+    }

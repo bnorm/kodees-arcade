@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import dev.bnorm.arcade.display.internal.FixedSize
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Track
 
 @Composable
 fun TrackImage(

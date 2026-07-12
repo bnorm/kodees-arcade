@@ -3,8 +3,8 @@ package dev.bnorm.arcade.rally.race
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.Car
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Car
+import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.rally.engine.DriverControlState
 import dev.bnorm.arcade.rally.engine.RallyCarState
 import dev.bnorm.arcade.rally.engine.RallyGameState
@@ -14,7 +14,7 @@ import dev.bnorm.arcade.rally.engine.wasm.withEngine
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import dev.bnorm.arcade.rally.Race as DriverRaceModel
+import dev.bnorm.arcade.driver.Race as DriverRaceModel
 
 class WasmGame(
     private val track: Track,
@@ -105,7 +105,7 @@ class WasmGame(
                                     driver.onDraw()
                                     Game.Event.Update.Driver.Debug(
                                         stdout = emptyList(), // TODO gather stdout as well
-                                        canvasRequests = driver.canvasRequestBuffer.toList(),
+                                        drawRequests = driver.canvasRequestBuffer.toList(),
                                     )
                                 }
 

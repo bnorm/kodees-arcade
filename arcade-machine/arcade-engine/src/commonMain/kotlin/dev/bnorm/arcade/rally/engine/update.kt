@@ -10,7 +10,7 @@ import dev.bnorm.arcade.geometry.sin
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.MAX_SPEED
 import dev.bnorm.arcade.rally.MAX_SPEED_BOOST
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.rally.simulateHeading
 import dev.bnorm.arcade.rally.simulateSpeed
 import kotlin.math.sqrt

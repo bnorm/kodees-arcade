@@ -16,6 +16,7 @@ import dev.bnorm.arcade.display.MenuItem
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.track.TrackViewModel.Companion.INITIAL_TRACK
+import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph

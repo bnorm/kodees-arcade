@@ -1,14 +1,14 @@
 @file:OptIn(ExperimentalSerializationApi::class)
 
-package dev.bnorm.arcade.rally.internal
+package dev.bnorm.arcade.driver.internal
 
 import kotlin.wasm.unsafe.MemoryAllocator
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.wasm.unsafe.Pointer
 import kotlin.wasm.unsafe.UnsafeWasmMemoryApi
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.protobuf.ProtoBuf
 
 @UnsafeWasmMemoryApi
 internal fun Pointer.loadByteArray(size: Int): ByteArray = ByteArray(size) { i -> (this + i).loadByte() }

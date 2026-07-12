@@ -11,7 +11,7 @@ import dev.bnorm.arcade.display.ViewModel
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Track
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn

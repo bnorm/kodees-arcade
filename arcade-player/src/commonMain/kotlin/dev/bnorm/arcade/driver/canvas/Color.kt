@@ -1,8 +1,10 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.driver.canvas
 
+import kotlin.jvm.JvmInline
 import kotlinx.serialization.Serializable
 
 @Serializable
+@JvmInline
 value class Color(val value: UInt) {
     constructor(
         red: UByte,

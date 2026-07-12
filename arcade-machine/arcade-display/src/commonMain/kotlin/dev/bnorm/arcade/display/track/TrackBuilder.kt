@@ -57,7 +57,7 @@ import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
 import dev.bnorm.arcade.display.internal.FixedSize
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Track
 import kotlin.math.abs
 import kotlin.math.sqrt
 

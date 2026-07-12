@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.sample
+package dev.bnorm.arcade.driver.sample
 
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Vector

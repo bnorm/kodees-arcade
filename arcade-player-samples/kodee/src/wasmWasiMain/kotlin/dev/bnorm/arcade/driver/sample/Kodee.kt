@@ -1,5 +1,13 @@
-package dev.bnorm.arcade.rally.sample
+package dev.bnorm.arcade.driver.sample
 
+import dev.bnorm.arcade.driver.Car
+import dev.bnorm.arcade.driver.Controls
+import dev.bnorm.arcade.driver.Driver
+import dev.bnorm.arcade.driver.Race
+import dev.bnorm.arcade.driver.Track
+import dev.bnorm.arcade.driver.canvas.Canvas
+import dev.bnorm.arcade.driver.canvas.Color
+import dev.bnorm.arcade.driver.canvas.Stroke
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Circle
 import dev.bnorm.arcade.geometry.Line
@@ -15,15 +23,8 @@ import dev.bnorm.arcade.geometry.sign
 import dev.bnorm.arcade.geometry.times
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
-import dev.bnorm.arcade.rally.Canvas
-import dev.bnorm.arcade.rally.Car
-import dev.bnorm.arcade.rally.Color
-import dev.bnorm.arcade.rally.Controls
 import dev.bnorm.arcade.rally.DECELERATION
-import dev.bnorm.arcade.rally.Driver
 import dev.bnorm.arcade.rally.MAX_SPEED
-import dev.bnorm.arcade.rally.Race
-import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.getTurningRadius
 import kotlin.math.ceil
 
@@ -143,6 +144,7 @@ object Kodee : Driver() {
             canvas.drawSegment(
                 color = Color(red = 0x00u, green = 0x00u, blue = 0xFFu),
                 segment = Segment(start, end),
+                stroke = Stroke(width = 2f)
             )
         }
 
@@ -155,10 +157,12 @@ object Kodee : Driver() {
         canvas.drawCircle(
             color = Color(red = 0xFFu, green = 0x00u, blue = 0x00u),
             circle = Circle(car.location + normalVector, radius = radius),
+            style = Stroke(width = 2f),
         )
         canvas.drawCircle(
             color = Color(red = 0xFFu, green = 0x00u, blue = 0x00u),
             circle = Circle(car.location - normalVector, radius = radius),
+            style = Stroke(width = 2f),
         )
     }
 }

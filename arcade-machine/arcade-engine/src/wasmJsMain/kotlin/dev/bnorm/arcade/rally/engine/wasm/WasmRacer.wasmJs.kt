@@ -2,6 +2,7 @@
 
 package dev.bnorm.arcade.rally.engine.wasm
 
+import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
 import dev.bnorm.arcade.rally.engine.DriverControlState
 import js.array.Tuple
 import js.buffer.DataView
@@ -13,8 +14,10 @@ import js.numbers.JsNumbers.toJsDouble
 import js.numbers.JsNumbers.toJsInt
 import js.objects.get
 import js.typedarrays.Uint8Array
+import js.typedarrays.toByteArray
 import js.typedarrays.toUint8Array
 import kotlin.random.Random
+import kotlinx.serialization.protobuf.ProtoBuf
 import web.assembly.Imports
 import web.assembly.Memory
 import web.assembly.compile
@@ -26,6 +29,7 @@ actual suspend fun WasmEngine.createWasmDriver(
     driver: ByteArray,
     name: String
 ): WasmDriver {
+    val drawRequests = mutableListOf<DrawRequest>()
     lateinit var memory: Memory<*>
 
     val imports = Imports(
@@ -36,6 +40,9 @@ actual suspend fun WasmEngine.createWasmDriver(
         getSteering = { controlState.steering.toJsDouble() },
         setSteering = { steering ->
             controlState.steering = steering.toDouble()
+        },
+        playerCanvasDraw = { offset ->
+            drawRequests.add(readDrawRequest(memory, offset.toInt()))
         },
         fdWrite = { fd, iovs, iovs_len, nwritten ->
             fdWrite(name, memory, iovs_len.toInt(), iovs.toInt(), fd.toInt(), nwritten.toInt()).toJsInt()
@@ -52,13 +59,14 @@ actual suspend fun WasmEngine.createWasmDriver(
 
     val moveFunction = instance.exports["move"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
     val onRaceFunction = instance.exports["onRace"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
+    val onDrawFunction = instance.exports["onDraw"]?.unsafeCast<JsFunction<Tuple, JsAny?>>()
     return WasmDriver(
         memory = BrowserMemory(memory),
         moveFunction = { invoke(moveFunction) },
         onRaceFunction = { invoke(onRaceFunction) },
-        onDrawFunction = null,
+        onDrawFunction = onDrawFunction?.let { { invoke(it) } },
         onClose = {},
-        drawRequests = mutableListOf(),
+        drawRequests = drawRequests,
     )
 }
 
@@ -68,13 +76,13 @@ private fun invoke(func: JsFunction<Tuple, JsAny?>) {
 }
 
 // TODO convert this to Kotlin, somehow...
-// TODO add canvas
 @Suppress("unused")
 private fun Imports(
     getThrottle: () -> JsDouble,
     setThrottle: (JsDouble) -> Unit,
     getSteering: () -> JsDouble,
     setSteering: (JsDouble) -> Unit,
+    playerCanvasDraw: (JsInt) -> Unit,
     fdWrite: (JsInt, JsInt, JsInt, JsInt) -> JsInt,
     randomGet: (JsInt, JsInt) -> JsInt
 ): Imports = js(
@@ -86,6 +94,9 @@ private fun Imports(
                controls_steering_get: getSteering,
                controls_steering_set: setSteering
             },
+            player_canvas: {
+                draw: playerCanvasDraw
+            },
             wasi_snapshot_preview1: {
                 fd_write: fdWrite,
                 random_get: randomGet
@@ -93,6 +104,15 @@ private fun Imports(
         })
     """
 )
+
+private fun readDrawRequest(
+    memory: Memory<*>,
+    offset: Int
+): DrawRequest {
+    val size = DataView(memory.buffer).getUint32(offset, true)
+    val bytes = Uint8Array(memory.buffer, offset + 4, size).toByteArray()
+    return ProtoBuf.decodeFromByteArray(DrawRequest.serializer(), bytes)
+}
 
 private fun fdWrite(
     name: String,

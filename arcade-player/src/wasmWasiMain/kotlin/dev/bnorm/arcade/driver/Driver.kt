@@ -1,4 +1,6 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.driver
+
+import dev.bnorm.arcade.driver.canvas.Canvas
 
 abstract class Driver {
     open fun onRace(race: Race) {}

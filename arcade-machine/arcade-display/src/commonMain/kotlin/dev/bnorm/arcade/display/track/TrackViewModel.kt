@@ -11,7 +11,7 @@ import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Position
 import dev.bnorm.arcade.geometry.Segment
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Track
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn

@@ -18,7 +18,7 @@ import com.jakewharton.mosaic.ui.Column
 import com.jakewharton.mosaic.ui.Row
 import com.jakewharton.mosaic.ui.Spacer
 import com.jakewharton.mosaic.ui.Text
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.rally.race.WasmDriver
 import dev.bnorm.arcade.rally.race.WasmGame
 import dev.bnorm.arcade.server.client.ArcadeClient

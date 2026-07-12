@@ -45,6 +45,7 @@ import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.rally.race.WasmGame
 import dev.bnorm.arcade.rally.race.WasmDriver
 import dev.bnorm.arcade.display.track.TrackImage
+import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.Version

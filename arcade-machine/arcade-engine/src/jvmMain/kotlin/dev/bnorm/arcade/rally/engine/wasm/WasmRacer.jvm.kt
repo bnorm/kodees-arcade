@@ -7,10 +7,7 @@ import ai.tegmentum.wasmtime4j.WasmValueType
 import ai.tegmentum.wasmtime4j.func.HostFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
 import ai.tegmentum.wasmtime4j.wasi.WasiContext
-import dev.bnorm.arcade.geometry.Circle
-import dev.bnorm.arcade.geometry.Rectangle
-import dev.bnorm.arcade.geometry.Segment
-import dev.bnorm.arcade.machine.DrawRequest
+import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
 import dev.bnorm.arcade.rally.engine.DriverControlState
 import kotlin.jvm.optionals.getOrNull
 
@@ -89,57 +86,11 @@ private fun createLinker(
 
     linker.defineHostFunction(
         "player_canvas",
-        "draw_segment",
-        FunctionType(arrayOf(WasmValueType.I32, WasmValueType.I32), arrayOf()),
-        HostFunction.voidFunction { (color, segmentPtr) ->
-            drawBuffer.add(
-                DrawRequest.DrawSegment(
-                    color.asInt().toUInt(),
-                    memory().readProto(segmentPtr.asInt(), Segment.serializer())
-                )
-            )
-        },
-    )
-
-    linker.defineHostFunction(
-        "player_canvas",
-        "draw_circle",
-        FunctionType(arrayOf(WasmValueType.I32, WasmValueType.I32), arrayOf()),
-        HostFunction.voidFunction { (color, circlePtr) ->
-            drawBuffer.add(
-                DrawRequest.DrawCircle(
-                    color.asInt().toUInt(),
-                    memory().readProto(circlePtr.asInt(), Circle.serializer())
-                )
-            )
-        },
-    )
-
-    linker.defineHostFunction(
-        "player_canvas",
-        "fill_circle",
-        FunctionType(arrayOf(WasmValueType.I32, WasmValueType.I32), arrayOf()),
-        HostFunction.voidFunction { (color, circlePtr) ->
-            drawBuffer.add(
-                DrawRequest.FillCircle(
-                    color.asInt().toUInt(),
-                    memory().readProto(circlePtr.asInt(), Circle.serializer())
-                )
-            )
-        },
-    )
-
-    linker.defineHostFunction(
-        "player_canvas",
-        "fill_rect",
-        FunctionType(arrayOf(WasmValueType.I32, WasmValueType.I32), arrayOf()),
-        HostFunction.voidFunction { (color, rectPtr) ->
-            drawBuffer.add(
-                DrawRequest.FillRect(
-                    color.asInt().toUInt(),
-                    memory().readProto(rectPtr.asInt(), Rectangle.serializer())
-                )
-            )
+        "draw",
+        FunctionType(arrayOf(WasmValueType.I32), arrayOf()),
+        HostFunction.voidFunction { (offset) ->
+            val request = memory().readProto(offset.asInt(), DrawRequest.serializer())
+            drawBuffer.add(request)
         },
     )
 

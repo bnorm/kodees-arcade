@@ -1,7 +1,8 @@
 package dev.bnorm.arcade.machine
 
+import dev.bnorm.arcade.driver.Track
+import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
 import dev.bnorm.arcade.geometry.Angle
-import dev.bnorm.arcade.rally.Track
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -30,7 +31,7 @@ interface Game {
             ) {
                 class Debug(
                     val stdout: List<String>,
-                    val canvasRequests: List<DrawRequest>,
+                    val drawRequests: List<DrawRequest>,
                 )
 
             }

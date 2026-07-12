@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally
+package dev.bnorm.arcade.driver
 
 import dev.bnorm.arcade.geometry.Position
 import dev.bnorm.arcade.geometry.Segment

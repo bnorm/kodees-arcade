@@ -1,8 +1,8 @@
 package dev.bnorm.arcade.rally.engine.wasm
 
-import dev.bnorm.arcade.machine.DrawRequest
-import dev.bnorm.arcade.rally.Car
-import dev.bnorm.arcade.rally.Race
+import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
+import dev.bnorm.arcade.driver.Car
+import dev.bnorm.arcade.driver.Race
 import dev.bnorm.arcade.rally.engine.DriverControlState
 
 expect suspend fun WasmEngine.createWasmDriver(

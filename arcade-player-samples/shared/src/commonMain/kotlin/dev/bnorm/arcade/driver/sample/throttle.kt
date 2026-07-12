@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.sample
+package dev.bnorm.arcade.driver.sample
 
 import dev.bnorm.arcade.rally.CORNERING
 import dev.bnorm.arcade.rally.MAX_SPEED

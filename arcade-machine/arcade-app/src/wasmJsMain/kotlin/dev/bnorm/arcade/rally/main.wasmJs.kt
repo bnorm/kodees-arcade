@@ -23,8 +23,8 @@ import dev.bnorm.arcade.SerializedStringCache
 import dev.bnorm.arcade.StorageCache
 import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.game.GameViewModel
-import dev.bnorm.arcade.display.track.TrackViewEvent
 import dev.bnorm.arcade.display.track.TrackViewModel
+import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.machine.ReplayGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import io.github.vinceglb.filekit.dialogs.FileKitMode

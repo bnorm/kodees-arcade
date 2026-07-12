@@ -1,12 +1,11 @@
 @file:OptIn(UnsafeWasmMemoryApi::class)
 
-package dev.bnorm.arcade.rally.internal
+package dev.bnorm.arcade.driver.internal
 
-import dev.bnorm.arcade.rally.Canvas
-import dev.bnorm.arcade.rally.Car
-import dev.bnorm.arcade.rally.Controls
-import dev.bnorm.arcade.rally.Driver
-import dev.bnorm.arcade.rally.Race
+import dev.bnorm.arcade.driver.Car
+import dev.bnorm.arcade.driver.Driver
+import dev.bnorm.arcade.driver.Race
+import dev.bnorm.arcade.driver.canvas.internal.ImportCanvas
 import kotlin.wasm.unsafe.Pointer
 import kotlin.wasm.unsafe.UnsafeWasmMemoryApi
 
@@ -47,9 +46,9 @@ fun driverMove(driver: Driver) {
  */
 @DriverExport
 fun driverOnDraw(driver: Driver) {
-    try {
+//    try {
         driver.onDraw(ImportCanvas)
-    } catch (e: Throwable) {
-        e.printStackTrace()
-    }
+//    } catch (e: Throwable) {
+//        e.printStackTrace()
+//    }
 }
