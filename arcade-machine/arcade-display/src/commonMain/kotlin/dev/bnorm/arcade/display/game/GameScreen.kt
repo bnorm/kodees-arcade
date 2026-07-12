@@ -1,23 +1,29 @@
 package dev.bnorm.arcade.display.game
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,6 +34,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -43,6 +51,7 @@ import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.display.internal.LogarithmicSlider
 import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.display.track.toOffset
+import dev.bnorm.arcade.machine.DrawRequest
 import dev.zacsweers.metro.Inject
 
 @Inject
@@ -82,17 +91,65 @@ fun GameScreen(
         modifier
             .height(IntrinsicSize.Min)
     ) {
-        Game(
-            model = model,
-            modifier = Modifier
-                .fillMaxWidth()
+        Row(
+            Modifier
                 .weight(1f)
-        )
+                .fillMaxWidth()
+        ) {
+            Game(
+                model = model,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+
+            Spacer(Modifier.fillMaxHeight().width(2.dp).background(Color.Black))
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .width(200.dp)
+                    .background(Color.LightGray)
+                    .fillMaxHeight()
+                    .padding(8.dp)
+            ) {
+                for (name in model.start.drivers) {
+                    key(name) {
+                        var debug by remember { mutableStateOf(false) }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            shadowElevation = 8.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(name, style = MaterialTheme.typography.titleMedium)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = debug,
+                                        onCheckedChange = {
+                                            debug = !debug
+                                            gameViewModel.setDebug(name, debug)
+                                        }
+                                    )
+                                    Text("Debug", style = MaterialTheme.typography.bodyLarge)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .background(Color.LightGray)
+                .padding(16.dp)
         ) {
             Button(
                 enabled = model.active,
@@ -169,8 +226,8 @@ private fun Game(
 
         val carSize = Size(27.2f, 20f)
         Canvas(Modifier.fillMaxSize()) {
-            val positions = model.update?.drivers.orEmpty()
-            for ((index, position) in positions.withIndex()) {
+            val drivers = model.update?.drivers.orEmpty()
+            for ((index, position) in drivers.withIndex()) {
                 val x = position.x.toFloat()
                 val y = size.height - position.y.toFloat()
                 val center = Offset(x, y)
@@ -184,7 +241,7 @@ private fun Game(
                 drawText(result, color = Color.Black, topLeft = center + textOffset)
             }
 
-            for ((index, position) in positions.withIndex()) {
+            for ((index, position) in drivers.withIndex()) {
                 val center = position.toOffset()
                 rotate(degrees = -position.heading.degrees.toFloat(), pivot = center) {
                     val tint = ColorFilter.tint(color = colors[index % colors.size], BlendMode.SrcIn)
@@ -195,6 +252,48 @@ private fun Game(
                     }
                 }
             }
+
+            for (driver in drivers) {
+                driver.debug?.canvasRequests?.forEach { request ->
+                    request.draw()
+                }
+            }
+        }
+    }
+}
+
+context(scope: DrawScope)
+private fun DrawRequest.draw() {
+    when (this) {
+        is DrawRequest.DrawSegment -> scope.drawLine(
+            color = Color(color.toInt()),
+            start = segment.start.toOffset(),
+            end = segment.end.toOffset(),
+        )
+
+        is DrawRequest.DrawCircle -> scope.drawCircle(
+            color = Color(color.toInt()),
+            radius = circle.radius.toFloat(),
+            center = circle.center.toOffset(),
+            style = Stroke(width = Stroke.HairlineWidth),
+        )
+
+        is DrawRequest.FillCircle -> scope.drawCircle(
+            color = Color(color.toInt()),
+            radius = circle.radius.toFloat(),
+            center = circle.center.toOffset(),
+        )
+
+        is DrawRequest.FillRect -> {
+            scope.drawRect(
+                color = Color(color.toInt()),
+                topLeft = rectangle.center.toOffset() -
+                    Offset(
+                        rectangle.width.toFloat() / 2f,
+                        rectangle.height.toFloat() / 2f
+                    ),
+                size = Size(rectangle.width.toFloat(), rectangle.height.toFloat()),
+            )
         }
     }
 }

@@ -56,7 +56,9 @@ actual suspend fun WasmEngine.createWasmDriver(
         memory = BrowserMemory(memory),
         moveFunction = { invoke(moveFunction) },
         onRaceFunction = { invoke(onRaceFunction) },
+        onDrawFunction = null,
         onClose = {},
+        drawRequests = mutableListOf(),
     )
 }
 
@@ -66,7 +68,7 @@ private fun invoke(func: JsFunction<Tuple, JsAny?>) {
 }
 
 // TODO convert this to Kotlin, somehow...
-// TODO use https://github.com/easywasm/wasi instead of custom 'wasi_snapshot_preview1'?
+// TODO add canvas
 @Suppress("unused")
 private fun Imports(
     getThrottle: () -> JsDouble,

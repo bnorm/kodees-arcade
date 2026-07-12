@@ -1,5 +1,6 @@
 package dev.bnorm.arcade.rally.engine.wasm
 
+import dev.bnorm.arcade.machine.DrawRequest
 import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Race
 import dev.bnorm.arcade.rally.engine.DriverControlState
@@ -14,7 +15,9 @@ class WasmDriver(
     private val memory: WasmMemory,
     private val moveFunction: () -> Unit,
     private val onRaceFunction: () -> Unit,
+    private val onDrawFunction: (() -> Unit)?,
     private val onClose: () -> Unit,
+    private val drawRequests: MutableList<DrawRequest>
 ) : AutoCloseable {
     fun move(car: Car) {
         memory.writeProto(0, Car.serializer(), car)
@@ -25,6 +28,16 @@ class WasmDriver(
         memory.writeProto(0, Race.serializer(), race)
         onRaceFunction.invoke()
     }
+
+    fun onDraw() {
+        if (onDrawFunction != null) {
+            drawRequests.clear()
+            onDrawFunction()
+        }
+    }
+
+    val canvasRequestBuffer: List<DrawRequest>
+        get() = drawRequests
 
     override fun close() {
         onClose.invoke()

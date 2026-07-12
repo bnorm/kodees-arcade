@@ -1,9 +1,11 @@
 package dev.bnorm.arcade.rally.sample
 
 import dev.bnorm.arcade.geometry.Angle
+import dev.bnorm.arcade.geometry.Circle
 import dev.bnorm.arcade.geometry.Line
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Segment
+import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.geometry.abs
 import dev.bnorm.arcade.geometry.center
 import dev.bnorm.arcade.geometry.cos
@@ -11,8 +13,11 @@ import dev.bnorm.arcade.geometry.intersect
 import dev.bnorm.arcade.geometry.plus
 import dev.bnorm.arcade.geometry.sign
 import dev.bnorm.arcade.geometry.times
+import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
+import dev.bnorm.arcade.rally.Canvas
 import dev.bnorm.arcade.rally.Car
+import dev.bnorm.arcade.rally.Color
 import dev.bnorm.arcade.rally.Controls
 import dev.bnorm.arcade.rally.DECELERATION
 import dev.bnorm.arcade.rally.Driver
@@ -71,7 +76,10 @@ object Kodee : Driver() {
         }
     }
 
+    private lateinit var car: Car
     override fun move(car: Car, controls: Controls) {
+        this.car = car
+
         val velocity = car.velocity
         val current = targets[car.nextCheckpoint]
 
@@ -126,6 +134,32 @@ object Kodee : Driver() {
             // No point in going slower than the maximum speed for the minimum turning radius.
             controls.throttle = throttle.coerceAtLeast(TURNING_RADIUS_SPEED / MAX_SPEED)
         }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        repeat(targets.size) {
+            val start = targets[it]
+            val end = targets[(it + 1) % targets.size]
+            canvas.drawSegment(
+                color = Color(red = 0x00u, green = 0x00u, blue = 0xFFu),
+                segment = Segment(start, end),
+            )
+        }
+
+        val radius = getTurningRadius(car.velocity.magnitude)
+        val normalVector = Vector(
+            angle = car.velocity.angle + Angle.QUARTER_CIRCLE,
+            magnitude = radius,
+        ).toPoint()
+
+        canvas.drawCircle(
+            color = Color(red = 0xFFu, green = 0x00u, blue = 0x00u),
+            circle = Circle(car.location + normalVector, radius = radius),
+        )
+        canvas.drawCircle(
+            color = Color(red = 0xFFu, green = 0x00u, blue = 0x00u),
+            circle = Circle(car.location - normalVector, radius = radius),
+        )
     }
 }
 

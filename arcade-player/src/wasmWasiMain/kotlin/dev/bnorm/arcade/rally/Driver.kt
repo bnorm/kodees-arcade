@@ -4,6 +4,8 @@ abstract class Driver {
     open fun onRace(race: Race) {}
     abstract fun move(car: Car, controls: Controls)
 
+    open fun onDraw(canvas: Canvas) {}
+
     // TODO onX call for other driver
 
     // TODO a driver can "watch" one other driver per "move"

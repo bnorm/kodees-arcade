@@ -4,9 +4,11 @@ import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.rally.Track
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 interface Game {
     suspend fun start(onEvent: suspend (Event) -> Unit)
+    fun setDebug(driver: String, debug: Boolean) {}
 
     @Serializable
     sealed interface Event {
@@ -24,7 +26,14 @@ interface Game {
                 val x: Double,
                 val y: Double,
                 val heading: Angle,
-            )
+                @Transient val debug: Debug? = null,
+            ) {
+                class Debug(
+                    val stdout: List<String>,
+                    val canvasRequests: List<DrawRequest>,
+                )
+
+            }
         }
 
         @Serializable

@@ -23,8 +23,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 
 @SingleIn(AppScope::class)
@@ -53,6 +51,10 @@ class GameViewModel(
         take(GameViewEvent.Ups(ups))
     }
 
+    fun setDebug(driver: String, debug: Boolean) {
+        take(GameViewEvent.SetDebug(driver, debug))
+    }
+
     @Composable
     override fun models(events: Flow<GameViewEvent>): GameModel {
         return GamePresenter(initialTrack, events)
@@ -65,6 +67,8 @@ sealed class GameViewEvent {
 
     data object TogglePlayPause : GameViewEvent()
     data class Ups(val ups: Float) : GameViewEvent()
+
+    data class SetDebug(val driver: String, val debug: Boolean) : GameViewEvent()
 }
 
 data class GameModel(
@@ -116,6 +120,10 @@ fun GamePresenter(
 
                 is GameViewEvent.Ups -> {
                     desiredUps = it.ups
+                }
+
+                is GameViewEvent.SetDebug -> {
+                    game?.setDebug(it.driver, it.debug)
                 }
             }
         }

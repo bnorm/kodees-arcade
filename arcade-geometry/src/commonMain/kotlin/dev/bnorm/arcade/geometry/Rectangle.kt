@@ -1,5 +1,8 @@
 package dev.bnorm.arcade.geometry
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Rectangle(
     val center: Point,
     val width: Double,

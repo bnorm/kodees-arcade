@@ -3,7 +3,6 @@ package dev.bnorm.arcade.rally.race
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.Race as DriverRaceModel
 import dev.bnorm.arcade.rally.Car
 import dev.bnorm.arcade.rally.Track
 import dev.bnorm.arcade.rally.engine.DriverControlState
@@ -14,9 +13,8 @@ import dev.bnorm.arcade.rally.engine.wasm.createWasmDriver
 import dev.bnorm.arcade.rally.engine.wasm.withEngine
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.coroutineScope
+import dev.bnorm.arcade.rally.Race as DriverRaceModel
 
 class WasmGame(
     private val track: Track,
@@ -25,6 +23,11 @@ class WasmGame(
 ) : Game {
     init {
         require(drivers.size <= track.positions.size)
+    }
+
+    private val debug = mutableSetOf<String>()
+    override fun setDebug(driver: String, debug: Boolean) {
+        if (debug) this.debug += driver else this.debug -= driver
     }
 
     override suspend fun start(onEvent: suspend (Game.Event) -> Unit) {
@@ -50,7 +53,13 @@ class WasmGame(
             }
         )
 
-        onEvent(gameState.toUpdate())
+        onEvent(
+            Game.Event.Update(
+                drivers = gameState.drivers.map {
+                    it.toDriver()
+                },
+            )
+        )
 
         withEngine { engine ->
             val drivers = coroutineScope {
@@ -85,7 +94,25 @@ class WasmGame(
 
                     // Update game state.
                     update(gameState, track)
-                    onEvent(gameState.toUpdate())
+
+                    onEvent(
+                        Game.Event.Update(
+                            drivers = gameState.drivers.mapIndexed { index, state ->
+                                val debug = if (state.name !in debug) {
+                                    null
+                                } else {
+                                    val driver = drivers[index]
+                                    driver.onDraw()
+                                    Game.Event.Update.Driver.Debug(
+                                        stdout = emptyList(), // TODO gather stdout as well
+                                        canvasRequests = driver.canvasRequestBuffer.toList(),
+                                    )
+                                }
+
+                                state.toDriver(debug)
+                            },
+                        )
+                    )
                 }
             } finally {
                 for (driver in drivers) {
@@ -103,16 +130,12 @@ class WasmGame(
     }
 }
 
-private fun RallyGameState.toUpdate(): Game.Event {
-    fun RallyCarState.toDriver(): Game.Event.Update.Driver {
-        return Game.Event.Update.Driver(
-            x = x,
-            y = y,
-            heading = heading
-        )
-    }
-
-    return Game.Event.Update(
-        drivers = drivers.map { it.toDriver() },
+fun RallyCarState.toDriver(debug: Game.Event.Update.Driver.Debug? = null): Game.Event.Update.Driver {
+    return Game.Event.Update.Driver(
+        x = x,
+        y = y,
+        heading = heading,
+        debug = debug,
     )
 }
+
