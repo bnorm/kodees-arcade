@@ -18,15 +18,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import androidx.compose.ui.window.Dialog
+import dev.bnorm.arcade.NestedCache
+import dev.bnorm.arcade.SerializedStringCache
+import dev.bnorm.arcade.StorageCache
 import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.game.GameViewModel
+import dev.bnorm.arcade.display.track.TrackViewEvent
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.ReplayGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import kotlinx.browser.localStorage
 import kotlinx.browser.window
+import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
@@ -42,7 +48,18 @@ fun main() {
             }
         }
 
-        val trackViewModel = remember(scope) { TrackViewModel(scope) }
+        val cache = remember { StorageCache(localStorage) }
+        val trackViewModel = remember(scope) {
+            val cache = SerializedStringCache(
+                delegate = NestedCache(cache, part = "track"),
+                serializer = Track.serializer(),
+                format = Json,
+            )
+            if (cache.keys.isEmpty()) {
+                cache["initial"] = TrackViewModel.INITIAL_TRACK
+            }
+            TrackViewModel(scope, cache)
+        }
         val gameViewModel = remember(scope) { GameViewModel(TrackViewModel.INITIAL_TRACK, scope) }
         val gameScreen = remember(gameViewModel) { GameScreen(gameViewModel) }
 
