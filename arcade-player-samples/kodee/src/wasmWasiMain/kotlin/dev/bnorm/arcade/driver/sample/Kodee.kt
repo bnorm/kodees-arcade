@@ -142,7 +142,7 @@ object Kodee : Driver() {
             val start = targets[it]
             val end = targets[(it + 1) % targets.size]
             canvas.drawSegment(
-                color = Color(red = 0x00u, green = 0x00u, blue = 0xFFu),
+                color = Color.Blue,
                 segment = Segment(start, end),
                 stroke = Stroke(width = 2f)
             )
@@ -155,12 +155,12 @@ object Kodee : Driver() {
         ).toPoint()
 
         canvas.drawCircle(
-            color = Color(red = 0xFFu, green = 0x00u, blue = 0x00u),
+            color = Color.Red,
             circle = Circle(car.location + normalVector, radius = radius),
             style = Stroke(width = 2f),
         )
         canvas.drawCircle(
-            color = Color(red = 0xFFu, green = 0x00u, blue = 0x00u),
+            color = Color.Red,
             circle = Circle(car.location - normalVector, radius = radius),
             style = Stroke(width = 2f),
         )
