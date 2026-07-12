@@ -20,4 +20,11 @@ class Wasmtime4jMemory(
         delegate.writeInt32(offset.toLong(), bytes.size)
         delegate.writeBytes(offset + 4, bytes, 0, bytes.size)
     }
+
+    fun <T> readProto(offset: Int, serializer: KSerializer<T>): T {
+        val byteCount = delegate.readInt32(offset.toLong())
+        val bytes = ByteArray(byteCount)
+        delegate.readBytes(offset + 4, bytes, 0, byteCount)
+        return ProtoBuf.decodeFromByteArray(serializer, bytes)
+    }
 }

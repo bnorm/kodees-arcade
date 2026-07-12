@@ -2,15 +2,16 @@ package dev.bnorm.arcade.display.track
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
+import dev.bnorm.arcade.Cache
 import dev.bnorm.arcade.display.ViewModel
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Position
 import dev.bnorm.arcade.geometry.Segment
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Track
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.Flow
 @Inject
 class TrackViewModel(
     @ViewModelCoroutineScope scope: CoroutineScope,
+    private val cache: Cache<Track>,
 ) : ViewModel<TrackViewEvent, TrackModel>(scope) {
     companion object {
         val INITIAL_TRACK = Track(
@@ -45,7 +47,7 @@ class TrackViewModel(
 
     @Composable
     override fun models(events: Flow<TrackViewEvent>): TrackModel {
-        return TrackPresenter(events)
+        return TrackPresenter(events, cache)
     }
 }
 
@@ -60,10 +62,11 @@ data class TrackModel(
 @Composable
 fun TrackPresenter(
     events: Flow<TrackViewEvent>,
+    cache: Cache<Track>,
 ): TrackModel {
-    val tracks = remember {
-        mutableStateListOf<Track>().apply {
-            add(TrackViewModel.INITIAL_TRACK)
+    val keys = remember(cache) {
+        mutableStateSetOf<String>().apply {
+            addAll(cache.keys)
         }
     }
 
@@ -71,13 +74,15 @@ fun TrackPresenter(
         events.collect { event ->
             when (event) {
                 is TrackViewEvent.New -> {
-                    tracks.add(event.track)
+                    val key = event.track.hashCode().toString()
+                    cache[key] = event.track
+                    keys.add(key)
                 }
             }
         }
     }
 
     return TrackModel(
-        tracks = tracks.toList(), // Make sure to take a snapshot
+        tracks = keys.mapNotNull { cache[it] },
     )
 }

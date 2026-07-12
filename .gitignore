@@ -2,18 +2,11 @@
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
+!**/src/**/build/
 
 ### IntelliJ IDEA ###
 .idea/*
 !.idea/icon.png
-*.iws
-*.iml
-*.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
 http-client.private.env.json
 
 ### Kotlin ###
@@ -23,4 +16,7 @@ http-client.private.env.json
 .DS_Store
 
 ### Arcade ###
-/.blobs
+# Server persistent file root.
+/.blobs/
+# Application persistent file root.
+.arcade/

@@ -11,13 +11,14 @@ import dev.bnorm.arcade.display.ViewModel
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.Track
+import dev.bnorm.arcade.driver.Track
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -50,6 +51,10 @@ class GameViewModel(
         take(GameViewEvent.Ups(ups))
     }
 
+    fun setDebug(driver: String, debug: Boolean) {
+        take(GameViewEvent.SetDebug(driver, debug))
+    }
+
     @Composable
     override fun models(events: Flow<GameViewEvent>): GameModel {
         return GamePresenter(initialTrack, events)
@@ -62,6 +67,8 @@ sealed class GameViewEvent {
 
     data object TogglePlayPause : GameViewEvent()
     data class Ups(val ups: Float) : GameViewEvent()
+
+    data class SetDebug(val driver: String, val debug: Boolean) : GameViewEvent()
 }
 
 data class GameModel(
@@ -79,7 +86,7 @@ fun GamePresenter(
     initialTrack: Track,
     events: Flow<GameViewEvent>,
 ): GameModel {
-    var running by remember { mutableStateOf(true) }
+    var running by remember { mutableStateOf(CompletableDeferred(Unit)) }
     var desiredUps by remember { mutableFloatStateOf(60f) }
 
     var game by remember { mutableStateOf<Game?>(null) }
@@ -101,11 +108,22 @@ fun GamePresenter(
                 }
 
                 GameViewEvent.TogglePlayPause -> {
-                    running = !running
+                    // TODO this is so ugly...
+                    if (running.isCompleted) {
+                        // Pause
+                        running = CompletableDeferred()
+                    } else {
+                        // Play
+                        running.complete(Unit)
+                    }
                 }
 
                 is GameViewEvent.Ups -> {
                     desiredUps = it.ups
+                }
+
+                is GameViewEvent.SetDebug -> {
+                    game?.setDebug(it.driver, it.debug)
                 }
             }
         }
@@ -113,29 +131,19 @@ fun GamePresenter(
 
     LaunchedEffect(game) {
         withContext(Dispatchers.Default) {
-            game?.start()
-        }
-    }
-
-    LaunchedEffect(game, running, desiredUps) {
-        if (!running) return@LaunchedEffect
-        val gameEvents = game?.events ?: return@LaunchedEffect
-
-        withContext(Dispatchers.Default) {
-            val frameDelay = (1.0 / desiredUps).seconds
             val startTime = TimeSource.Monotonic.markNow()
             var targetTime = 0.seconds
 
-            for (event in gameEvents) {
+            game?.start { event ->
+                running.join()
                 val currentTime = startTime.elapsedNow()
                 val delay = targetTime - currentTime
                 if (delay > Duration.ZERO) delay(delay)
-                targetTime = maxOf(targetTime + frameDelay, currentTime)
+                targetTime = maxOf(targetTime + (1.0 / desiredUps).seconds, currentTime)
 
                 when (event) {
                     is Game.Event.Complete -> {
                         complete = event
-                        break
                     }
 
                     is Game.Event.Start -> {
@@ -152,7 +160,7 @@ fun GamePresenter(
 
     return GameModel(
         active = game != null,
-        running = running,
+        running = running.isCompleted,
         desiredUps = desiredUps,
         actualUps = desiredUps,
         start = start,

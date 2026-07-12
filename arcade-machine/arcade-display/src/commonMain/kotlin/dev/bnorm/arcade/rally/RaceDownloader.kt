@@ -35,13 +35,18 @@ private data class RaceDisplay(
 fun RaceDownloader(
     client: ArcadeClient,
     onStart: (Game) -> Unit,
+    onError: (Throwable) -> Unit,
 ) {
     val races = remember { mutableStateListOf<RaceDisplay>() }
 
     LaunchedEffect(client) {
-        val foundRaces = client.getRaces()
-        races.clear()
-        races.addAll(foundRaces.map { race -> RaceDisplay(race.id, race.positions.map { it.name }) })
+        try {
+            val foundRaces = client.getRaces()
+            races.clear()
+            races.addAll(foundRaces.map { race -> RaceDisplay(race.id, race.positions.map { it.name }) })
+        } catch (t: Throwable) {
+            onError(t)
+        }
     }
 
     var selectedRace by remember { mutableStateOf<RaceId?>(null) }

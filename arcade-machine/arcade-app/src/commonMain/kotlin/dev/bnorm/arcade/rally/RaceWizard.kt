@@ -45,6 +45,7 @@ import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.rally.race.WasmGame
 import dev.bnorm.arcade.rally.race.WasmDriver
 import dev.bnorm.arcade.display.track.TrackImage
+import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.Version
@@ -115,14 +116,17 @@ fun RaceWizard(
     val serverDrivers = remember { mutableStateListOf<DriverDisplay>() }
     if (client != null && showDownloader) {
         LaunchedEffect(Unit) {
-            val foundDrivers = client.getDrivers()
-            val foundVersions = foundDrivers
-                .flatMap { driver ->
-                    client.getDriverVersions(driver.id)
-                        .map { DriverDisplay(driver.id, it.version, driver.name) }
-                }
-            serverDrivers.clear()
-            serverDrivers.addAll(foundVersions)
+            try {
+                val foundDrivers = client.getDrivers()
+                val foundVersions = foundDrivers
+                    .flatMap { driver ->
+                        client.getDriverVersions(driver.id)
+                            .map { DriverDisplay(driver.id, it.version, driver.name) }
+                    }
+                serverDrivers.clear()
+                serverDrivers.addAll(foundVersions)
+            } catch (_: Throwable) {
+            }
         }
 
         Dialog(onDismissRequest = { showDownloader = false }) {

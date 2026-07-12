@@ -50,6 +50,8 @@ kotlin {
             implementation(libs.compose.resources)
             implementation(libs.filekit.dialogs.compose)
             implementation(libs.molecule.runtime)
+
+            implementation(libs.kotlinx.serialization.json)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

@@ -18,6 +18,9 @@ import com.jakewharton.mosaic.ui.Column
 import com.jakewharton.mosaic.ui.Row
 import com.jakewharton.mosaic.ui.Spacer
 import com.jakewharton.mosaic.ui.Text
+import dev.bnorm.arcade.driver.Track
+import dev.bnorm.arcade.rally.race.WasmDriver
+import dev.bnorm.arcade.rally.race.WasmGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceId
@@ -34,11 +37,9 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consume
+import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -74,7 +75,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
                     client = client,
                     id = event.id,
                     nonce = event.nonce,
-                    race = LocalGame(client, event.id),
+                    race = WorkerGame(client, event),
                     state = state,
                 ) ?: continue
             } finally {
@@ -207,14 +208,12 @@ suspend fun process(
     state: RaceState,
 ): RaceResponse? {
     return coroutineScope {
-        launch { race.start() }
 
         var targetTime = Instant.DISTANT_PAST
         val updateFrequency = 200.milliseconds
 
-        val events = race.events
-            .consumeAsFlow()
-            .onEach {
+        val events = produce {
+            race.start {
                 when (it) {
                     is RallyRace.Event.Start -> {
                         val now = Clock.System.now()
@@ -239,9 +238,10 @@ suspend fun process(
                         state.ups = state.time / (elapsed.inWholeNanoseconds / 1_000_000_000.0)
                     }
                 }
+
+                send(ProtoBuf.encodeToByteArray(RallyRace.Event.serializer(), it))
             }
-            .map { ProtoBuf.encodeToByteArray(RallyRace.Event.serializer(), it) }
-            .produceIn(this)
+        }
 
         try {
             client.upload(id, nonce, events)
@@ -250,4 +250,25 @@ suspend fun process(
             null
         }
     }
+}
+
+@Suppress("FunctionName") // Factory function.
+suspend fun WorkerGame(client: ArcadeClient, event: RaceProcessEvent): WasmGame {
+    val race = client.getRace(event.id) // TODO error
+    val track = client.getTrack(race.trackId) // TODO error
+    return WasmGame(
+        track = Track(
+            width = track.width,
+            height = track.height,
+            checkpoints = track.checkpoints,
+            positions = track.positions,
+        ),
+        drivers = buildList {
+            for (driver in race.positions) {
+                val blob = client.downloadDriverVersion(driver.driverId, driver.version) // TODO error
+                add(WasmDriver(driver.name, blob))
+            }
+        },
+        laps = race.laps
+    )
 }

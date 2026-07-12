@@ -45,7 +45,10 @@ class RaceDownloadItem(
                     onStart = {
                         gameViewModel.new(it)
                         visible = false
-                    }
+                    },
+                    onError = {
+                        visible = false
+                    },
                 )
             }
         }
