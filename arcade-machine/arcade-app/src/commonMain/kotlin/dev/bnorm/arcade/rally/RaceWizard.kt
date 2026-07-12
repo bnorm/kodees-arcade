@@ -116,14 +116,17 @@ fun RaceWizard(
     val serverDrivers = remember { mutableStateListOf<DriverDisplay>() }
     if (client != null && showDownloader) {
         LaunchedEffect(Unit) {
-            val foundDrivers = client.getDrivers()
-            val foundVersions = foundDrivers
-                .flatMap { driver ->
-                    client.getDriverVersions(driver.id)
-                        .map { DriverDisplay(driver.id, it.version, driver.name) }
-                }
-            serverDrivers.clear()
-            serverDrivers.addAll(foundVersions)
+            try {
+                val foundDrivers = client.getDrivers()
+                val foundVersions = foundDrivers
+                    .flatMap { driver ->
+                        client.getDriverVersions(driver.id)
+                            .map { DriverDisplay(driver.id, it.version, driver.name) }
+                    }
+                serverDrivers.clear()
+                serverDrivers.addAll(foundVersions)
+            } catch (_: Throwable) {
+            }
         }
 
         Dialog(onDismissRequest = { showDownloader = false }) {
