@@ -17,6 +17,7 @@ import dev.bnorm.arcade.driver.Race
 import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
 import kotlin.jvm.optionals.getOrNull
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlinx.io.Buffer
 import kotlinx.io.DelicateIoApi
 import kotlinx.io.RawSource
@@ -67,7 +68,7 @@ private class WasmtimeWasmDriver private constructor() : WasmDriver {
                     "wasi_snapshot_preview1", "random_get",
                     FunctionType(arrayOf(I32, I32), arrayOf(I32)),
                     singleValue { (bufLen, bufPtr) ->
-                        i32(randomGet(guest.memory, bufLen.asInt(), bufPtr.asInt()))
+                        i32(randomGet(guest.memory, driver.random, bufLen.asInt(), bufPtr.asInt()))
                     },
                 )
                 defineHostFunction(
@@ -120,6 +121,8 @@ private class WasmtimeWasmDriver private constructor() : WasmDriver {
 
     override val stderr: RawSource
         field = Buffer()
+
+    private val random = Random(Clock.System.now().toEpochMilliseconds())
 
     private val drawRequests = mutableListOf<DrawRequest>()
 
@@ -228,10 +231,11 @@ private fun fdWrite(
 
 private fun randomGet(
     memory: WasmMemory,
+    random: Random,
     bufLen: Int,
     bufPtr: Int
 ): Int {
-    val randomBytes = Random.nextBytes(bufLen)
+    val randomBytes = random.nextBytes(bufLen)
     memory.writeBytes(bufPtr, randomBytes, 0, randomBytes.size)
     return 0
 }

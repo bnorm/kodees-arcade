@@ -18,6 +18,7 @@ import js.typedarrays.Uint8Array
 import js.typedarrays.toByteArray
 import js.typedarrays.toUint8Array
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import kotlinx.io.Sink
@@ -68,7 +69,7 @@ private class BrowserWasmDriver : WasmDriver {
                     ).toJsInt()
                 },
                 randomGet = { bufPtr, bufLen ->
-                    randomGet(guest.memory, bufLen.toInt(), bufPtr.toInt()).toJsInt()
+                    randomGet(guest.memory, driver.random, bufLen.toInt(), bufPtr.toInt()).toJsInt()
                 }
             )
 
@@ -93,6 +94,8 @@ private class BrowserWasmDriver : WasmDriver {
     override val stderr: RawSource
         field = Buffer()
 
+    private val random = Random(Clock.System.now().toEpochMilliseconds())
+
     private val drawRequests = mutableListOf<DrawRequest>()
 
     private val move by lazy(LazyThreadSafetyMode.NONE) {
@@ -106,7 +109,7 @@ private class BrowserWasmDriver : WasmDriver {
     }
 
     private val onDraw by lazy(LazyThreadSafetyMode.NONE) {
-        val function = guest.instance.exports["onDraw"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
+        val function = guest.instance.exports["onDraw"]?.unsafeCast<JsFunction<Tuple, JsAny?>>()
         if (function == null) null else function::invoke
     }
 
@@ -236,11 +239,12 @@ private fun fdWrite(
 
 private fun randomGet(
     memory: Memory<*>,
+    random: Random,
     bufLen: Int,
     bufPtr: Int
 ): Int {
     val memory = Uint8Array(memory.buffer)
-    val randomBytes = Random.nextBytes(bufLen).toUint8Array()
+    val randomBytes = random.nextBytes(bufLen).toUint8Array()
     memory.set(randomBytes, bufPtr)
     return 0
 }
