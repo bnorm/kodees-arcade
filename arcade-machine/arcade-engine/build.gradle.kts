@@ -26,7 +26,7 @@ kotlin {
             implementation(libs.filekit.core)
         }
         jvmMain.dependencies {
-            implementation(libs.wasmtime4j.jni)
+            implementation(libs.wasmtime4j.panama)
         }
         wasmJsMain.dependencies {
             implementation(libs.kotlinx.browser)
