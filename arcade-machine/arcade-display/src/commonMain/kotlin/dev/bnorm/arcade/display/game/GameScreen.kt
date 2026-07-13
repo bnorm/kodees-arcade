@@ -1,8 +1,12 @@
 package dev.bnorm.arcade.display.game
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.HorizontalScrollbar
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -13,7 +17,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -38,6 +45,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -132,6 +140,7 @@ fun GameScreen(
                                     )
                                     Text("Debug", style = MaterialTheme.typography.bodyLarge)
                                 }
+                                TerminalOutput(model.driverOutput[name].orEmpty())
                             }
                         }
                     }
@@ -177,6 +186,40 @@ fun GameScreen(
                 steps = 50,
             )
         }
+    }
+}
+
+@Composable
+private fun TerminalOutput(
+    output: String,
+    modifier: Modifier = Modifier,
+) {
+    val vertical = rememberScrollState()
+    val horizontal = rememberScrollState()
+
+    // TODO start by being pinned to the bottom
+    //  - and stay at the bottom if pinned
+
+    Box(modifier.fillMaxWidth().height(200.dp)) {
+        Column(
+            Modifier
+                .verticalScroll(vertical)
+                .horizontalScroll(horizontal)
+        ) {
+            Text(
+                output,
+                style = MaterialTheme.typography.bodySmall.let { it.copy(lineHeight = it.fontSize) },
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(vertical),
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
+        )
+        HorizontalScrollbar(
+            adapter = rememberScrollbarAdapter(horizontal),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+        )
     }
 }
 

@@ -37,7 +37,7 @@ fun update(gameState: RallyGameState, track: Track) {
     //  - speed boost should slowly decay, slow enough to allow following car to overtake
     //     - boosted speed should increase understeer!
 
-    val drivers = gameState.drivers
+    val drivers = gameState.driverStates
     for (state in drivers) {
         // Skip updating drivers which are finished.
         if (state.lap >= gameState.laps && state.checkpoint > 0) {
@@ -47,9 +47,8 @@ fun update(gameState: RallyGameState, track: Track) {
             continue
         }
 
-        val controls = state.controls
-        val steering = controls.steering
-        val throttle = controls.throttle
+        val steering = state.driver.steering
+        val throttle = state.driver.throttle
 
         val oldHeading = state.heading
         val oldSpeed = state.speed

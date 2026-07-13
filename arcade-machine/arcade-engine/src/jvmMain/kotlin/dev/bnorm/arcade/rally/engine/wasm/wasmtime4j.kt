@@ -1,16 +1,11 @@
 package dev.bnorm.arcade.rally.engine.wasm
 
-import ai.tegmentum.wasmtime4j.Engine
 import ai.tegmentum.wasmtime4j.RuntimeType
 import ai.tegmentum.wasmtime4j.config.EngineConfig
 import ai.tegmentum.wasmtime4j.factory.WasmRuntimeFactory
 
-actual typealias WasmEngine = Engine
-
-@PublishedApi
 internal val runtime = WasmRuntimeFactory.create(RuntimeType.PANAMA)
 
-@PublishedApi
 internal val engine = runtime.createEngine(
     EngineConfig.forSize()
         .wasmFunctionReferences(true)
@@ -18,7 +13,3 @@ internal val engine = runtime.createEngine(
         .wasmExceptions(true)
         .wasmComponentModel(true)
 )
-
-actual inline fun withEngine(block: (WasmEngine) -> Unit) {
-    block(engine)
-}

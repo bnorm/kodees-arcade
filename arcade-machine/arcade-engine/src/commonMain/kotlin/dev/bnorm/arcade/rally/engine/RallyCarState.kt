@@ -2,10 +2,11 @@ package dev.bnorm.arcade.rally.engine
 
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.atan2
+import dev.bnorm.arcade.rally.engine.wasm.WasmDriver
 
 class RallyCarState(
     val name: String,
-    val controls: DriverControlState,
+    val driver: WasmDriver,
     var x: Double,
     var y: Double,
     var heading: Angle,

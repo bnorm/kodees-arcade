@@ -4,14 +4,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.bnorm.arcade.display.ViewModel
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.display.track.TrackViewModel
-import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.driver.Track
+import dev.bnorm.arcade.machine.Game
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -71,6 +72,8 @@ sealed class GameViewEvent {
     data class SetDebug(val driver: String, val debug: Boolean) : GameViewEvent()
 }
 
+private const val MAX_STDOUT_LENGTH = 100_000
+
 data class GameModel(
     val active: Boolean,
     val running: Boolean,
@@ -79,6 +82,7 @@ data class GameModel(
     val start: Game.Event.Start,
     val update: Game.Event.Update?,
     val complete: Game.Event.Complete?,
+    val driverOutput: Map<String, String>
 )
 
 @Composable
@@ -95,6 +99,8 @@ fun GamePresenter(
     }
     var update by remember(game) { mutableStateOf<Game.Event.Update?>(null) }
     var complete by remember(game) { mutableStateOf<Game.Event.Complete?>(null) }
+
+    val driverOutput = remember { mutableStateMapOf<String, String>() }
 
     LaunchedEffect(events) {
         events.collect {
@@ -148,10 +154,26 @@ fun GamePresenter(
 
                     is Game.Event.Start -> {
                         start = event
+                        driverOutput.clear()
                     }
 
                     is Game.Event.Update -> {
                         update = event
+                        for ((index, driver) in event.drivers.withIndex()) {
+                            val stdout = driver.debug?.stdout
+                            val stderr = driver.debug?.stderr
+                            if (stdout == null && stderr == null) continue
+
+                            val name = start.drivers[index]
+                            driverOutput[name] = buildString {
+                                append(driverOutput.getOrElse(name) { "" })
+                                if (stdout != null) append(stdout)
+                                if (stderr != null) append(stderr)
+                                if (length > MAX_STDOUT_LENGTH) {
+                                    deleteRange(0, length - MAX_STDOUT_LENGTH)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -166,5 +188,6 @@ fun GamePresenter(
         start = start,
         update = update,
         complete = complete,
+        driverOutput = driverOutput,
     )
 }
