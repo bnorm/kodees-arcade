@@ -2,14 +2,15 @@ package dev.bnorm.arcade.rally.engine.wasm
 
 import ai.tegmentum.wasmtime4j.Engine
 import ai.tegmentum.wasmtime4j.Linker
+import ai.tegmentum.wasmtime4j.WasmMemory
 import ai.tegmentum.wasmtime4j.WasmValue
 import ai.tegmentum.wasmtime4j.WasmValueType
 import ai.tegmentum.wasmtime4j.func.HostFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
-import ai.tegmentum.wasmtime4j.wasi.WasiContext
 import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
 import dev.bnorm.arcade.rally.engine.DriverControlState
 import kotlin.jvm.optionals.getOrNull
+import kotlin.random.Random
 
 actual suspend fun WasmEngine.createWasmDriver(
     controlState: DriverControlState,
@@ -17,20 +18,20 @@ actual suspend fun WasmEngine.createWasmDriver(
     name: String,
 ): WasmDriver {
     val drawRequests = mutableListOf<DrawRequest>()
+    lateinit var delegate: WasmMemory
 
     val module = compileModule(driver)
     val store = createStore()
 
-    lateinit var memory: Wasmtime4jMemory
-    val linker = createLinker(this, { memory }, controlState, drawRequests)
+    val linker = createLinker(name, this, { delegate }, controlState, drawRequests)
     val instance = linker.instantiate(store, module)
 
-    memory = Wasmtime4jMemory(instance.defaultMemory.orElseThrow())
+    delegate = instance.defaultMemory.orElseThrow()
     val moveFunction = instance.getFunction("move").orElseThrow()
     val onRaceFunction = instance.getFunction("onRace").orElseThrow()
     val onDrawFunction = instance.getFunction("onDraw").getOrNull()
     return WasmDriver(
-        memory = memory,
+        memory = Wasmtime4jMemory(delegate),
         moveFunction = { moveFunction.callVoid() },
         onRaceFunction = { onRaceFunction.callVoid() },
         onDrawFunction = onDrawFunction?.let { { onDrawFunction.callVoid() } },
@@ -45,16 +46,63 @@ actual suspend fun WasmEngine.createWasmDriver(
 }
 
 private fun createLinker(
+    name: String,
     engine: Engine,
-    memory: () -> Wasmtime4jMemory,
+    memory: () -> WasmMemory,
     controlState: DriverControlState,
     drawBuffer: MutableList<DrawRequest>,
 ): Linker<*> {
     val runtime = engine.runtime
-    // TODO need to redirect IO into buffer of some kind
-    val context = runtime.createWasiContext().inheritStdio()
-    val linker = runtime.createLinker<WasiContext?>(engine)
-    runtime.addWasiToLinker(linker, context)
+    val linker = runtime.createLinker<Nothing>(engine)
+
+    linker.defineHostFunction(
+        "wasi_snapshot_preview1",
+        "fd_write",
+        FunctionType(
+            arrayOf(WasmValueType.I32, WasmValueType.I32, WasmValueType.I32, WasmValueType.I32),
+            arrayOf(WasmValueType.I32)
+        ),
+        HostFunction.singleValue { (iovs_len, iovs, fd, nwritten) ->
+            val memory = memory()
+            var bytesWritten = 0
+
+            val iovs = iovs.asLong()
+
+            for (i in 0..<iovs_len.asInt()) {
+                val iov_base = memory.readInt32(iovs + i * 8)
+                val iov_len = memory.readInt32(iovs + i * 8 + 4)
+
+                val buffer = ByteArray(iov_len)
+                memory.readBytes(iov_base, buffer, 0, buffer.size)
+
+                if (fd.asInt() == 1) {
+                    println("[$name] " + buffer.decodeToString())
+                } else if (fd.asInt() == 2) {
+                    System.err.println("[$name] " + buffer.decodeToString())
+                }
+
+                bytesWritten += iov_len
+            }
+
+            memory.writeInt32(nwritten.asLong(), bytesWritten)
+            WasmValue.i32(0)
+        },
+    )
+
+    linker.defineHostFunction(
+        "wasi_snapshot_preview1",
+        "random_get",
+        FunctionType(
+            arrayOf(WasmValueType.I32, WasmValueType.I32),
+            arrayOf(WasmValueType.I32)
+        ),
+        HostFunction.singleValue { (bufLen, bufPtr) ->
+            val memory = memory()
+            val randomBytes = Random.nextBytes(bufLen.asInt())
+            memory.writeBytes(bufPtr.asInt(), randomBytes, 0, randomBytes.size)
+            WasmValue.i32(0)
+        },
+    )
 
     linker.defineHostFunction(
         "rally_api",
@@ -89,7 +137,7 @@ private fun createLinker(
         "draw",
         FunctionType(arrayOf(WasmValueType.I32), arrayOf()),
         HostFunction.voidFunction { (offset) ->
-            val request = memory().readProto(offset.asInt(), DrawRequest.serializer())
+            val request = Wasmtime4jMemory(memory()).readProto(offset.asInt(), DrawRequest.serializer())
             drawBuffer.add(request)
         },
     )
