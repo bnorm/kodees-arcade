@@ -106,7 +106,8 @@ fun getTurn(speed: Double, steering: Double, traction: Double = 1.0): Angle {
 
     val turnSpeed = abs(speed).coerceAtLeast(ACCELERATION) // Allow a little turn in place...
     val turn = Angle.ofRadians(turnSpeed / actualRadius)
-     return sign(steering) * sign(speed) * turn
+    val speedSign = if (sign(speed) == -1.0) -1.0 else 1.0
+    return sign(steering) * speedSign * turn
 }
 
 fun simulateHeading(heading: Angle, speed: Double, steering: Double, traction: Double): Angle {
