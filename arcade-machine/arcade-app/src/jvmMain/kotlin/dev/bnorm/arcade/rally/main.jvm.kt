@@ -23,7 +23,7 @@ fun main() {
 
         Window(
             title = "Rally",
-            state = rememberWindowState(width = 1000.dp, height = 1000.dp),
+            state = rememberWindowState(width = 1600.dp, height = 1000.dp),
             onCloseRequest = ::exitApplication,
         ) {
             val windowGraph = remember(appGraph) {

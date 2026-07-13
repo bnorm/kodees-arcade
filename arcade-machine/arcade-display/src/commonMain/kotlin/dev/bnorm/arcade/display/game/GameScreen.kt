@@ -1,14 +1,15 @@
 package dev.bnorm.arcade.display.game
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.HorizontalScrollbar
+import androidx.compose.foundation.LocalScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -28,12 +29,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateSet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -92,10 +96,7 @@ fun GameScreen(
         }
     }
 
-    Column(
-        modifier
-            .height(IntrinsicSize.Min)
-    ) {
+    Column(modifier) {
         Row(
             Modifier
                 .weight(1f)
@@ -110,87 +111,143 @@ fun GameScreen(
 
             Spacer(Modifier.fillMaxHeight().width(2.dp).background(Color.Black))
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            Drivers(
+                model,
+                gameViewModel,
                 modifier = Modifier
-                    .width(200.dp)
-                    .background(Color.LightGray)
-                    .fillMaxHeight()
-                    .padding(8.dp)
-            ) {
-                for (name in model.start.drivers) {
-                    key(name) {
-                        var debug by remember { mutableStateOf(false) }
-
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            shadowElevation = 8.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text(name, style = MaterialTheme.typography.titleMedium)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(
-                                        checked = debug,
-                                        onCheckedChange = {
-                                            debug = !debug
-                                            gameViewModel.setDebug(name, debug)
-                                        }
-                                    )
-                                    Text("Debug", style = MaterialTheme.typography.bodyLarge)
-                                }
-                                TerminalOutput(model.driverOutput[name].orEmpty())
-                            }
-                        }
-                    }
-                }
-            }
+            )
         }
 
         Spacer(Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier
-                .background(Color.LightGray)
-                .padding(16.dp)
+        GameControls(model, gameViewModel)
+    }
+}
+
+@Composable
+private fun GameControls(
+    model: GameModel,
+    gameViewModel: GameViewModel
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .padding(16.dp)
+    ) {
+        Button(
+            enabled = model.active,
+            onClick = {
+                gameViewModel.stop()
+            }
         ) {
-            Button(
-                enabled = model.active,
-                onClick = {
-                    gameViewModel.stop()
+            Text("Stop!")
+        }
+
+        Button(
+            enabled = model.active,
+            onClick = { gameViewModel.togglePlayPause() }
+        ) {
+            Text(if (model.running) "Pause" else "Play")
+        }
+
+        Text(
+            text = "FPS: ${model.desiredUps.toInt()}",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.width(96.dp)
+        )
+
+        LogarithmicSlider(
+            initialValue = model.desiredUps,
+            maxValue = 10000f,
+            onValueChange = { gameViewModel.adjustUps(it) },
+            steps = 50,
+        )
+    }
+}
+
+@Composable
+private fun Drivers(
+    model: GameModel,
+    gameViewModel: GameViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val vertical = rememberScrollState()
+    val debug = remember { mutableStateSetOf<String>() }
+
+    Box(
+        modifier
+            .animateContentSize()
+            .fillMaxHeight()
+            .width(400.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxHeight()
+                .verticalScroll(vertical)
+                .padding(8.dp)
+                .padding(end = 8.dp)
+        ) {
+            for (name in model.start.drivers) {
+                key(name) {
+                    DriverInfo(name, debug, gameViewModel, model)
                 }
-            ) {
-                Text("Stop!")
             }
+        }
 
-            Button(
-                enabled = model.active,
-                onClick = { gameViewModel.togglePlayPause() }
-            ) {
-                Text(if (model.running) "Pause" else "Play")
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(vertical),
+            modifier = Modifier.align(Alignment.CenterEnd)
+        )
+    }
+}
+
+@Composable
+private fun DriverInfo(
+    name: String,
+    debug: SnapshotStateSet<String>,
+    gameViewModel: GameViewModel,
+    model: GameModel
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        shadowElevation = 8.dp,
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            Text(name, style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val checked = name in debug
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = {
+                        when (checked) {
+                            true -> {
+                                debug.remove(name)
+                                gameViewModel.setDebug(name, false)
+                            }
+
+                            false -> {
+                                debug.add(name)
+                                gameViewModel.setDebug(name, true)
+                            }
+                        }
+                    }
+                )
+                Text("Debug", style = MaterialTheme.typography.bodyLarge)
             }
-
-            Text(
-                text = "FPS: ${model.desiredUps.toInt()}",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.width(96.dp)
-            )
-
-            LogarithmicSlider(
-                initialValue = model.desiredUps,
-                maxValue = 10000f,
-                onValueChange = { gameViewModel.adjustUps(it) },
-                steps = 50,
+            DriverTerminal(
+                output = model.driverOutput[name].orEmpty(),
+                modifier = Modifier
+                    .height(200.dp)
             )
         }
     }
 }
 
 @Composable
-private fun TerminalOutput(
+private fun DriverTerminal(
     output: String,
     modifier: Modifier = Modifier,
 ) {
@@ -200,26 +257,54 @@ private fun TerminalOutput(
     // TODO start by being pinned to the bottom
     //  - and stay at the bottom if pinned
 
-    Box(modifier.fillMaxWidth().height(200.dp)) {
-        Column(
+    Surface(
+        color = Color.Black,
+        contentColor = Color.White,
+        shape = RoundedCornerShape(8.dp),
+        modifier = modifier,
+    ) {
+        Box(
             Modifier
-                .verticalScroll(vertical)
-                .horizontalScroll(horizontal)
+                .fillMaxSize()
         ) {
-            Text(
-                output,
-                style = MaterialTheme.typography.bodySmall.let { it.copy(lineHeight = it.fontSize) },
-                fontFamily = FontFamily.Monospace,
+            val scrollbarStyle = LocalScrollbarStyle.current.copy(
+                unhoverColor = Color.White.copy(alpha = 0.5f),
+                hoverColor = Color.White.copy(alpha = 0.8f),
+                minimalHeight = 32.dp,
             )
+
+            Box(
+                Modifier
+                    .verticalScroll(vertical)
+                    .horizontalScroll(horizontal)
+                    .padding(bottom = scrollbarStyle.thickness, end = scrollbarStyle.thickness)
+            ) {
+                Text(
+                    text = output.removeSuffix("\n"),
+                    style = MaterialTheme.typography.bodySmall.let { it.copy(lineHeight = it.fontSize) },
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                )
+            }
+            CompositionLocalProvider(
+                LocalScrollbarStyle provides scrollbarStyle
+            ) {
+                VerticalScrollbar(
+                    adapter = rememberScrollbarAdapter(vertical),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(bottom = scrollbarStyle.thickness)
+                )
+                HorizontalScrollbar(
+                    adapter = rememberScrollbarAdapter(horizontal),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(end = scrollbarStyle.thickness)
+                )
+            }
         }
-        VerticalScrollbar(
-            adapter = rememberScrollbarAdapter(vertical),
-            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
-        )
-        HorizontalScrollbar(
-            adapter = rememberScrollbarAdapter(horizontal),
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-        )
     }
 }
 
