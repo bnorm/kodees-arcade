@@ -14,18 +14,15 @@ import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.rememberDialogState
 import dev.bnorm.arcade.display.MenuItem
 import dev.bnorm.arcade.display.game.GameViewModel
-import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.RecordGame
-import dev.bnorm.arcade.rally.RaceWizard
-import dev.bnorm.arcade.server.client.ArcadeClient
+import dev.bnorm.arcade.rally.RaceWizardScreen
 import dev.zacsweers.metro.ContributesIntoSet
 import java.nio.file.Paths
 
 @ContributesIntoSet(WindowScope::class)
 class RaceWizardItem(
-    private val client: ArcadeClient,
-    private val trackViewModel: TrackViewModel,
     private val gameViewModel: GameViewModel,
+    private val raceWizardScreen: RaceWizardScreen,
 ) : MenuItem {
     override val category get() = MenuItem.Category.Race
     override val order get() = 1
@@ -44,9 +41,7 @@ class RaceWizardItem(
                 state = state,
                 onCloseRequest = { visible = false }
             ) {
-                RaceWizard(
-                    client,
-                    trackViewModel,
+                raceWizardScreen.Content(
                     onStart = {
                         gameViewModel.new(RecordGame(it, Paths.get("./recording.race")))
                         visible = false
