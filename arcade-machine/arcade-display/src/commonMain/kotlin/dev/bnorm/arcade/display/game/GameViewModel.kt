@@ -21,9 +21,9 @@ import dev.zacsweers.metro.SingleIn
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -50,6 +50,10 @@ class GameViewModel(
         take(GameViewEvent.TogglePlayPause)
     }
 
+    fun step() {
+        take(GameViewEvent.Step)
+    }
+
     fun adjustUps(ups: Float) {
         take(GameViewEvent.Ups(ups))
     }
@@ -69,6 +73,7 @@ sealed class GameViewEvent {
     data class New(val game: Game) : GameViewEvent()
 
     data object TogglePlayPause : GameViewEvent()
+    data object Step : GameViewEvent()
     data class Ups(val ups: Float) : GameViewEvent()
 
     data class SetDebug(val driver: String, val debug: Boolean) : GameViewEvent()
@@ -92,10 +97,12 @@ fun GamePresenter(
     initialTrack: Track,
     events: Flow<GameViewEvent>,
 ): GameModel {
-    var running by remember { mutableStateOf(CompletableDeferred(Unit)) }
-    var desiredUps by remember { mutableFloatStateOf(60f) }
-
     var game by remember { mutableStateOf<Game?>(null) }
+
+    var ticker by remember { mutableStateOf<Channel<Unit>>(Channel()) }
+    var desiredUps by remember { mutableFloatStateOf(60f) }
+    var running by remember { mutableStateOf(true) }
+
     var start by remember {
         mutableStateOf(Game.Event.Start(initialTrack, emptyList()))
     }
@@ -116,14 +123,11 @@ fun GamePresenter(
                 }
 
                 GameViewEvent.TogglePlayPause -> {
-                    // TODO this is so ugly...
-                    if (running.isCompleted) {
-                        // Pause
-                        running = CompletableDeferred()
-                    } else {
-                        // Play
-                        running.complete(Unit)
-                    }
+                    running = !running
+                }
+
+                GameViewEvent.Step -> {
+                    ticker.trySend(Unit)
                 }
 
                 is GameViewEvent.Ups -> {
@@ -137,18 +141,10 @@ fun GamePresenter(
         }
     }
 
+    // Start the game and consume events.
     LaunchedEffect(game) {
         withContext(Dispatchers.Default) {
-            val startTime = TimeSource.Monotonic.markNow()
-            var targetTime = 0.seconds
-
             game?.start { event ->
-                running.join()
-                val currentTime = startTime.elapsedNow()
-                val delay = targetTime - currentTime
-                if (delay > Duration.ZERO) delay(delay)
-                targetTime = maxOf(targetTime + (1.0 / desiredUps).seconds, currentTime)
-
                 when (event) {
                     is Game.Event.Complete -> {
                         complete = event
@@ -175,13 +171,38 @@ fun GamePresenter(
                         }
                     }
                 }
+
+                // This must be at the end!
+                // The ticker controls when the game engine can *compute* the next event,
+                // not when we can *consume* the next game engine event.
+                // This makes sure debug mode can be enabled while paused,
+                // and we will see debug information on the very next tick.
+                ticker.receive()
+            }
+        }
+    }
+
+    // Launch a "ticker", that controls how quickly events are computed by the game.
+    LaunchedEffect(game, ticker, running) {
+        withContext(Dispatchers.Default) {
+            if (game != null && running) {
+                val startTime = TimeSource.Monotonic.markNow()
+                var targetTime = 0.seconds
+
+                while (true) {
+                    val currentTime = startTime.elapsedNow()
+                    val delay = targetTime - currentTime
+                    if (delay > Duration.ZERO) delay(delay)
+                    targetTime = maxOf(targetTime + (1.0 / desiredUps).seconds, currentTime)
+                    ticker.send(Unit)
+                }
             }
         }
     }
 
     return GameModel(
         active = game != null,
-        running = running.isCompleted,
+        running = running,
         desiredUps = desiredUps,
         actualUps = desiredUps,
         start = start,

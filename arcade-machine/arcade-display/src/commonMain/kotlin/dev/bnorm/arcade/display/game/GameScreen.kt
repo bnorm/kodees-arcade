@@ -164,6 +164,13 @@ private fun GameControls(
             Text(if (model.running) "Pause" else "Play")
         }
 
+        Button(
+            enabled = model.active && !model.running,
+            onClick = { gameViewModel.step() }
+        ) {
+            Text("Step")
+        }
+
         Text(
             text = "FPS: ${model.desiredUps.toInt()}",
             style = MaterialTheme.typography.bodyLarge,
