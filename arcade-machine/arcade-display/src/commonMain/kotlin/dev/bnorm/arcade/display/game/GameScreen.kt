@@ -77,6 +77,7 @@ class GameScreen(
 fun GameScreen(
     gameViewModel: GameViewModel,
     modifier: Modifier = Modifier,
+    showDebug: Boolean = true,
 ) {
     val model by gameViewModel.models.collectAsState()
 
@@ -109,13 +110,15 @@ fun GameScreen(
                     .fillMaxHeight()
             )
 
-            Spacer(Modifier.fillMaxHeight().width(2.dp).background(Color.Black))
+            if (showDebug) {
+                Spacer(Modifier.fillMaxHeight().width(2.dp).background(Color.Black))
 
-            Drivers(
-                model,
-                gameViewModel,
-                modifier = Modifier
-            )
+                Drivers(
+                    model,
+                    gameViewModel,
+                    modifier = Modifier
+                )
+            }
         }
 
         Spacer(Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
