@@ -2,8 +2,10 @@ package dev.bnorm.arcade.display.game
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,7 +84,7 @@ data class GameModel(
     val start: Game.Event.Start,
     val update: Game.Event.Update?,
     val complete: Game.Event.Complete?,
-    val driverOutput: Map<String, String>
+    val driverOutput: Map<String, TextLines>
 )
 
 @Composable
@@ -100,7 +102,7 @@ fun GamePresenter(
     var update by remember(game) { mutableStateOf<Game.Event.Update?>(null) }
     var complete by remember(game) { mutableStateOf<Game.Event.Complete?>(null) }
 
-    val driverOutput = remember { mutableStateMapOf<String, String>() }
+    val driverOutput = remember { mutableStateMapOf<String, TextLines>() }
 
     LaunchedEffect(events) {
         events.collect {
@@ -155,6 +157,9 @@ fun GamePresenter(
                     is Game.Event.Start -> {
                         start = event
                         driverOutput.clear()
+                        for (name in event.drivers) {
+                            driverOutput[name] = TextLines()
+                        }
                     }
 
                     is Game.Event.Update -> {
@@ -164,15 +169,9 @@ fun GamePresenter(
                             val stderr = driver.debug?.stderr
                             if (stdout == null && stderr == null) continue
 
-                            val name = start.drivers[index]
-                            driverOutput[name] = buildString {
-                                append(driverOutput.getOrElse(name) { "" })
-                                if (stdout != null) append(stdout)
-                                if (stderr != null) append(stderr)
-                                if (length > MAX_STDOUT_LENGTH) {
-                                    deleteRange(0, length - MAX_STDOUT_LENGTH)
-                                }
-                            }
+                            val lines = driverOutput.getValue(start.drivers[index])
+                            if (stdout != null) lines.append(stdout)
+                            if (stderr != null) lines.append(stderr)
                         }
                     }
                 }
@@ -190,4 +189,44 @@ fun GamePresenter(
         complete = complete,
         driverOutput = driverOutput,
     )
+}
+
+@Stable
+class TextLines {
+    private val textLines = mutableStateListOf<String>()
+    private var last by mutableStateOf("")
+
+    var length by mutableStateOf(0)
+        private set
+
+    var columns by mutableStateOf(0)
+        private set
+
+    val lines: Int
+        get() = textLines.size + 1
+
+    fun getLine(index: Int): String {
+        return if (index == textLines.size) last else textLines[index]
+    }
+
+    fun append(text: String) {
+        val start = textLines.size
+
+        // Add new text lines to the list.
+        val split = text.split('\n')
+        textLines.add(if (last.isEmpty()) split[0] else last + split[0])
+        if (split.size > 1) {
+            textLines.addAll(split.subList(1, split.lastIndex))
+            last = split.last()
+        }
+
+        // Add new text to the length.
+        length += text.length
+
+        // Compare new text lines against known max columns.
+        for (i in start..<textLines.size) {
+            columns = maxOf(columns, textLines[i].length)
+        }
+        columns = maxOf(columns, last.length)
+    }
 }
