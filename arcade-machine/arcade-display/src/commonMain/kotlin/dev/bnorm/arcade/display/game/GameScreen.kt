@@ -295,7 +295,7 @@ private fun DriverTerminal(
         if (pinned) {
             // Cancel any current scroll behavior and immediately scroll to the last item.
             try {
-                vertical.requestScrollToItem(output.lines - 1)
+                vertical.requestScrollToItem((output.lines.last - output.lines.first).toInt())
             } catch (_: IndexOutOfBoundsException) {
                 // TODO this occasionally causes an 'IndexOutOfBoundsException' to be thrown because of a force remeasure...
                 //  - why?!?!
@@ -348,8 +348,10 @@ private fun DriverTerminal(
                         .nestedScroll(nestedScrollConnection)
                         .horizontalScroll(horizontal)
                 ) {
-                    items(output.lines) {
-                        Text(output.getLine(it), modifier = Modifier.width(minWidth))
+                    for (line in output.lines) {
+                        item(line) {
+                            Text(output.getLine(line), modifier = Modifier.width(minWidth))
+                        }
                     }
                 }
             }
