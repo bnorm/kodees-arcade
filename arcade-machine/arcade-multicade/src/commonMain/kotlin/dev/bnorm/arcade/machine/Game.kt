@@ -30,7 +30,8 @@ interface Game {
                 @Transient val debug: Debug? = null,
             ) {
                 class Debug(
-                    val stdout: List<String>,
+                    val stdout: String?,
+                    val stderr: String?,
                     val drawRequests: List<DrawRequest>,
                 )
 

@@ -11,6 +11,9 @@ import dev.bnorm.arcade.display.InstallMenuItems
 import dev.zacsweers.metro.createGraphFactory
 
 fun main() {
+    System.setProperty("kotlinx.coroutines.debug", "on") // Enable Kotlin coroutines debugging.
+    java.util.logging.Logger.getLogger("").setLevel(java.util.logging.Level.OFF) // Disable JUL.
+
     application {
         val scope = rememberCoroutineScope()
         val appGraph = remember(scope) {
@@ -20,7 +23,7 @@ fun main() {
 
         Window(
             title = "Rally",
-            state = rememberWindowState(width = 1000.dp, height = 1000.dp),
+            state = rememberWindowState(width = 1600.dp, height = 1000.dp),
             onCloseRequest = ::exitApplication,
         ) {
             val windowGraph = remember(appGraph) {

@@ -43,7 +43,7 @@ import dev.bnorm.arcade.arcade_player_samples.generated.resources.BundledDrivers
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.Game
 import dev.bnorm.arcade.rally.race.WasmGame
-import dev.bnorm.arcade.rally.race.WasmDriver
+import dev.bnorm.arcade.rally.race.Driver
 import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.server.client.ArcadeClient
@@ -72,7 +72,7 @@ fun RaceWizard(
     val lapsTextState = rememberTextFieldState("25")
     val laps = lapsTextState.text.toString().toIntOrNull()
 
-    val drivers = remember { mutableStateListOf<WasmDriver>() }
+    val drivers = remember { mutableStateListOf<Driver>() }
 
     fun pickDriverName(baseName: String): String {
         val existingNames = drivers.mapTo(mutableSetOf()) { it.name }
@@ -97,7 +97,7 @@ fun RaceWizard(
         if (file != null) {
             scope.launch {
                 drivers.add(
-                    WasmDriver(
+                    Driver(
                         name = pickDriverName(file.name.substringBeforeLast(".")),
                         bytes = file.readBytes(),
                     )
@@ -144,7 +144,7 @@ fun RaceWizard(
                                     .clickable {
                                         scope.launch {
                                             val wasm = client.downloadDriverVersion(driver.id, version)
-                                            drivers.add(WasmDriver(pickDriverName(name), wasm))
+                                            drivers.add(Driver(pickDriverName(name), wasm))
                                             showDownloader = false
                                         }
                                     }
@@ -211,7 +211,7 @@ fun RaceWizard(
                     onClick = {
                         scope.launch {
                             drivers.add(
-                                WasmDriver(
+                                Driver(
                                     name = pickDriverName(driver),
                                     bytes = BundledDrivers.readBytes("files/$driver.wasm"),
                                 )

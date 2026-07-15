@@ -121,13 +121,22 @@ private fun WatchRaceDialog(client: ArcadeClient, raceId: RaceId?, onDismiss: ()
     }) {
         val scope = rememberCoroutineScope()
         val gameViewModel = remember {
-            GameViewModel(TrackViewModel.INITIAL_TRACK, scope).apply {
-                new(DownloadGame(client, raceId))
-            }
+            GameViewModel(TrackViewModel.INITIAL_TRACK, scope)
+        }
+
+        LaunchedEffect(Unit) {
+            gameViewModel.new(DownloadGame(client, raceId))
         }
 
         Card {
-            GameScreen(gameViewModel, modifier = Modifier.padding(16.dp))
+            GameScreen(
+                gameViewModel,
+                showDebug = false,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .height(IntrinsicSize.Min)
+                    .width(IntrinsicSize.Min)
+            )
         }
     }
 }

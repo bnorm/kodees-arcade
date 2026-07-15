@@ -1,6 +1,6 @@
 package dev.bnorm.arcade.rally.race
 
-class WasmDriver(
+class Driver(
     val name: String,
     val bytes: ByteArray,
 )

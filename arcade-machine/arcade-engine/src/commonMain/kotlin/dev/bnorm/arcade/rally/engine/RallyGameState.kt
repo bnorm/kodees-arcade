@@ -6,5 +6,5 @@ class RallyGameState(
     val laps: Int,
     var finished: Boolean,
     var time: Long,
-    val drivers: List<RallyCarState>,
+    val driverStates: List<RallyCarState>,
 )

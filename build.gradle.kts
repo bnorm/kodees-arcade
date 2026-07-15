@@ -16,7 +16,14 @@ allprojects {
     group = "dev.bnorm.arcade"
     version = "1.0.0"
 
-    val javaVersion = JavaVersion.VERSION_21
+    val javaVersion = JavaVersion.VERSION_25
+
+    fun KotlinBaseExtension.configureCommonOptions() {
+        jvmToolchain {
+            languageVersion = JavaLanguageVersion.of(javaVersion.toString())
+            vendor = JvmVendorSpec.JETBRAINS
+        }
+    }
 
     fun HasConfigurableKotlinCompilerOptions<*>.configureCommonCompilerOptions() {
         compilerOptions {
@@ -37,6 +44,7 @@ allprojects {
 
     plugins.withType<KotlinMultiplatformPluginWrapper> {
         extensions.configure<KotlinMultiplatformExtension> {
+            configureCommonOptions()
             configureCommonCompilerOptions()
             targets.withType<KotlinJvmTarget> {
                 configureJvmCompilerOption()
@@ -46,15 +54,9 @@ allprojects {
 
     plugins.withType<KotlinPluginWrapper> {
         extensions.configure<KotlinJvmProjectExtension> {
+            configureCommonOptions()
             configureCommonCompilerOptions()
             configureJvmCompilerOption()
-        }
-    }
-
-    plugins.withType<JavaPlugin> {
-        extensions.configure<JavaPluginExtension> {
-            sourceCompatibility = javaVersion
-            targetCompatibility = javaVersion
         }
     }
 
