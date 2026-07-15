@@ -245,7 +245,7 @@ private fun RaceCard(
 
             Column {
                 // TODO this should be the same as race results
-                for (position in race.positions) {
+                for (position in race.drivers) {
                     Text(position.name, style = MaterialTheme.typography.bodyLarge)
                     // TODO include driver version
                 }

@@ -118,6 +118,7 @@ class RaceService(
         if (!races.startRace(id, nonce, startTime = clock.now())) return null
 
         val blob = try {
+            // TODO decode while uploading to determine results
             blobs.upload(channel)
         } catch (t: Throwable) {
             log.warn("error uploading race results", t)
@@ -165,8 +166,8 @@ class RaceService(
             id = this.id,
             trackId = this.trackId,
             laps = this.laps,
-            positions = this.positions.map {
-                RaceResponse.Position(
+            drivers = this.drivers.map {
+                RaceResponse.Driver(
                     position = it.position,
                     driverId = it.driverId,
                     name = it.name,

@@ -8,12 +8,12 @@ class RaceResponse(
     val id: RaceId,
     val trackId: TrackId,
     val laps: Int,
-    val positions: List<Position>,
+    val drivers: List<Driver>,
     val startTime: Instant?,
     val endTime: Instant?,
 ) {
     @Serializable
-    class Position(
+    class Driver(
         val position: Int,
         val driverId: DriverId,
         val name: String,

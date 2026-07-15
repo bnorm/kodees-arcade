@@ -66,7 +66,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
             val state = RaceState(
                 race = race,
                 track = getTrack(race.trackId),
-                drivers = race.positions,
+                drivers = race.drivers,
             )
             active += state
 
@@ -191,7 +191,7 @@ fun WorkerPane(client: ArcadeClient, jobs: Int) {
 class RaceState(
     race: RaceResponse,
     val track: TrackResponse,
-    val drivers: List<RaceResponse.Position>,
+    val drivers: List<RaceResponse.Driver>,
 ) {
     var race by mutableStateOf(race)
     var time by mutableLongStateOf(0L)
@@ -264,7 +264,7 @@ suspend fun WorkerGame(client: ArcadeClient, event: RaceProcessEvent): WasmGame 
             positions = track.positions,
         ),
         drivers = buildList {
-            for (driver in race.positions) {
+            for (driver in race.drivers) {
                 val blob = client.downloadDriverVersion(driver.driverId, driver.version) // TODO error
                 add(Driver(driver.name, blob))
             }
