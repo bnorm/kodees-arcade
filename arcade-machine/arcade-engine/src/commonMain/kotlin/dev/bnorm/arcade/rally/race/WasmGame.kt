@@ -72,8 +72,7 @@ class WasmGame(
             while (!gameState.finished) {
                 // Allow drivers to manipulate controls.
                 for (state in gameState.driverStates) {
-                    // TODO stop calling when driver is finished.
-                    //  - should they be removed from the game entirely when they finish?
+                    if (state.finished) continue
 
                     state.driver.move(
                         Car(
@@ -111,10 +110,7 @@ class WasmGame(
         }
 
         val results = gameState.driverStates
-            .sortedBy { it.finished }.withIndex()
-            .associate { (place, state) ->
-                state.name to Game.Event.Complete.Result(place + 1, state.finished!!)
-            }
+            .associate { state -> state.name to Game.Event.Complete.Result(state.lapTimes) }
         onEvent(Game.Event.Complete(results))
     }
 }

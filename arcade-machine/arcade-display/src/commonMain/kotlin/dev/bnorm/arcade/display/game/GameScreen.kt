@@ -100,8 +100,10 @@ fun GameScreen(
                     gameViewModel.clear()
                 },
             ) {
-                Surface {
-                    RaceResults(it)
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    RaceResults(it.results)
                 }
             }
         }

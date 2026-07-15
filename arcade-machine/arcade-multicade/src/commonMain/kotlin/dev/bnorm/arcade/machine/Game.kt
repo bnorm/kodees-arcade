@@ -9,6 +9,8 @@ import kotlinx.serialization.Transient
 
 interface Game {
     suspend fun start(onEvent: suspend (Event) -> Unit)
+
+    // TODO it's a little ugly to have this exposed like this...
     fun setDebug(driver: String, debug: Boolean) {}
 
     @Serializable
@@ -45,8 +47,7 @@ interface Game {
         ) : Event {
             @Serializable
             class Result(
-                val place: Int,
-                val time: Long,
+                val laps: List<Long>,
             )
         }
 
