@@ -56,7 +56,6 @@ object RaceResultTable : Table("race_results") {
     val nonce = nonce("nonce")
 
     val startTime = timestamp("start_time").nullable()
-
     val endTime = timestamp("end_time").nullable()
     val blobId = reference("blob_id", BlobTable, onDelete = ReferenceOption.RESTRICT).nullable()
 
@@ -74,6 +73,8 @@ object RaceDriverTable : Table("race_drivers") {
     val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
     val position = integer("position")
     val driverVersionId = reference("driver_version_id", DriverVersionTable, onDelete = ReferenceOption.RESTRICT)
+
+    val result = double("result").nullable()
 
     override val primaryKey = PrimaryKey(raceId, driverVersionId)
 }
@@ -110,6 +111,7 @@ class RaceDriverEntity(
     val name: String,
     val version: Version,
     val blobId: BlobId,
+    val result: Double?,
 )
 
 val SeasonRaceResultJoin = SeasonRaceTable
@@ -164,11 +166,12 @@ fun ResultRow.toRaceEntity(
 fun ResultRow.toRaceDriverEntity(): RaceDriverEntity {
     return RaceDriverEntity(
         position = this[RaceDriverTable.position],
-        driverId = this[DriverTable.id].value,
         driverVersionId = this[RaceDriverTable.driverVersionId].value,
-        name = this[DriverTable.name],
+        result = this[RaceDriverTable.result],
         version = this[DriverVersionTable.version],
         blobId = this[DriverVersionTable.blobId].value,
+        driverId = this[DriverTable.id].value,
+        name = this[DriverTable.name],
     )
 }
 
@@ -292,22 +295,31 @@ class RaceRepository(
         }
     }
 
-    suspend fun startRace(id: RaceId, nonce: Nonce, startTime: Instant): Boolean {
+    suspend fun startRace(id: RaceId, nonce: Nonce, startTime: Instant): RaceEntity? {
         return suspendTransaction(database) {
-            RaceResultTable.update(
+            val updates = RaceResultTable.update(
                 where = {
                     (RaceResultTable.raceId eq id) and
                         (RaceResultTable.nonce eq nonce)
                 }
             ) {
                 it[RaceResultTable.startTime] = startTime
-            } == 1
+            }
+            if (updates != 1) return@suspendTransaction null
+            getRace(id)!!
         }
     }
 
-    suspend fun finishRace(id: RaceId, nonce: Nonce, endTime: Instant, blobId: BlobId): Boolean {
+    suspend fun finishRace(
+        id: RaceId,
+        nonce: Nonce,
+        endTime: Instant,
+        results: Map<DriverVersionId, Double>,
+        blobId: BlobId,
+    ): Boolean {
         return suspendTransaction(database) {
-            RaceResultTable.update(
+            var successful = true
+            successful = successful && RaceResultTable.update(
                 where = {
                     (RaceResultTable.raceId eq id) and
                         (RaceResultTable.nonce eq nonce)
@@ -316,6 +328,19 @@ class RaceRepository(
                 it[RaceResultTable.endTime] = endTime
                 it[RaceResultTable.blobId] = blobId
             } == 1
+
+            for ((driverVersionId, result) in results) {
+                successful = successful && RaceDriverTable.update(
+                    where = {
+                        (RaceDriverTable.raceId eq id) and
+                            (RaceDriverTable.driverVersionId eq driverVersionId)
+                    }
+                ) {
+                    it[RaceDriverTable.result] = result
+                } == 1
+            }
+
+            successful
         }
     }
 

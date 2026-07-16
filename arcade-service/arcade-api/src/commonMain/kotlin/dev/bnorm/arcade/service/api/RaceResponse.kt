@@ -18,5 +18,6 @@ class RaceResponse(
         val driverId: DriverId,
         val name: String,
         val version: Version,
+        val result: Double?,
     )
 }

@@ -1,5 +1,8 @@
 package dev.bnorm.arcade.service.race
 
+import dev.bnorm.arcade.machine.MemorizeGame
+import dev.bnorm.arcade.machine.ReadGame
+import dev.bnorm.arcade.machine.WriteGame
 import dev.bnorm.arcade.service.Service
 import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.ParticipantId
@@ -16,13 +19,17 @@ import dev.bnorm.arcade.service.season.SeasonRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
+import io.ktor.util.cio.use
+import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteReadChannel
 import kotlin.time.Clock
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onClosed
 import kotlinx.coroutines.channels.onFailure
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 
 @SingleIn(AppScope::class)
 @ContributesIntoSet(AppScope::class)
@@ -115,19 +122,46 @@ class RaceService(
     }
 
     suspend fun uploadRace(id: RaceId, nonce: Nonce, channel: ByteReadChannel): RaceResponse? {
-        if (!races.startRace(id, nonce, startTime = clock.now())) return null
+        val entity = races.startRace(id, nonce, startTime = clock.now()) ?: return null
+        val game = MemorizeGame(ReadGame { reader -> reader(channel) })
 
         val blob = try {
-            // TODO decode while uploading to determine results
-            blobs.upload(channel)
+            coroutineScope {
+                val buffer = ByteChannel()
+                val writeGame = WriteGame(game) { writer -> buffer.use { writer(buffer) } }
+                launch { writeGame.start { } }
+                blobs.upload(buffer)
+            }
         } catch (t: Throwable) {
             log.warn("error uploading race results", t)
             resetRace(id)
             throw t
         }
 
+        val endTime = clock.now()
+        val results = buildMap {
+            val driverVersionIds = entity.drivers.associate { it.name to it.driverVersionId }
+            val results = game.complete.results
+            val numberOfLaps = results.maxOf { it.value.laps.size }
+            val order = results.entries
+                .sortedBy { (_, value) -> value.laps.getOrNull(numberOfLaps - 1) ?: Long.MAX_VALUE }
+                .map { (key, _) -> key }
+            for ((place, name) in order.withIndex()) {
+                put(driverVersionIds.getValue(name), place.toDouble())
+            }
+        }
+
         try {
-            if (!races.finishRace(id, nonce, endTime = clock.now(), blob.id)) TODO("should be impossible")
+            val result = races.finishRace(
+                id = id,
+                nonce = nonce,
+                endTime = endTime,
+                results = results,
+                blobId = blob.id,
+            )
+            if (!result) {
+                TODO("should be impossible")
+            }
         } catch (t: Throwable) {
             log.warn("error finishing race", t)
             // TODO delete blob
@@ -172,6 +206,7 @@ class RaceService(
                     driverId = it.driverId,
                     name = it.name,
                     version = it.version,
+                    result = it.result,
                 )
             },
             startTime = this.startTime,
