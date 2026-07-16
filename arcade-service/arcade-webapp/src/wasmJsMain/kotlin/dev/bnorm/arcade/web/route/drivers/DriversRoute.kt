@@ -30,11 +30,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import app.softwork.routingcompose.RouteBuilder
+import app.softwork.routingcompose.Router
 import dev.bnorm.arcade.icons.sports_motorsports
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverCreateRequest
 import dev.bnorm.arcade.service.api.DriverResponse
-import dev.bnorm.arcade.web.route.Route
+import dev.bnorm.arcade.web.route.WebRouter
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import kotlinx.coroutines.launch
@@ -42,11 +44,21 @@ import kotlinx.coroutines.launch
 @ContributesIntoSet(AppScope::class)
 class DriversRoute(
     private val client: ArcadeClient
-) : Route {
-    override val path: String get() = "/drivers"
+) : WebRouter {
+    @Composable
+    override fun RouteBuilder.Route() {
+        route("/drivers") {
+            route("/") {
+                Content()
+            }
+            noMatch {
+                Router.current.navigate(to = "/", replace = true)
+            }
+        }
+    }
 
     @Composable
-    override fun Content() {
+    fun Content() {
         val drivers = remember { mutableStateListOf<DriverResponse>() }
         LaunchedEffect(Unit) {
             val elements = client.getDrivers()

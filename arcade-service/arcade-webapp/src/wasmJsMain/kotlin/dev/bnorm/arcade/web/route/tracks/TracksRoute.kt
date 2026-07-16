@@ -18,11 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import app.softwork.routingcompose.RouteBuilder
+import app.softwork.routingcompose.Router
 import dev.bnorm.arcade.display.track.TrackBuilder
 import dev.bnorm.arcade.display.track.TrackSize
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.TrackCreateRequest
-import dev.bnorm.arcade.web.route.Route
+import dev.bnorm.arcade.web.route.WebRouter
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import kotlinx.coroutines.launch
@@ -30,11 +32,21 @@ import kotlinx.coroutines.launch
 @ContributesIntoSet(AppScope::class)
 class TracksRoute(
     private val client: ArcadeClient
-) : Route {
-    override val path: String get() = "/tracks"
+) : WebRouter {
+    @Composable
+    override fun RouteBuilder.Route() {
+        route("/tracks") {
+            route("/") {
+                Content()
+            }
+            noMatch {
+                Router.current.navigate(to = "/", replace = true)
+            }
+        }
+    }
 
     @Composable
-    override fun Content() {
+    fun Content() {
         val scope = rememberCoroutineScope()
 
         Column {

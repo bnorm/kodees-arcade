@@ -2,8 +2,9 @@ package dev.bnorm.arcade.web
 
 import androidx.compose.ui.window.ComposeViewport
 import app.softwork.routingcompose.HashRouter
+import app.softwork.routingcompose.Router
 import dev.bnorm.arcade.server.client.ArcadeClient
-import dev.bnorm.arcade.web.route.Route
+import dev.bnorm.arcade.web.route.WebRouter
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Multibinds
@@ -24,7 +25,7 @@ interface WebGraph {
     }
 
     @Multibinds
-    val routes: Set<Route>
+    val webRouters: Set<WebRouter>
 }
 
 fun main() {
@@ -33,10 +34,13 @@ fun main() {
     // TODO switch to Compose HTML?
     ComposeViewport("composeApp") {
         HashRouter(initPath = "/") {
-            for (route in graph.routes) {
-                route(route.path) {
-                    route.Content()
+            for (router in graph.webRouters) {
+                with(router) {
+                    Route()
                 }
+            }
+            noMatch {
+                Router.current.navigate(to = "/", replace = true)
             }
         }
     }

@@ -34,24 +34,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import app.softwork.routingcompose.RouteBuilder
+import app.softwork.routingcompose.Router
+import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.icons.play_arrow
 import dev.bnorm.arcade.icons.replay
 import dev.bnorm.arcade.icons.sports_motorsports
-import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.rally.race.DownloadGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
-import dev.bnorm.arcade.web.route.Route
+import dev.bnorm.arcade.web.route.WebRouter
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import kotlin.time.Clock
@@ -61,11 +62,21 @@ import kotlinx.coroutines.launch
 @ContributesIntoSet(AppScope::class)
 class RacesRoute(
     private val client: ArcadeClient
-) : Route {
-    override val path: String get() = "/races"
+) : WebRouter {
+    @Composable
+    override fun RouteBuilder.Route() {
+        route("/races") {
+            route("/") {
+                Content()
+            }
+            noMatch {
+                Router.current.navigate(to = "/", replace = true)
+            }
+        }
+    }
 
     @Composable
-    override fun Content() {
+    fun Content() {
         val races = remember { mutableStateListOf<RaceResponse>() }
         val tracks = remember { mutableStateMapOf<TrackId, TrackResponse>() }
         LaunchedEffect(Unit) {
@@ -76,9 +87,6 @@ class RacesRoute(
             tracks.clear()
             tracks.putAll(apiTracks)
         }
-
-        var watchRaceId by remember { mutableStateOf<RaceId?>(null) }
-        WatchRaceDialog(client, watchRaceId, onDismiss = { watchRaceId = null })
 
         Column(
             modifier = Modifier
@@ -103,9 +111,7 @@ class RacesRoute(
                     .width(IntrinsicSize.Max)
             ) {
                 for (race in races) {
-                    RaceCard(client, race, tracks, onWatch = {
-                        watchRaceId = race.id
-                    })
+                    RaceCard(client, race)
                 }
             }
         }
@@ -171,12 +177,18 @@ private fun RaceCreateButton(client: ArcadeClient, onCreate: (RaceResponse) -> U
 }
 
 @Composable
-private fun RaceCard(
+fun RaceCard(
     client: ArcadeClient,
     race: RaceResponse,
-    tracks: SnapshotStateMap<TrackId, TrackResponse>,
-    onWatch: () -> Unit,
 ) {
+    var track by remember { mutableStateOf<TrackResponse?>(null) }
+    LaunchedEffect(race.trackId) {
+        track = client.getTrack(race.trackId)
+    }
+
+    var watch by remember { mutableStateOf(false) }
+    WatchRaceDialog(client, race.id.takeIf { watch }, onDismiss = { watch = false })
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -189,12 +201,11 @@ private fun RaceCard(
             val startTime = race.startTime
             val endTime = race.endTime
 
-            val track = tracks.getValue(race.trackId)
             Row {
-                Text(track.name, style = MaterialTheme.typography.titleLarge)
+                Text(track?.name.toString(), style = MaterialTheme.typography.titleLarge)
                 if (endTime != null) {
                     Spacer(Modifier.weight(1f).widthIn(min = 32.dp))
-                    PlayRaceButton(onWatch)
+                    PlayRaceButton(onWatch = { watch = true })
                 } else {
                     Spacer(Modifier.weight(1f).widthIn(min = 32.dp))
                     ResetRaceButton(client, race.id)
@@ -245,9 +256,8 @@ private fun RaceCard(
 
             Column {
                 // TODO this should be the same as race results
-                for (position in race.drivers) {
-                    Text(position.name, style = MaterialTheme.typography.bodyLarge)
-                    // TODO include driver version
+                for (driver in race.drivers) {
+                    Text("${driver.name} ${driver.version}", style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }

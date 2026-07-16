@@ -12,19 +12,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.softwork.routingcompose.RouteBuilder
 import dev.bnorm.arcade.arcade_webapp.generated.resources.Res
 import dev.bnorm.arcade.arcade_webapp.generated.resources.icon
-import dev.bnorm.arcade.web.route.Route
+import dev.bnorm.arcade.web.route.WebRouter
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import org.jetbrains.compose.resources.painterResource
 
 @ContributesIntoSet(AppScope::class)
-class HomeRoute : Route {
-    override val path: String get() = "/"
+class HomeRoute : WebRouter {
+    @Composable
+    override fun RouteBuilder.Route() {
+        route("/") {
+            Content()
+        }
+    }
 
     @Composable
-    override fun Content() {
+    fun Content() {
         App()
     }
 }
