@@ -8,7 +8,6 @@ import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.ParticipantId
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
-import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
@@ -23,12 +22,7 @@ import io.ktor.util.cio.use
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteReadChannel
 import kotlin.time.Clock
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.onClosed
-import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 @SingleIn(AppScope::class)
@@ -38,21 +32,11 @@ class RaceService(
     private val races: RaceRepository,
     private val drivers: DriverRepository,
     private val blobs: BlobRepository,
+    private val listeners: Set<RaceListener>,
     private val clock: Clock = Clock.System,
 ) : Service {
     companion object {
         private val log = logger<RaceService>()
-    }
-
-    // TODO umm... this needs to be better
-    private val channel = Channel<RaceProcessEvent>(1_000)
-
-    override suspend fun initialize() {
-        for (entity in races.getIncompleteRaces()) {
-            if (entity.endTime == null) {
-                resetRace(entity.id)
-            }
-        }
     }
 
     suspend fun getAllRaces(): List<RaceResponse> {
@@ -74,7 +58,9 @@ class RaceService(
         }
 
         val entity = races.createRace(seasonId = null, request.trackId, driverVersionIds, request.laps)
-        submitRaceForProcessing(entity)
+        for (listener in listeners) {
+            listener.onRaceCreated(entity)
+        }
         return entity.toResponse()
     }
 
@@ -102,7 +88,9 @@ class RaceService(
         // TODO check track positions vs participants size
 
         val entity = races.createRace(seasonId, request.trackId, participants, request.laps)
-        submitRaceForProcessing(entity)
+        for (listener in listeners) {
+            listener.onRaceCreated(entity)
+        }
         return entity.toResponse()
     }
 
@@ -134,7 +122,6 @@ class RaceService(
             }
         } catch (t: Throwable) {
             log.warn("error uploading race results", t)
-            resetRace(id)
             throw t
         }
 
@@ -168,51 +155,38 @@ class RaceService(
             throw t
         }
 
-        return getRace(id)
-    }
-
-    suspend fun resetRace(id: RaceId): RaceResponse? {
-        val entity = races.resetRace(id) ?: return null
-        submitRaceForProcessing(entity)
-        return entity.toResponse()
-    }
-
-    private fun submitRaceForProcessing(entity: RaceEntity) {
-        channel.trySend(RaceProcessEvent(entity.id, entity.nonce))
-            .onClosed { TODO("should be impossible") }
-            .onFailure { log.warn("large event processing backlog, could not reprocess race", it) }
-    }
-
-    fun listen(): Flow<RaceProcessEvent> = flow {
-        for (event in channel) {
-            try {
-                emit(event)
-            } catch (t: Throwable) {
-                log.warn("error processing race event", t)
-                resetRace(event.id)
-                throw t
-            }
-        }
-    }
-
-    private fun RaceEntity.toResponse(): RaceResponse {
-        return RaceResponse(
-            id = this.id,
-            trackId = this.trackId,
-            laps = this.laps,
-            drivers = this.drivers.map {
-                RaceResponse.Driver(
-                    position = it.position,
-                    driverId = it.driverId,
-                    name = it.name,
-                    version = it.version,
-                    result = it.result,
-                )
+        val completed = entity.copy(
+            endTime = endTime,
+            drivers = entity.drivers.map {
+                it.copy(result = results[it.driverVersionId])
             },
-            startTime = this.startTime,
-            endTime = this.endTime,
         )
+
+        for (listener in listeners) {
+            listener.onRaceComplete(completed)
+        }
+
+        return completed.toResponse()
     }
+}
+
+fun RaceEntity.toResponse(): RaceResponse {
+    return RaceResponse(
+        id = this.id,
+        trackId = this.trackId,
+        laps = this.laps,
+        drivers = this.drivers.map {
+            RaceResponse.Driver(
+                position = it.position,
+                driverId = it.driverId,
+                name = it.name,
+                version = it.version,
+                result = it.result,
+            )
+        },
+        startTime = this.startTime,
+        endTime = this.endTime,
+    )
 }
 
 private fun <T> Iterable<T>.duplicates(): Set<T> {

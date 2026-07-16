@@ -104,7 +104,7 @@ data class RaceEntity(
     val blobId: BlobId? = null,
 )
 
-class RaceDriverEntity(
+data class RaceDriverEntity(
     val position: Int,
     val driverId: DriverId,
     val driverVersionId: DriverVersionId,
