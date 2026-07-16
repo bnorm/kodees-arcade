@@ -15,7 +15,9 @@ import dev.bnorm.arcade.service.repo.Repository
 import dev.bnorm.arcade.service.repo.TrackTable
 import dev.bnorm.arcade.service.repo.nonce
 import dev.bnorm.arcade.service.repo.raceId
+import dev.bnorm.arcade.service.repo.workerId
 import dev.bnorm.arcade.service.season.SeasonRaceTable
+import dev.bnorm.arcade.service.worker.WorkerId
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
@@ -30,6 +32,7 @@ import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.andIfNotNull
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
@@ -53,9 +56,15 @@ object RaceTable : IdTable<RaceId>("races") {
 // TODO does this really need to be another table?
 object RaceResultTable : Table("race_results") {
     val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
+
+    // Set when assigned.
+    val workerId = workerId("worker_id").nullable() // TODO table?
     val nonce = nonce("nonce")
 
+    // Set when started.
     val startTime = timestamp("start_time").nullable()
+
+    // Set when complete.
     val endTime = timestamp("end_time").nullable()
     val blobId = reference("blob_id", BlobTable, onDelete = ReferenceOption.RESTRICT).nullable()
 
@@ -99,6 +108,7 @@ data class RaceEntity(
     val laps: Int,
     val drivers: List<RaceDriverEntity>,
     val nonce: Nonce,
+    val workerId: WorkerId? = null,
     val startTime: Instant? = null,
     val endTime: Instant? = null,
     val blobId: BlobId? = null,
@@ -156,6 +166,7 @@ fun ResultRow.toRaceEntity(
         trackId = this[RaceTable.trackId].value,
         laps = this[RaceTable.laps],
         drivers = drivers,
+        workerId = this[RaceResultTable.workerId],
         nonce = this[RaceResultTable.nonce],
         startTime = this[RaceResultTable.startTime],
         endTime = this[RaceResultTable.endTime],
@@ -229,11 +240,16 @@ class RaceRepository(
      * Specialized query to get only incomplete races.
      * Race entities are created without associated driver IDs to limit data.
      */
-    suspend fun getIncompleteRaces(): List<RaceEntity> {
+    suspend fun getIncompleteRaces(
+        workerId: WorkerId? = null,
+    ): List<RaceEntity> {
         // TODO paginate somehow?
         return suspendTransaction(database) {
             RaceResultJoin.selectAll()
-                .where { RaceResultTable.endTime eq null }
+                .where {
+                    (RaceResultTable.endTime eq null) andIfNotNull
+                        workerId?.let { (RaceResultTable.workerId eq it) }
+                }
                 .map { it.toRaceEntity(emptyList()) }.toList()
         }
     }
@@ -290,6 +306,36 @@ class RaceRepository(
 
             row ?: return@suspendTransaction null
 
+            val versionedDrivers = getRaceDrivers(id)
+            row.toRaceEntity(versionedDrivers)
+        }
+    }
+
+    suspend fun acquireRace(workerId: WorkerId): RaceEntity? {
+        return suspendTransaction(database) {
+            val nonce = Nonce.generate()
+
+            val updates = RaceResultTable.update(
+                where = {
+                    (RaceResultTable.workerId eq null)
+                },
+                limit = 1,
+            ) {
+                it[RaceResultTable.workerId] = workerId
+                it[RaceResultTable.nonce] = nonce
+            }
+            if (updates != 1) return@suspendTransaction null
+
+            val row = RaceResultJoin.selectAll()
+                .where {
+                    (RaceResultTable.workerId eq workerId) and
+                        (RaceResultTable.nonce eq nonce)
+                }
+                .singleOrNull()
+
+            row ?: error("updated race not found...")
+
+            val id = row[RaceTable.id].value
             val versionedDrivers = getRaceDrivers(id)
             row.toRaceEntity(versionedDrivers)
         }
@@ -353,7 +399,11 @@ class RaceRepository(
                 }
             ) {
                 it[RaceResultTable.nonce] = Nonce.generate()
+                it[RaceResultTable.workerId] = null
                 it[RaceResultTable.startTime] = null
+                // These should not be set, but let's be safe.
+                it[RaceResultTable.endTime] = null
+                it[RaceResultTable.blobId] = null
             }
             if (rows != 1) return@suspendTransaction null
 

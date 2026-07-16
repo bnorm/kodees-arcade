@@ -8,6 +8,8 @@ import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
 import dev.bnorm.arcade.service.logger
 import dev.bnorm.arcade.service.route.Router
+import dev.bnorm.arcade.service.worker.RaceWorkerQueue
+import dev.bnorm.arcade.service.worker.WorkerId
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
@@ -69,10 +71,11 @@ class RaceRouter(
 
             sse("/listen") {
                 heartbeat()
-                queue.listen().collect {
+                // TODO id must be provided by worker
+                //  - should this also require an auth token?
+                queue.listen(WorkerId.generate()).collect {
                     log.info("sending race to worker: ${it.id}")
                     send(Json.encodeToString(RaceProcessEvent.serializer(), it))
-                    log.info("worker finished processing: ${it.id}")
                 }
             }
 
