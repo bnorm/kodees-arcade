@@ -103,7 +103,11 @@ fun GameScreen(
                 Surface(
                     shape = MaterialTheme.shapes.large,
                 ) {
-                    RaceResults(it.results)
+                    RaceResults(
+                        results = it.results,
+                        modifier = Modifier
+                            .padding(16.dp)
+                    )
                 }
             }
         }
