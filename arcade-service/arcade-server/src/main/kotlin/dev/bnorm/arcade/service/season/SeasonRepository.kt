@@ -2,8 +2,10 @@ package dev.bnorm.arcade.service.season
 
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.ParticipantId
+import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.Version
+import dev.bnorm.arcade.service.race.RaceDriverTable
 import dev.bnorm.arcade.service.race.RaceTable
 import dev.bnorm.arcade.service.repo.DriverTable
 import dev.bnorm.arcade.service.repo.DriverVersionId
@@ -30,6 +32,7 @@ import org.jetbrains.exposed.v1.r2dbc.deleteWhere
 import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
+import org.jetbrains.exposed.v1.r2dbc.update
 
 object SeasonTable : IdTable<SeasonId>("seasons") {
     override val id = seasonId("id").entityId()
@@ -55,6 +58,8 @@ object ParticipantTable : IdTable<ParticipantId>("season_participants") {
     val seasonId = reference("season_id", SeasonTable, onDelete = ReferenceOption.CASCADE)
     val driverVersionId = reference("driver_version_id", DriverVersionTable, onDelete = ReferenceOption.RESTRICT)
 
+    val score = double("score")
+
     override val primaryKey = PrimaryKey(id)
 
     init {
@@ -76,13 +81,40 @@ val SeasonParticipantJoin = ParticipantTable
         otherColumn = DriverVersionTable.driverId,
     )
 
+val RaceParticipantJoin = SeasonRaceTable
+    .join(
+        ParticipantTable,
+        JoinType.INNER,
+        onColumn = ParticipantTable.seasonId,
+        otherColumn = SeasonRaceTable.seasonId
+    )
+    .join(
+        RaceDriverTable,
+        JoinType.INNER,
+        onColumn = RaceDriverTable.driverVersionId,
+        otherColumn = ParticipantTable.driverVersionId,
+    )
+    .join(
+        DriverVersionTable,
+        JoinType.INNER,
+        onColumn = DriverVersionTable.id,
+        otherColumn = ParticipantTable.driverVersionId,
+    )
+    .join(
+        DriverTable,
+        JoinType.INNER,
+        onColumn = DriverTable.id,
+        otherColumn = DriverVersionTable.driverId,
+    )
+
 class ParticipantEntity(
     val id: ParticipantId,
     val seasonId: SeasonId,
     val driverVersionId: DriverVersionId,
+    val score: Double,
     val driverId: DriverId,
-    val name: String,
     val version: Version,
+    val name: String,
 )
 
 fun ResultRow.toParticipantEntity(): ParticipantEntity {
@@ -90,9 +122,10 @@ fun ResultRow.toParticipantEntity(): ParticipantEntity {
         id = this[ParticipantTable.id].value,
         seasonId = this[ParticipantTable.seasonId].value,
         driverVersionId = this[ParticipantTable.driverVersionId].value,
+        score = this[ParticipantTable.score],
         driverId = this[DriverVersionTable.driverId].value,
-        name = this[DriverTable.name],
         version = this[DriverVersionTable.version],
+        name = this[DriverTable.name],
     )
 }
 
@@ -153,6 +186,15 @@ class SeasonRepository(
         }
     }
 
+    suspend fun getParticipants(raceId: RaceId): List<ParticipantEntity> {
+        return suspendTransaction(database) {
+            RaceParticipantJoin.selectAll()
+                .where { SeasonRaceTable.raceId eq raceId }
+                .map { it.toParticipantEntity() }
+                .toList()
+        }
+    }
+
     suspend fun getParticipant(seasonId: SeasonId, participantId: ParticipantId): ParticipantEntity? {
         return suspendTransaction(database) {
             val row = SeasonParticipantJoin.selectAll()
@@ -173,6 +215,7 @@ class SeasonRepository(
                 it[this.id] = participantId
                 it[this.seasonId] = seasonId
                 it[this.driverVersionId] = driverVersionId
+                it[this.score] = 1200.0
             }
 
             getParticipant(seasonId, participantId)!!
@@ -184,6 +227,21 @@ class SeasonRepository(
             val rows = ParticipantTable.deleteWhere {
                 (ParticipantTable.id eq participantId) and
                     (ParticipantTable.seasonId eq seasonId)
+            }
+
+            rows > 0
+        }
+    }
+
+    suspend fun updateParticipant(seasonId: SeasonId, participantId: ParticipantId, score: Double): Boolean {
+        return suspendTransaction(database) {
+            val rows = ParticipantTable.update(
+                where = {
+                    (ParticipantTable.id eq participantId) and
+                        (ParticipantTable.seasonId eq seasonId)
+                }
+            ) {
+                it[this.score] = score
             }
 
             rows > 0
