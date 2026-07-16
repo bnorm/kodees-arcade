@@ -201,7 +201,7 @@ internal class HttpArcadeClient(
         nonce: Nonce,
         events: ReceiveChannel<ByteArray>
     ): RaceResponse = coroutineScope {
-        val channel = ByteChannel()
+        val channel = ByteChannel(autoFlush = true)
         launch {
             channel.use {
                 events.consumeEach {

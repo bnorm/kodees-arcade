@@ -111,6 +111,11 @@ class RaceService(
 
     suspend fun uploadRace(id: RaceId, nonce: Nonce, channel: ByteReadChannel): RaceResponse? {
         val entity = races.startRace(id, nonce, startTime = clock.now()) ?: return null
+
+        for (listener in listeners) {
+            listener.onRaceStarted(entity)
+        }
+
         val game = MemorizeGame(ReadGame { reader -> reader(channel) })
 
         val blob = try {
