@@ -38,8 +38,9 @@ kotlin {
 
             implementation(libs.compose.material3)
             implementation(libs.compose.resources)
+            implementation(libs.compose.navigation3)
+            implementation(libs.compose.navigation3.browser)
             implementation(libs.filekit.dialogs.compose)
-            implementation(libs.routing.compose)
             implementation(libs.kotlinx.serialization.json)
         }
     }

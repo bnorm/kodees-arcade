@@ -1,13 +1,12 @@
 package dev.bnorm.arcade.web
 
 import androidx.compose.ui.window.ComposeViewport
-import app.softwork.routingcompose.HashRouter
-import app.softwork.routingcompose.Router
+import androidx.navigation3.runtime.NavBackStack
 import dev.bnorm.arcade.server.client.ArcadeClient
-import dev.bnorm.arcade.web.route.WebRouter
+import dev.bnorm.arcade.web.route.RouteKey
+import dev.bnorm.arcade.web.route.restoreKey
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
-import dev.zacsweers.metro.Multibinds
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.createGraph
@@ -24,24 +23,19 @@ interface WebGraph {
         return ArcadeClient(host = hostname, port = port, secure = secure)
     }
 
-    @Multibinds
-    val webRouters: Set<WebRouter>
+    @Provides
+    @SingleIn(AppScope::class)
+    private fun provideBackStack(): NavBackStack<RouteKey> {
+        return NavBackStack(restoreKey(window.location.hash))
+    }
+
+    val appScreen: AppScreen
 }
 
 fun main() {
-    val graph = createGraph<WebGraph>()
-
     // TODO switch to Compose HTML?
+    val graph = createGraph<WebGraph>()
     ComposeViewport("composeApp") {
-        HashRouter(initPath = "/") {
-            for (router in graph.webRouters) {
-                with(router) {
-                    Route()
-                }
-            }
-            noMatch {
-                Router.current.navigate(to = "/", replace = true)
-            }
-        }
+        graph.appScreen.Content()
     }
 }

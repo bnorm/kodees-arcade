@@ -38,8 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import app.softwork.routingcompose.RouteBuilder
-import app.softwork.routingcompose.Router
 import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.display.track.TrackViewModel
@@ -52,31 +50,26 @@ import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.TrackResponse
-import dev.bnorm.arcade.web.route.WebRouter
+import dev.bnorm.arcade.web.route.RacesKey
+import dev.bnorm.arcade.web.route.RouteKey
+import dev.bnorm.arcade.web.route.RouteScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class)
-class RacesRoute(
+@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+class RacesScreen(
     private val client: ArcadeClient
-) : WebRouter {
-    @Composable
-    override fun RouteBuilder.Route() {
-        route("/races") {
-            route("/") {
-                Content()
-            }
-            noMatch {
-                Router.current.navigate(to = "/", replace = true)
-            }
-        }
-    }
+) : RouteScreen<RacesKey> {
+    override val key: KClass<out RacesKey>
+        get() = RacesKey::class
 
     @Composable
-    fun Content() {
+    override fun Content(key: RacesKey) {
         val races = remember { mutableStateListOf<RaceResponse>() }
         val tracks = remember { mutableStateMapOf<TrackId, TrackResponse>() }
         LaunchedEffect(Unit) {

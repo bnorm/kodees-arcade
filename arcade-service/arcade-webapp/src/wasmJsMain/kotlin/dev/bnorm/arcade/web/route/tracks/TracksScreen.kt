@@ -18,35 +18,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import app.softwork.routingcompose.RouteBuilder
-import app.softwork.routingcompose.Router
 import dev.bnorm.arcade.display.track.TrackBuilder
 import dev.bnorm.arcade.display.track.TrackSize
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.TrackCreateRequest
-import dev.bnorm.arcade.web.route.WebRouter
+import dev.bnorm.arcade.web.route.RouteKey
+import dev.bnorm.arcade.web.route.TracksKey
+import dev.bnorm.arcade.web.route.RouteScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlin.reflect.KClass
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class)
-class TracksRoute(
+@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+class TracksScreen(
     private val client: ArcadeClient
-) : WebRouter {
-    @Composable
-    override fun RouteBuilder.Route() {
-        route("/tracks") {
-            route("/") {
-                Content()
-            }
-            noMatch {
-                Router.current.navigate(to = "/", replace = true)
-            }
-        }
-    }
+) : RouteScreen<TracksKey> {
+    override val key: KClass<out TracksKey>
+        get() = TracksKey::class
 
     @Composable
-    fun Content() {
+    override fun Content(key: TracksKey) {
         val scope = rememberCoroutineScope()
 
         Column {

@@ -1,27 +1,28 @@
 package dev.bnorm.arcade.web.route.seasons
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,17 +32,29 @@ import dev.bnorm.arcade.service.api.ParticipantResponse
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonResponse
+import dev.bnorm.arcade.web.route.RouteKey
+import dev.bnorm.arcade.web.route.SeasonKey
+import dev.bnorm.arcade.web.components.MaxWidthContent
+import dev.bnorm.arcade.web.route.RouteScreen
 import dev.bnorm.arcade.web.route.races.RaceCard
 import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
 import kotlin.math.roundToInt
+import kotlin.reflect.KClass
 
-@Inject
-@SingleIn(AppScope::class)
+@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
 class SeasonScreen(
     private val client: ArcadeClient,
-) {
+) : RouteScreen<SeasonKey> {
+    override val key: KClass<out SeasonKey>
+        get() = SeasonKey::class
+
+    @Composable
+    override fun Content(key: SeasonKey) {
+        Content(key.id)
+    }
+
     @Composable
     fun Content(seasonId: SeasonId) {
         var season by remember { mutableStateOf<SeasonResponse?>(null) }
@@ -53,23 +66,55 @@ class SeasonScreen(
             races.addAll(client.getSeasonRaces(seasonId))
         }
 
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${season?.name}", style = MaterialTheme.typography.displayLarge)
-                Spacer(Modifier.weight(1f))
-                // RaceCreateButton(client, onCreate = { races.add(it) })
-            }
-            Spacer(
-                Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    navigationIcon = {
 
-            Row {
+                    },
+                    title = {
+                        Text("${season?.name}")
+                    },
+                    actions = {
+
+                    }
+                )
+            }
+        ) { contentPadding ->
+            MaxWidthContent(
+                modifier = Modifier
+                    .padding(contentPadding)
+            ) {
+                SeasonContent(races, participants)
+            }
+        }
+    }
+
+    @Composable
+    private fun SeasonContent(
+        races: SnapshotStateList<RaceResponse>,
+        participants: SnapshotStateList<ParticipantResponse>
+    ) {
+        Column {
+            var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
+            PrimaryScrollableTabRow(
+                selectedTabIndex = selectedDestination,
+                divider = {},
+                modifier = Modifier
+            ) {
+                Tab(
+                    selected = selectedDestination == 0,
+                    onClick = { selectedDestination = 0 },
+                    text = { Text("Participants") },
+                )
+                Tab(
+                    selected = selectedDestination == 1,
+                    onClick = { selectedDestination = 1 },
+                    text = { Text("Races") },
+                )
+            }
+
+            if (selectedDestination == 1) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier
@@ -82,7 +127,9 @@ class SeasonScreen(
                         RaceCard(client, race)
                     }
                 }
+            }
 
+            if (selectedDestination == 0) {
                 Grid(
                     rows = 1 + participants.size,
                     stickyRows = 1,

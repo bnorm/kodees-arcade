@@ -12,21 +12,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.softwork.routingcompose.RouteBuilder
 import dev.bnorm.arcade.arcade_webapp.generated.resources.Res
 import dev.bnorm.arcade.arcade_webapp.generated.resources.icon
-import dev.bnorm.arcade.web.route.WebRouter
+import dev.bnorm.arcade.web.route.HomeKey
+import dev.bnorm.arcade.web.route.RouteKey
+import dev.bnorm.arcade.web.route.RouteScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlin.reflect.KClass
 import org.jetbrains.compose.resources.painterResource
 
-@ContributesIntoSet(AppScope::class)
-class HomeRoute : WebRouter {
+@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+class HomeScreen : RouteScreen<HomeKey> {
+    override val key: KClass<out HomeKey>
+        get() = HomeKey::class
+
     @Composable
-    override fun RouteBuilder.Route() {
-        route("/") {
-            Content()
-        }
+    override fun Content(key: HomeKey) {
+        Content()
     }
 
     @Composable
