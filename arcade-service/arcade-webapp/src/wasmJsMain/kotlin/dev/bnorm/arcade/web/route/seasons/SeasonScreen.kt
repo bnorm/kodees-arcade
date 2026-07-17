@@ -14,12 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,11 +28,11 @@ import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.ParticipantResponse
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonResponse
-import dev.bnorm.arcade.web.route.races.RaceModel
 import dev.bnorm.arcade.web.route.RouteKey
 import dev.bnorm.arcade.web.route.RouteScreen
 import dev.bnorm.arcade.web.route.SeasonKey
 import dev.bnorm.arcade.web.route.races.RaceCard
+import dev.bnorm.arcade.web.route.races.RaceModel
 import dev.bnorm.arcade.web.route.races.toModel
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
@@ -67,77 +67,87 @@ class SeasonScreen(
         }
 
         Column {
-            var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
+            var selectedDestination by rememberSaveable { mutableStateOf(SeasonTab.Participants) }
             PrimaryScrollableTabRow(
-                selectedTabIndex = selectedDestination,
+                selectedTabIndex = selectedDestination.ordinal,
                 divider = {},
                 modifier = Modifier
             ) {
-                Tab(
-                    selected = selectedDestination == 0,
-                    onClick = { selectedDestination = 0 },
-                    text = { Text("Participants") },
-                )
-                Tab(
-                    selected = selectedDestination == 1,
-                    onClick = { selectedDestination = 1 },
-                    text = { Text("Races") },
-                )
-            }
-
-            if (selectedDestination == 1) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier
-                        .width(IntrinsicSize.Max)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
-                        .padding(top = 16.dp)
-                ) {
-                    for (race in races) {
-                        RaceCard(client, race)
-                    }
+                for (tab in SeasonTab.entries) {
+                    Tab(
+                        selected = selectedDestination == tab,
+                        onClick = { selectedDestination = tab },
+                        text = { Text(tab.name) },
+                    )
                 }
             }
 
-            if (selectedDestination == 0) {
-                Grid(
-                    rows = 1 + participants.size,
-                    stickyRows = 1,
-                    columns = 2,
-                    modifier = Modifier
-                        .padding(32.dp - 4.dp)
-                ) {
-                    Text(
-                        text = "Name",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .padding(4.dp)
-                    )
-                    Text(
-                        text = "Score",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .padding(4.dp)
-                    )
-                    for (participant in participants.sortedBy { -it.score }) {
-                        Text(
-                            text = "${participant.name} ${participant.version}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier
-                                .padding(4.dp)
-                        )
-                        Text(
-                            text = "${participant.score.roundToInt()}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier
-                                .padding(4.dp)
-                        )
-                    }
-                }
+            when (selectedDestination) {
+                SeasonTab.Participants -> ParticipantsTab(participants)
+                SeasonTab.Races -> RacesTab(client, races)
             }
+        }
+    }
+
+}
+
+private enum class SeasonTab {
+    Participants,
+    Races,
+}
+
+@Composable
+private fun ParticipantsTab(participants: SnapshotStateList<ParticipantResponse>) {
+    Grid(
+        rows = 1 + participants.size,
+        stickyRows = 1,
+        columns = 2,
+        modifier = Modifier
+            .padding(32.dp - 4.dp)
+    ) {
+        Text(
+            text = "Name",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(4.dp)
+        )
+        Text(
+            text = "Score",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(4.dp)
+        )
+        for (participant in participants.sortedBy { -it.score }) {
+            Text(
+                text = "${participant.name} ${participant.version}",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .padding(4.dp)
+            )
+            Text(
+                text = "${participant.score.roundToInt()}",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .padding(4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun RacesTab(client: ArcadeClient, races: List<RaceModel>) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .width(IntrinsicSize.Max)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+            .padding(top = 16.dp)
+    ) {
+        for (race in races) {
+            RaceCard(client, race)
         }
     }
 }
