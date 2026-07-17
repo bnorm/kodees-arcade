@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.icons
+package dev.bnorm.arcade.display.asset.icon
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType

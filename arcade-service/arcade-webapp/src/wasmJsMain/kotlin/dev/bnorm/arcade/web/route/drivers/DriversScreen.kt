@@ -28,13 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.icons.sports_motorsports
+import dev.bnorm.arcade.display.asset.icon.sports_motorsports
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverCreateRequest
 import dev.bnorm.arcade.service.api.DriverResponse
+import dev.bnorm.arcade.web.components.MaxWidthContent
 import dev.bnorm.arcade.web.route.DriversKey
 import dev.bnorm.arcade.web.route.RouteKey
-import dev.bnorm.arcade.web.components.MaxWidthContent
 import dev.bnorm.arcade.web.route.RouteScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet

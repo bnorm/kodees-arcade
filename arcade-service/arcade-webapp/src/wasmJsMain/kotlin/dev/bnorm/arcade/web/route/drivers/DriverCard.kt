@@ -33,8 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.icons.download
-import dev.bnorm.arcade.icons.upload
+import dev.bnorm.arcade.display.asset.icon.download
+import dev.bnorm.arcade.display.asset.icon.upload
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.DriverResponse

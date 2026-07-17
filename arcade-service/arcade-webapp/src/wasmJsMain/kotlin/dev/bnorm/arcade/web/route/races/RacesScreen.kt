@@ -38,12 +38,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import dev.bnorm.arcade.display.asset.icon.play_arrow
+import dev.bnorm.arcade.display.asset.icon.replay
+import dev.bnorm.arcade.display.asset.icon.sports_motorsports
 import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.display.track.TrackViewModel
-import dev.bnorm.arcade.icons.play_arrow
-import dev.bnorm.arcade.icons.replay
-import dev.bnorm.arcade.icons.sports_motorsports
 import dev.bnorm.arcade.rally.race.DownloadGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId

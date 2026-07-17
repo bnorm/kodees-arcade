@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.icons
+package dev.bnorm.arcade.display.asset.icon
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
@@ -9,7 +9,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-@Suppress("CheckReturnValue")
 val download: ImageVector
     get() {
         if (_download != null) {
