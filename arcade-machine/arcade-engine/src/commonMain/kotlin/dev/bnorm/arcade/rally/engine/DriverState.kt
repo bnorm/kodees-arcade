@@ -2,10 +2,8 @@ package dev.bnorm.arcade.rally.engine
 
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.atan2
-import dev.bnorm.arcade.rally.engine.wasm.WasmDriver
 
-class RallyCarState(
-    val name: String,
+class DriverState(
     val driver: WasmDriver,
     var x: Double,
     var y: Double,
@@ -16,11 +14,11 @@ class RallyCarState(
     var lapTimes: MutableList<Long> = mutableListOf(),
     var finished: Boolean = false,
 ) {
-    fun angleTo(other: RallyCarState): Angle {
+    fun angleTo(other: DriverState): Angle {
         return atan2(other.y - y, other.x - x)
     }
 
-    fun distanceSq(other: RallyCarState): Double {
+    fun distanceSq(other: DriverState): Double {
         val dx = other.x - x
         val dy = other.y - y
         return dx * dx + dy * dy

@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.engine.wasm
+package dev.bnorm.arcade.rally.engine
 
 import ai.tegmentum.wasmtime4j.RuntimeType
 import ai.tegmentum.wasmtime4j.config.EngineConfig

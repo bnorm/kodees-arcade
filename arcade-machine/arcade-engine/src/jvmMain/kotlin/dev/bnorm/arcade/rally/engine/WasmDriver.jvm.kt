@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.rally.engine.wasm
+package dev.bnorm.arcade.rally.engine
 
 import ai.tegmentum.wasmtime4j.Instance
 import ai.tegmentum.wasmtime4j.Linker
@@ -39,22 +39,25 @@ import kotlinx.io.readString
 import kotlinx.io.unsafe.UnsafeBufferOperations
 import kotlinx.io.writeToInternalBuffer
 
-actual suspend fun WasmDriver(name: String, bytes: ByteArray): WasmDriver {
-    return WasmtimeWasmDriver.of(bytes)
+actual suspend fun WasmModule(bytes: ByteArray): WasmModule {
+    return WasmtimeWasmModule(engine.compileModule(bytes))
 }
 
-private class WasmtimeWasmDriver private constructor() : WasmDriver {
-    companion object {
-        fun of(bytes: ByteArray): WasmtimeWasmDriver {
-            val driver = WasmtimeWasmDriver()
-            val guest = driver.guest
+private class WasmtimeWasmModule(
+    private val module: Module
+) : WasmModule {
+    override suspend fun createDriver(name: String): WasmDriver {
+        return WasmtimeWasmDriver.of(name, module)
+    }
+}
 
-            // TODO can we cache these?
-            //  - this is probably the longest process of creating a driver
-            //  - maybe it should come pre-compiled, so we know it's a valid wasm program?
-            //  - caching might be a lot of memory pressure...
-            //  - but it could help with running the same driver multiple times
-            guest.module = engine.compileModule(bytes)
+private class WasmtimeWasmDriver private constructor(
+    override val name: String,
+) : WasmDriver {
+    companion object {
+        fun of(name: String, module: Module): WasmtimeWasmDriver {
+            val driver = WasmtimeWasmDriver(name)
+            val guest = driver.guest
 
             guest.store = engine.createStore()
             guest.linker = runtime.createLinker<Nothing>(engine).apply {
@@ -210,7 +213,7 @@ private class WasmtimeWasmDriver private constructor() : WasmDriver {
                 )
             }
 
-            guest.instance = guest.linker.instantiate(guest.store, guest.module)
+            guest.instance = guest.linker.instantiate(guest.store, module)
             guest.memory = guest.instance.defaultMemory.orElseThrow()
 
             return driver
@@ -307,7 +310,6 @@ private class WasmtimeWasmDriver private constructor() : WasmDriver {
 }
 
 private class WasmGuest : AutoCloseable {
-    lateinit var module: Module
     lateinit var store: Store
     lateinit var linker: Linker<*>
     lateinit var instance: Instance
@@ -317,7 +319,6 @@ private class WasmGuest : AutoCloseable {
         instance.close()
         linker.close()
         store.close()
-        module.close()
     }
 }
 

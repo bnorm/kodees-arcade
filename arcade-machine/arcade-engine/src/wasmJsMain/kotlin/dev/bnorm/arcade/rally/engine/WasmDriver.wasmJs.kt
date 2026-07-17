@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
-package dev.bnorm.arcade.rally.engine.wasm
+package dev.bnorm.arcade.rally.engine
 
 import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Race
@@ -39,17 +39,26 @@ import web.assembly.Module
 import web.assembly.compile
 import web.assembly.instantiate
 
-actual suspend fun WasmDriver(name: String, bytes: ByteArray): WasmDriver {
-    return BrowserWasmDriver.of(name, bytes)
+actual suspend fun WasmModule(bytes: ByteArray): WasmModule {
+    return BrowserWasmModule(compile(bytes.toArrayBuffer()))
 }
 
-private class BrowserWasmDriver : WasmDriver {
-    companion object {
-        suspend fun of(name: String, bytes: ByteArray): WasmDriver {
-            val driver = BrowserWasmDriver()
-            val guest = driver.guest
+private class BrowserWasmModule(
+    private val module: Module
+) : WasmModule {
+    override suspend fun createDriver(name: String): WasmDriver {
+        return BrowserWasmDriver.of(name, module)
+    }
+}
 
-            guest.imports = Imports(
+private class BrowserWasmDriver private constructor(
+    override val name: String,
+) : WasmDriver {
+    companion object {
+        suspend fun of(name: String, module: Module): WasmDriver {
+            val driver = BrowserWasmDriver(name)
+
+            val imports = Imports(
                 getThrottle = {
                     driver.throttle.toJsDouble()
                 },
@@ -79,7 +88,7 @@ private class BrowserWasmDriver : WasmDriver {
                 },
                 fdWrite = { fd, iovs, iovs_len, nwritten ->
                     fdWrite(
-                        guest.memory,
+                        driver.memory,
                         iovs_len.toInt(),
                         iovs.toInt(),
                         fd.toInt(),
@@ -89,7 +98,7 @@ private class BrowserWasmDriver : WasmDriver {
                     ).toJsInt()
                 },
                 randomGet = { bufPtr, bufLen ->
-                    randomGet(guest.memory, driver.random, bufLen.toInt(), bufPtr.toInt()).toJsInt()
+                    randomGet(driver.memory, driver.random, bufLen.toInt(), bufPtr.toInt()).toJsInt()
                 },
                 environSizesGet = { environCountPtr, environBufferSizePtr ->
                     // TODO what environment variables should we expose?
@@ -107,14 +116,14 @@ private class BrowserWasmDriver : WasmDriver {
                 },
             )
 
-            guest.module = compile(bytes.toArrayBuffer())
-            guest.instance = instantiate(guest.module, guest.imports)
-            guest.memory = guest.instance.exports["memory"]!!.unsafeCast()
+            driver.instance = instantiate(module, imports)
+            driver.memory = driver.instance.exports["memory"]!!.unsafeCast()
             return driver
         }
     }
 
-    private val guest = WasmGuest()
+    lateinit var instance: Instance
+    lateinit var memory: Memory<*>
 
     override var steering: Double = 0.0
         private set
@@ -133,15 +142,15 @@ private class BrowserWasmDriver : WasmDriver {
     private val drawRequests = mutableListOf<DrawRequest>()
 
     private val move: JsFunction<Tuple, JsAny?> by lazy(LazyThreadSafetyMode.NONE) {
-        guest.instance.exports["bnorm:arcade/driver#on-turn"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
+        instance.exports["bnorm:arcade/driver#on-turn"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
     }
 
     private val onRace by lazy(LazyThreadSafetyMode.NONE) {
-        guest.instance.exports["bnorm:arcade/driver#on-race"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
+        instance.exports["bnorm:arcade/driver#on-race"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
     }
 
     private val onDraw by lazy(LazyThreadSafetyMode.NONE) {
-        guest.instance.exports["bnorm:arcade/driver#on-draw"]?.unsafeCast<JsFunction<Tuple, JsAny?>>()
+        instance.exports["bnorm:arcade/driver#on-draw"]?.unsafeCast<JsFunction<Tuple, JsAny?>>()
     }
 
     override fun move(car: Car) {
@@ -157,7 +166,7 @@ private class BrowserWasmDriver : WasmDriver {
     }
 
     override fun onRace(race: Race) {
-        guest.memory.require(
+        memory.require(
             race.track.checkpoints.size * 32 +
                 race.track.positions.size * 24
         )
@@ -200,17 +209,7 @@ private class BrowserWasmDriver : WasmDriver {
     }
 
     override fun close() {
-        guest.close()
     }
-}
-
-private class WasmGuest : AutoCloseable {
-    lateinit var module: Module
-    lateinit var imports: Imports
-    lateinit var instance: Instance
-    lateinit var memory: Memory<*>
-
-    override fun close() {}
 }
 
 private fun JsFunction<Tuple, JsAny?>.invoke() {

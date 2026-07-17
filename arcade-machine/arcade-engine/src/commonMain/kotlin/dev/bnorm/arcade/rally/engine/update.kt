@@ -10,23 +10,36 @@ import dev.bnorm.arcade.geometry.sin
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.MAX_SPEED
 import dev.bnorm.arcade.rally.MAX_SPEED_BOOST
-import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.rally.simulateHeading
 import dev.bnorm.arcade.rally.simulateSpeed
 import kotlin.math.sqrt
 
-val carWidth = 12.0
-val carHeight = 16.0
+internal const val impactDist = 27.2
+internal const val impactDistSq = impactDist * impactDist
+internal const val borderImpactDist = impactDist / 2.0
 
-//val impactDist = carHeight / 2.0
-private const val impactDist = (68.0 * 0.4f)
-private const val impactDistSq = impactDist * impactDist
+internal val draftAngle = Angle.QUARTER_CIRCLE / 4.0 // 22.5 deg
+internal const val draftDist = 10 * 6 + impactDist // 10 meters + impact
 
-private val draftAngle = Angle.QUARTER_CIRCLE / 4.0 // 22.5 deg
-private const val draftDist = 10 * 6 + impactDist // 10 meters + impact
-
-fun update(gameState: RallyGameState, track: Track) {
+fun update(gameState: GameState) {
     gameState.time++
+
+    /** @return if impacted with a wall. */
+    fun move(state: DriverState, speed: Double, heading: Angle): Boolean {
+        val newX = state.x + speed * cos(heading)
+        val newY = state.y + speed * sin(heading)
+        state.x = newX
+        state.y = newY
+
+        if (newX !in gameState.widthRange || newY !in gameState.heightRange) {
+            state.x = newX.coerceIn(gameState.widthRange)
+            state.y = newY.coerceIn(gameState.heightRange)
+            return true
+        }
+
+        return false
+    }
+
 
     val drivers = gameState.driverStates
     for (state in drivers) {
@@ -47,7 +60,7 @@ fun update(gameState: RallyGameState, track: Track) {
         val boost = drivers.maxOf { state.computeDraftBoost(it) }
         val newHeading = simulateHeading(oldHeading, oldSpeed, steering, traction = 1.0)
         var newSpeed = simulateSpeed(oldSpeed, boost, throttle)
-        if (updatePosition(state, newSpeed, newHeading, gameState)) {
+        if (move(state, newSpeed, newHeading)) {
             newSpeed = 0.0
         }
 
@@ -81,10 +94,10 @@ fun update(gameState: RallyGameState, track: Track) {
                 val delta = sqrt(impactDistSq) - sqrt(distSq)
                 val angle = atan2(dy, dx)
                 val impulse = (delta / 2).coerceAtLeast(0.1)
-                if (updatePosition(driver1, impulse, angle, gameState)) {
+                if (move(driver1, impulse, angle)) {
                     driver1.speed = 0.0
                 }
-                if (updatePosition(driver2, impulse, angle + Angle.HALF_CIRCLE, gameState)) {
+                if (move(driver2, impulse, angle + Angle.HALF_CIRCLE)) {
                     driver2.speed = 0.0
                 }
             }
@@ -93,7 +106,7 @@ fun update(gameState: RallyGameState, track: Track) {
 
     // Update driver checkpoints.
     for (driverState in drivers) {
-        val checkpoint = track.checkpoints[driverState.checkpoint]
+        val checkpoint = gameState.track.checkpoints[driverState.checkpoint]
         val radius = (MAX_SPEED + 1)
 
         // Calculate distance to the checkpoint by
@@ -105,7 +118,7 @@ fun update(gameState: RallyGameState, track: Track) {
             driverState.checkpoint += 1
 
             // Proceed to the next lap.
-            if (driverState.checkpoint >= track.checkpoints.size) {
+            if (driverState.checkpoint >= gameState.track.checkpoints.size) {
                 driverState.lap += 1
                 driverState.checkpoint = 0
             }
@@ -124,7 +137,7 @@ fun update(gameState: RallyGameState, track: Track) {
     gameState.finished = drivers.all { it.finished }
 }
 
-private fun RallyCarState.computeDraftBoost(other: RallyCarState): Double {
+private fun DriverState.computeDraftBoost(other: DriverState): Double {
     if (this === other) return 0.0
     if (other.finished) return 0.0
 
@@ -140,28 +153,4 @@ private fun RallyCarState.computeDraftBoost(other: RallyCarState): Double {
     }
 
     return 0.0
-}
-
-/** @return if impacted with a wall. */
-private fun updatePosition(
-    state: RallyCarState,
-    magnitude: Double,
-    heading: Angle,
-    gameState: RallyGameState
-): Boolean {
-    val newX = state.x + magnitude * cos(heading)
-    val newY = state.y + magnitude * sin(heading)
-    state.x = newX
-    state.y = newY
-
-    if (
-        newX !in impactDist..gameState.trackWidth - impactDist ||
-        newY !in impactDist..gameState.trackHeight - impactDist
-    ) {
-        state.x = newX.coerceIn(impactDist, gameState.trackWidth - impactDist)
-        state.y = newY.coerceIn(impactDist, gameState.trackHeight - impactDist)
-        return true
-    }
-
-    return false
 }

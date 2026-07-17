@@ -1,13 +1,19 @@
-package dev.bnorm.arcade.rally.engine.wasm
+package dev.bnorm.arcade.rally.engine
 
 import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Race
 import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
 import kotlinx.io.RawSource
 
-expect suspend fun WasmDriver(name: String, bytes: ByteArray): WasmDriver
+interface WasmModule {
+    suspend fun createDriver(name: String): WasmDriver
+}
+
+expect suspend fun WasmModule(bytes: ByteArray): WasmModule
 
 interface WasmDriver : AutoCloseable {
+    val name: String
+
     val steering: Double
     val throttle: Double
 

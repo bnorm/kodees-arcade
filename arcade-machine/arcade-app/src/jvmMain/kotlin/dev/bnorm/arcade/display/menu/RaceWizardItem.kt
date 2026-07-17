@@ -14,10 +14,8 @@ import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.rememberDialogState
 import dev.bnorm.arcade.display.MenuItem
 import dev.bnorm.arcade.display.game.GameViewModel
-import dev.bnorm.arcade.machine.RecordGame
 import dev.bnorm.arcade.rally.RaceWizardScreen
 import dev.zacsweers.metro.ContributesIntoSet
-import java.nio.file.Paths
 
 @ContributesIntoSet(WindowScope::class)
 class RaceWizardItem(
@@ -43,7 +41,7 @@ class RaceWizardItem(
             ) {
                 raceWizardScreen.Content(
                     onStart = {
-                        gameViewModel.new(RecordGame(it, Paths.get("./recording.race")))
+                        gameViewModel.new(it)
                         visible = false
                     }
                 )

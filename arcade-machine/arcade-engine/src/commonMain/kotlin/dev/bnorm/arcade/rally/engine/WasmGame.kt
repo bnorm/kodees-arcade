@@ -1,24 +1,17 @@
-package dev.bnorm.arcade.rally.race
+package dev.bnorm.arcade.rally.engine
 
 import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.engine.RallyCarState
-import dev.bnorm.arcade.rally.engine.RallyGameState
-import dev.bnorm.arcade.rally.engine.update
-import dev.bnorm.arcade.rally.engine.wasm.WasmDriver
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.io.buffered
 import kotlinx.io.readString
 import dev.bnorm.arcade.driver.Race as DriverRaceModel
 
 class WasmGame(
     private val track: Track,
-    private val drivers: List<Driver>,
+    private val drivers: List<WasmDriver>,
     private val laps: Int,
 ) : Game {
     init {
@@ -35,27 +28,21 @@ class WasmGame(
 
         onEvent(Game.Event.Start(track, drivers.map { it.name }))
 
-        val gameState = RallyGameState(
-            trackWidth = track.width,
-            trackHeight = track.height,
+        val gameState = GameState(
+            track = track,
             laps = laps,
             finished = false,
             time = 0,
-            driverStates = coroutineScope {
-                List(drivers.size) {
-                    async {
-                        val driver = drivers[it]
-                        val position = track.positions[it]
-                        RallyCarState(
-                            name = driver.name,
-                            driver = WasmDriver(driver.name, driver.bytes),
-                            x = position.location.x,
-                            y = position.location.y,
-                            heading = position.heading,
-                        )
-                    }
-                }
-            }.awaitAll()
+            driverStates = List(drivers.size) {
+                val driver = drivers[it]
+                val position = track.positions[it]
+                DriverState(
+                    driver = driver,
+                    x = position.location.x,
+                    y = position.location.y,
+                    heading = position.heading,
+                )
+            }
         )
 
         try {
@@ -86,7 +73,7 @@ class WasmGame(
                 }
 
                 // Update game state.
-                update(gameState, track)
+                update(gameState)
 
                 onEvent(
                     Game.Event.Update(
@@ -95,7 +82,7 @@ class WasmGame(
                                 Game.Event.Update.Driver.Debug(
                                     stdout = state.driver.stdout.buffered().readString().takeIf { it.isNotEmpty() },
                                     stderr = state.driver.stderr.buffered().readString().takeIf { it.isNotEmpty() },
-                                    drawRequests = state.takeIf { state.name in debug }
+                                    drawRequests = state.takeIf { state.driver.name in debug }
                                         ?.driver?.onDraw().orEmpty(),
                                 )
                             )
@@ -110,12 +97,12 @@ class WasmGame(
         }
 
         val results = gameState.driverStates
-            .associate { state -> state.name to Game.Event.Complete.Result(state.lapTimes) }
+            .associate { state -> state.driver.name to Game.Event.Complete.Result(state.lapTimes) }
         onEvent(Game.Event.Complete(results))
     }
 }
 
-private fun RallyCarState.toDriverUpdate(debug: Game.Event.Update.Driver.Debug? = null): Game.Event.Update.Driver {
+private fun DriverState.toDriverUpdate(debug: Game.Event.Update.Driver.Debug? = null): Game.Event.Update.Driver {
     return Game.Event.Update.Driver(
         x = x,
         y = y,

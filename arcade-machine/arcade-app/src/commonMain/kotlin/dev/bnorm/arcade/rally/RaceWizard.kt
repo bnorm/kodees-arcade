@@ -1,15 +1,16 @@
 package dev.bnorm.arcade.rally
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,6 +39,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,29 +48,39 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.bnorm.arcade.arcade_player_samples.generated.resources.BundledDrivers
+import dev.bnorm.arcade.display.asset.icon.progress_activity
 import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.race.Driver
-import dev.bnorm.arcade.rally.race.WasmGame
+import dev.bnorm.arcade.rally.engine.WasmDriver
+import dev.bnorm.arcade.rally.engine.WasmGame
+import dev.bnorm.arcade.rally.engine.WasmModule
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.Version
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.nameWithoutExtension
 import io.github.vinceglb.filekit.readBytes
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -79,9 +92,38 @@ class RaceWizardScreen(
     private val client: ArcadeClient,
     private val trackViewModel: TrackViewModel,
 ) {
+    private val compilerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    private val moduleCache = mutableStateMapOf<Any, Deferred<WasmModule>>()
+    private inner class SelectedDriver(
+        val name: String,
+        module: Deferred<WasmModule>,
+    ) {
+        var ready by mutableStateOf(false)
+            private set
+
+        var error by mutableStateOf<Throwable?>(null)
+            private set
+
+        private var module: Deferred<WasmModule> = compilerScope.async {
+            try {
+                module.await()
+            } catch (t: Throwable) {
+                error = t
+                throw t
+            } finally {
+                ready = true
+            }
+        }
+
+        suspend fun createWasmDriver(): WasmDriver {
+            return module.await().createDriver(name)
+        }
+    }
+
     private var selectedTrack by mutableStateOf<Track?>(null)
     private var laps by mutableIntStateOf(25)
-    private val drivers = mutableStateListOf<Driver>()
+    private val drivers = mutableStateListOf<SelectedDriver>()
 
     private fun pickDriverName(baseName: String): String {
         val existingNames = drivers.mapTo(mutableSetOf()) { it.name }
@@ -94,9 +136,36 @@ class RaceWizardScreen(
         return name
     }
 
+    private fun selectDriverFile(file: PlatformFile) {
+        val module = compilerScope.async {
+            WasmModule(file.readBytes())
+        }
+        drivers.add(SelectedDriver(pickDriverName(file.nameWithoutExtension), module))
+    }
+
+    private fun selectDriverDownload(name: String, id: DriverId, version: Version) {
+        val module = moduleCache.getOrPut(id to version) {
+            compilerScope.async {
+                WasmModule(client.downloadDriverVersion(id, version))
+            }
+        }
+        drivers.add(SelectedDriver(pickDriverName(name), module))
+    }
+
+    private fun selectDriverBundled(driver: String) {
+        val module = moduleCache.getOrPut(driver) {
+            compilerScope.async {
+                WasmModule(BundledDrivers.readBytes("files/$driver.wasm"))
+            }
+        }
+        drivers.add(SelectedDriver(pickDriverName(driver), module))
+    }
+
     private fun validDrivers(): Boolean {
         val selectedTrack = selectedTrack
-        return selectedTrack != null && drivers.size in 1..selectedTrack.positions.size
+        return selectedTrack != null &&
+            drivers.size in 1..selectedTrack.positions.size &&
+            drivers.all { it.ready && it.error == null }
     }
 
     private fun validLaps(): Boolean {
@@ -152,21 +221,12 @@ class RaceWizardScreen(
     private fun DriverSelection(
         modifier: Modifier = Modifier,
     ) {
-        val scope = rememberCoroutineScope()
-
         val driversLauncher = rememberFilePickerLauncher(
             mode = FileKitMode.Single,
             type = FileKitType.File("wasm"),
         ) { file ->
             if (file != null) {
-                scope.launch {
-                    drivers.add(
-                        Driver(
-                            name = pickDriverName(file.name.substringBeforeLast(".")),
-                            bytes = file.readBytes(),
-                        )
-                    )
-                }
+                selectDriverFile(file)
             }
         }
 
@@ -206,11 +266,8 @@ class RaceWizardScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            scope.launch {
-                                                val wasm = client.downloadDriverVersion(driver.id, version)
-                                                drivers.add(Driver(pickDriverName(name), wasm))
-                                                showDownloader = false
-                                            }
+                                            selectDriverDownload(name, driver.id, version)
+                                            showDownloader = false
                                         }
                                         .padding(4.dp)
                                 )
@@ -254,14 +311,7 @@ class RaceWizardScreen(
                 for (driver in BUNDLED_DRIVERS) {
                     Button(
                         onClick = {
-                            scope.launch {
-                                drivers.add(
-                                    Driver(
-                                        name = pickDriverName(driver),
-                                        bytes = BundledDrivers.readBytes("files/$driver.wasm"),
-                                    )
-                                )
-                            }
+                            selectDriverBundled(driver)
                         }
                     ) {
                         Text(driver)
@@ -283,8 +333,8 @@ class RaceWizardScreen(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        val valid = selectedTrack != null && position < selectedTrack.positions.size
-                        if (valid) {
+                        val validPosition = selectedTrack != null && position < selectedTrack.positions.size
+                        if (validPosition) {
                             Text(
                                 text = "P${position + 1}",
                                 textAlign = TextAlign.End,
@@ -304,6 +354,24 @@ class RaceWizardScreen(
                                 text = driver.name,
                                 color = MaterialTheme.colorScheme.error
                             )
+                        }
+
+                        val error = driver.error
+                        if (!driver.ready) {
+                            // TODO size the icon together with the text
+                            val transition = rememberInfiniteTransition()
+                            val rotation by transition.animateFloat(
+                                initialValue = 0f, targetValue = 360f,
+                                animationSpec = infiniteRepeatable(tween(1000))
+                            )
+                            Icon(
+                                painter = rememberVectorPainter(progress_activity),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .graphicsLayer { rotationZ = rotation }
+                            )
+                        } else if (error != null) {
+                            Text(error.message ?: "compilation error!")
                         }
                     }
                 }
@@ -329,12 +397,19 @@ class RaceWizardScreen(
         onStart: (Game) -> Unit,
         modifier: Modifier = Modifier,
     ) {
+        val scope = rememberCoroutineScope()
         val selectedTrack = selectedTrack
         val enabled = selectedTrack != null && validDrivers() && validLaps()
         Button(
             enabled = enabled,
             onClick = {
-                if (enabled) onStart(WasmGame(selectedTrack, drivers.toList(), laps))
+                if (enabled) {
+                    scope.launch {
+                        val drivers = drivers.map { it.createWasmDriver() }
+                        val game = WasmGame(selectedTrack, drivers, laps)
+                        onStart(game)
+                    }
+                }
             },
             modifier = modifier
         ) {

@@ -19,8 +19,8 @@ import com.jakewharton.mosaic.ui.Row
 import com.jakewharton.mosaic.ui.Spacer
 import com.jakewharton.mosaic.ui.Text
 import dev.bnorm.arcade.driver.Track
-import dev.bnorm.arcade.rally.race.Driver
-import dev.bnorm.arcade.rally.race.WasmGame
+import dev.bnorm.arcade.rally.engine.WasmDriver
+import dev.bnorm.arcade.rally.engine.WasmGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceId
@@ -266,7 +266,7 @@ suspend fun WorkerGame(client: ArcadeClient, event: RaceProcessEvent): WasmGame 
         drivers = buildList {
             for (driver in race.drivers) {
                 val blob = client.downloadDriverVersion(driver.driverId, driver.version) // TODO error
-                add(Driver(driver.name, blob))
+                add(WasmDriver(driver.name, blob))
             }
         },
         laps = race.laps
