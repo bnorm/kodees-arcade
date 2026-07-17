@@ -23,8 +23,8 @@ import dev.bnorm.arcade.display.track.TrackSize
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.TrackCreateRequest
 import dev.bnorm.arcade.web.route.RouteKey
-import dev.bnorm.arcade.web.route.TracksKey
 import dev.bnorm.arcade.web.route.RouteScreen
+import dev.bnorm.arcade.web.route.TracksKey
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.binding

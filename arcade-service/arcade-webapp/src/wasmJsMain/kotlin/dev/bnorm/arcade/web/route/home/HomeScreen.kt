@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,35 +29,15 @@ class HomeScreen : RouteScreen<HomeKey> {
 
     @Composable
     override fun Content(key: HomeKey) {
-        Content()
-    }
-
-    @Composable
-    fun Content() {
-        App()
-    }
-}
-
-@Composable
-fun App() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.widthIn(max = 1200.dp)) {
-            Content()
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp)
+        ) {
+            Image(painterResource(Res.drawable.icon), contentDescription = "Kodee's Arcade icon")
+            Text(text = "(Coming Soon)", style = MaterialTheme.typography.titleMedium)
         }
-    }
-}
-
-@Composable
-private fun Content() {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp)
-    ) {
-        Text(text = "Kodee's Arcade", style = MaterialTheme.typography.displayLarge)
-        Image(painterResource(Res.drawable.icon), contentDescription = "Kodee's Arcade icon")
-        Text(text = "(Coming Soon)", style = MaterialTheme.typography.displaySmall)
     }
 }

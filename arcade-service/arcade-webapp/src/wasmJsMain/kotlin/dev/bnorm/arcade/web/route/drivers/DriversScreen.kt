@@ -49,43 +49,24 @@ class DriversScreen(
     override val key: KClass<out DriversKey>
         get() = DriversKey::class
 
+    private val drivers = mutableStateListOf<DriverResponse>()
+
     @Composable
     override fun Content(key: DriversKey) {
-        val drivers = remember { mutableStateListOf<DriverResponse>() }
         LaunchedEffect(Unit) {
             val elements = client.getDrivers()
             drivers.clear()
             drivers.addAll(elements)
         }
 
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    navigationIcon = {
-
-                    },
-                    title = {
-                        Text("Drivers")
-                    },
-                    actions = {
-                        CreateDriverButton(client, onCreate = { drivers.add(it) })
-                    }
-                )
-            }
-        ) { innerPadding ->
-            MaxWidthContent(
-                modifier = Modifier
-                    .padding(innerPadding)
-            ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier
-                        .width(IntrinsicSize.Max)
-                ) {
-                    for ((index, driver) in drivers.withIndex()) {
-                        DriverCard(driver, client, onUpload = { drivers[index] = it })
-                    }
-                }
+//        CreateDriverButton(client, onCreate = { drivers.add(it) })
+        Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .width(IntrinsicSize.Max)
+        ) {
+            for ((index, driver) in drivers.withIndex()) {
+                DriverCard(driver, client, onUpload = { drivers[index] = it })
             }
         }
     }

@@ -1,82 +1,92 @@
 package dev.bnorm.arcade.web.route
 
 import androidx.navigation3.runtime.NavKey
-import androidx.savedstate.serialization.SavedStateConfiguration
 import com.github.terrakok.navigation3.browser.buildBrowserHistoryFragment
 import com.github.terrakok.navigation3.browser.getBrowserHistoryFragmentName
 import com.github.terrakok.navigation3.browser.getBrowserHistoryFragmentParameters
+import dev.bnorm.arcade.service.api.DriverId
+import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.SeasonId
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
 import kotlin.uuid.Uuid
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
 
-@Serializable
-sealed interface RouteKey : NavKey {
+interface RouteKey : NavKey {
     fun buildFragment(): String
 }
 
-@Serializable
+interface BaseRouteKey : RouteKey {
+    fun parse(fragmentName: String, parameters: Map<String, String?>): RouteKey?
+}
+
+abstract class AbstractBaseRouteKey(
+    private val fragment: String
+) : BaseRouteKey {
+    override fun buildFragment(): String {
+        return buildBrowserHistoryFragment(fragment)
+    }
+
+    override fun parse(fragmentName: String, parameters: Map<String, String?>): RouteKey? {
+        return when (fragmentName) {
+            this.fragment -> route(parameters)
+            else -> null
+        }
+    }
+
+    open fun route(parameters: Map<String, String?>): RouteKey? {
+        return this
+    }
+}
+
 data object HomeKey : RouteKey {
     override fun buildFragment(): String {
         return buildBrowserHistoryFragment("")
     }
 }
 
-@Serializable
-data object DriversKey : RouteKey {
-    override fun buildFragment(): String {
-        return buildBrowserHistoryFragment("drivers")
+@ContributesIntoSet(AppScope::class, binding<BaseRouteKey>())
+data object DriversKey : AbstractBaseRouteKey("drivers")
+
+@ContributesIntoSet(AppScope::class, binding<BaseRouteKey>())
+data object RacesKey : AbstractBaseRouteKey("racers")
+
+@ContributesIntoSet(AppScope::class, binding<BaseRouteKey>())
+data object TracksKey : AbstractBaseRouteKey("tracks")
+
+@ContributesIntoSet(AppScope::class, binding<BaseRouteKey>())
+data object SeasonsKey : AbstractBaseRouteKey("seasons") {
+    override fun route(parameters: Map<String, String?>): RouteKey? {
+        val seasonId = parameters.seasonId
+        return if (seasonId != null) {
+            SeasonKey(seasonId)
+        } else {
+            SeasonsKey
+        }
     }
 }
 
-@Serializable
-data object RacesKey : RouteKey {
-    override fun buildFragment(): String {
-        return buildBrowserHistoryFragment("races")
-    }
-}
-
-@Serializable
-data object TracksKey : RouteKey {
-    override fun buildFragment(): String {
-        return buildBrowserHistoryFragment("tracks")
-    }
-}
-
-@Serializable
-data object SeasonsKey : RouteKey {
-    override fun buildFragment(): String {
-        return buildBrowserHistoryFragment("seasons")
-    }
-}
-
-@Serializable
 data class SeasonKey(val id: SeasonId) : RouteKey {
     override fun buildFragment(): String {
         return buildBrowserHistoryFragment("seasons", mapOf("id" to id.toString()))
     }
 }
 
-fun restoreKey(fragment: String): RouteKey {
-    return when (getBrowserHistoryFragmentName(fragment)) {
-        "drivers" -> DriversKey
-
-        "races" -> RacesKey
-
-        "seasons" -> {
-            val parameters = getBrowserHistoryFragmentParameters(fragment)
-            val seasonId = parameters["id"]?.let { Uuid.parseOrNull(it) }?.let { SeasonId(it) }
-            if (seasonId != null) {
-                SeasonKey(seasonId)
-            } else {
-                SeasonsKey
-            }
-        }
-
-        "tracks" -> TracksKey
-
-        else -> HomeKey
+fun Set<BaseRouteKey>.route(fragment: String, default: RouteKey = HomeKey): RouteKey {
+    val fragmentName = getBrowserHistoryFragmentName(fragment) ?: return default
+    val parameters = getBrowserHistoryFragmentParameters(fragment)
+    for (key in this) {
+        val parsed = key.parse(fragmentName, parameters)
+        if (parsed != null) return parsed
     }
+    return default
 }
+
+private val Map<String, String?>.seasonId: SeasonId?
+    get() = this["id"]?.let { Uuid.parseOrNull(it) }?.let { SeasonId(it) }
+
+private val Map<String, String?>.raceId: RaceId?
+    get() = this["id"]?.let { Uuid.parseOrNull(it) }?.let { RaceId(it) }
+
+private val Map<String, String?>.driverId: DriverId?
+    get() = this["id"]?.let { Uuid.parseOrNull(it) }?.let { DriverId(it) }

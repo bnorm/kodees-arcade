@@ -9,8 +9,9 @@ import androidx.compose.ui.window.ComposeViewport
 import androidx.navigation3.runtime.NavBackStack
 import dev.bnorm.arcade.display.asset.font.Inter
 import dev.bnorm.arcade.server.client.ArcadeClient
+import dev.bnorm.arcade.web.route.BaseRouteKey
 import dev.bnorm.arcade.web.route.RouteKey
-import dev.bnorm.arcade.web.route.restoreKey
+import dev.bnorm.arcade.web.route.route
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -31,8 +32,8 @@ interface WebGraph {
 
     @Provides
     @SingleIn(AppScope::class)
-    private fun provideBackStack(): NavBackStack<RouteKey> {
-        return NavBackStack(restoreKey(window.location.hash))
+    private fun provideBackStack(baseRouteKeys: Set<BaseRouteKey>): NavBackStack<RouteKey> {
+        return NavBackStack(baseRouteKeys.route(window.location.hash))
     }
 
     val appScreen: AppScreen

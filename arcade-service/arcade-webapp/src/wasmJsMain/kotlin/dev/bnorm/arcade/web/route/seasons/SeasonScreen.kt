@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,21 +20,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.display.internal.Grid
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.ParticipantResponse
-import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonResponse
+import dev.bnorm.arcade.web.route.races.RaceModel
 import dev.bnorm.arcade.web.route.RouteKey
-import dev.bnorm.arcade.web.route.SeasonKey
-import dev.bnorm.arcade.web.components.MaxWidthContent
 import dev.bnorm.arcade.web.route.RouteScreen
+import dev.bnorm.arcade.web.route.SeasonKey
 import dev.bnorm.arcade.web.route.races.RaceCard
+import dev.bnorm.arcade.web.route.races.toModel
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.binding
@@ -59,42 +56,16 @@ class SeasonScreen(
     fun Content(seasonId: SeasonId) {
         var season by remember { mutableStateOf<SeasonResponse?>(null) }
         val participants = remember { mutableStateListOf<ParticipantResponse>() }
-        val races = remember { mutableStateListOf<RaceResponse>() }
+        val races = remember { mutableStateListOf<RaceModel>() }
         LaunchedEffect(seasonId) {
+            val tracks = client.getTracks().associateBy { it.id }
             season = client.getSeason(seasonId)
             participants.addAll(client.getParticipants(seasonId))
-            races.addAll(client.getSeasonRaces(seasonId))
+            races.addAll(client.getSeasonRaces(seasonId).map {
+                it.toModel(tracks[it.trackId])
+            })
         }
 
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    navigationIcon = {
-
-                    },
-                    title = {
-                        Text("${season?.name}")
-                    },
-                    actions = {
-
-                    }
-                )
-            }
-        ) { contentPadding ->
-            MaxWidthContent(
-                modifier = Modifier
-                    .padding(contentPadding)
-            ) {
-                SeasonContent(races, participants)
-            }
-        }
-    }
-
-    @Composable
-    private fun SeasonContent(
-        races: SnapshotStateList<RaceResponse>,
-        participants: SnapshotStateList<ParticipantResponse>
-    ) {
         Column {
             var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
             PrimaryScrollableTabRow(
