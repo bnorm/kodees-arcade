@@ -8,6 +8,22 @@ class Segment(
     val start: Point,
     val end: Point,
 ) {
+    operator fun plus(point: Point): Segment {
+        return Segment(start + point, end + point)
+    }
+
+    operator fun minus(point: Point): Segment {
+        return Segment(start - point, end - point)
+    }
+
+    operator fun times(scalar: Double): Segment {
+        return Segment(start * scalar, end * scalar)
+    }
+
+    operator fun div(scalar: Double): Segment {
+        return Segment(start / scalar, end / scalar)
+    }
+
     override fun toString(): String {
         return "[$start..$end]"
     }

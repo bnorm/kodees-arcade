@@ -40,7 +40,7 @@ class TrackBuilderItem(
                 onCloseRequest = { visible = false }
             ) {
                 TrackBuilder(
-                    size = IntSize(600, 600),
+                    initialSize = IntSize(600, 600),
                     onSave = {
                         trackViewModel.new(it)
                         visible = false

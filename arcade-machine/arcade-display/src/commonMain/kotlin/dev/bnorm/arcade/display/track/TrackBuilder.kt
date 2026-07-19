@@ -18,9 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.key.Key
@@ -31,10 +33,17 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.areAnyPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.roundToIntSize
+import androidx.compose.ui.unit.toSize
+import dev.bnorm.arcade.display.internal.FixedSize
+import dev.bnorm.arcade.display.internal.onKeyboard
+import dev.bnorm.arcade.display.internal.rememberKeyboardState
+import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Point
 import dev.bnorm.arcade.geometry.Position
@@ -56,15 +65,23 @@ import dev.bnorm.arcade.geometry.toNormal
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
-import dev.bnorm.arcade.display.internal.FixedSize
-import dev.bnorm.arcade.driver.Track
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-private enum class AddMode {
+private enum class BuilderMode {
+    /** Create a new track curve. */
     Curve,
+
+    /** Create a new track straight. */
     Straight,
+
+    /** Close the track with two final segments. */
     Close,
+
+    /** Move all segments together with the mouse. */
+    Shift,
+
+    ;
 }
 
 private sealed class BuilderResult(
@@ -78,7 +95,9 @@ private sealed class BuilderResult(
 }
 
 @Composable
-fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Modifier) {
+fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Modifier) {
+    var size by remember { mutableStateOf(initialSize.toSize()) }
+
     // the *second* checkpoint is the starting line
     // the first and second checkpoints define the starting grid and how many positions are possible
     var complete by remember { mutableStateOf(false) }
@@ -87,32 +106,55 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
         computePositions(checkpoints)
     }
 
-    var mouse by remember { mutableStateOf<Point?>(null) }
-    var addMode by remember { mutableStateOf(AddMode.Curve) }
+    fun move(delta: Point) {
+        val new = checkpoints.map { it + delta }
+        checkpoints.clear()
+        checkpoints.addAll(new)
+    }
 
+    fun scale(scrollDelta: Float, location: Point) {
+        size = Size(
+            width = (size.width + scrollDelta * size.width).coerceIn(1f, 32_766f),
+            height = (size.height + scrollDelta * size.height).coerceIn(1f, 32_766f),
+        )
+        move(scrollDelta.toDouble() * location)
+    }
+
+    val keyboardState = rememberKeyboardState()
+    var mouse by remember { mutableStateOf<Point?>(null) }
     var point by remember { mutableStateOf<Point?>(null) }
+
+    val mode by derivedStateOf {
+        when (keyboardState.pressed.singleOrNull()) {
+            Key.C -> BuilderMode.Close
+            Key.S -> BuilderMode.Straight
+            Key.MetaLeft, Key.MetaRight -> BuilderMode.Shift
+            else -> BuilderMode.Curve
+        }
+    }
+
     val builderResult by derivedStateOf {
         val mouse = mouse
         val point = point
-        when {
-            complete || mouse == null -> null
+        when (mode) {
+            BuilderMode.Shift -> null
+            else if (complete || mouse == null) -> null
+            else if point != null -> computeFirstSegment(mouse, point)
 
-            point != null -> computeFirstSegment(mouse, point)
+            else if checkpoints.isEmpty() -> null
 
-            checkpoints.isEmpty() -> null
-
-            addMode == AddMode.Close -> computeMiddleSegment(
+            BuilderMode.Close -> computeMiddleSegment(
                 mouse = mouse,
                 prev = checkpoints.last(),
                 next = checkpoints.first()
             )
 
-            addMode == AddMode.Straight -> computeStraightSegment(
+            BuilderMode.Straight -> computeStraightSegment(
                 mouse = mouse,
                 last = checkpoints.last()
             )
 
-            else -> computeCurveSegment(
+            BuilderMode.Curve -> computeCurveSegment(
                 mouse = mouse,
                 last = checkpoints.last()
             )
@@ -128,6 +170,7 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
         modifier = modifier
             .focusable()
             .focusRequester(focusRequester)
+            .onKeyboard(keyboardState)
             .onKeyEvent {
                 when (it.key) {
                     Key.Z if it.isCtrlPressed && it.type == KeyEventType.KeyUp -> {
@@ -139,16 +182,6 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                         } else {
                             checkpoints.removeLast()
                         }
-                        true
-                    }
-
-                    Key.C -> {
-                        addMode = if (it.type == KeyEventType.KeyDown) AddMode.Close else AddMode.Curve
-                        true
-                    }
-
-                    Key.S -> {
-                        addMode = if (it.type == KeyEventType.KeyDown) AddMode.Straight else AddMode.Curve
                         true
                     }
 
@@ -172,6 +205,7 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                 enabled = complete,
                 onClick = {
                     focusRequester.requestFocus()
+                    // TODO compact track width and height
                     val track = Track(
                         width = size.width.toDouble(),
                         height = size.height.toDouble(),
@@ -187,19 +221,23 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
         }
 
         FixedSize(
-            size = size,
+            size = size.roundToIntSize(),
             density = Density(1f),
+            modifier = Modifier
+                .border(2.dp, Color.Black)
+                .clipToBounds()
         ) {
             Canvas(
                 Modifier
                     .fillMaxSize()
-                    .border(2.dp, Color.Black)
                     .pointerInput(size) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
                                 when (event.type) {
                                     PointerEventType.Enter -> {
+                                        val location = event.changes.first().position.toPoint()
+                                        mouse = if (!complete) location else null
                                     }
 
                                     PointerEventType.Exit -> {
@@ -208,12 +246,25 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                                     }
 
                                     PointerEventType.Move -> {
-                                        mouse = if (!complete) event.changes.first().position.toPoint() else null
+                                        val change = event.changes.first()
+                                        val location = change.position.toPoint()
+                                        mouse = if (!complete) location else null
+
+                                        if (mode == BuilderMode.Shift && change.pressed) {
+                                            move(change.position.toPoint() - change.previousPosition.toPoint())
+                                        }
+                                    }
+
+                                    PointerEventType.Scroll -> {
+                                        if (mode == BuilderMode.Shift) {
+                                            val change = event.changes.first()
+                                            scale(change.scrollDelta.y / 4f, change.position.toPoint())
+                                        }
                                     }
 
                                     PointerEventType.Release -> {
                                         focusRequester.requestFocus()
-                                        if (!complete) {
+                                        if (!complete && !event.buttons.areAnyPressed) {
                                             when (val result = builderResult) {
                                                 null -> {}
 
@@ -231,7 +282,9 @@ fun TrackBuilder(size: IntSize, onSave: (Track) -> Unit, modifier: Modifier = Mo
                                                     }
                                                 }
 
-                                                else -> {
+                                                is BuilderResult.Curve,
+                                                is BuilderResult.Straight,
+                                                    -> {
                                                     result.segment?.let { checkpoints.add(it) }
                                                 }
                                             }
