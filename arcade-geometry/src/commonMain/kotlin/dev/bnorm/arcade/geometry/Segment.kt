@@ -1,13 +1,13 @@
 package dev.bnorm.arcade.geometry
 
-import kotlinx.serialization.Serializable
 import kotlin.math.sqrt
+import kotlinx.serialization.Serializable
 
 @Serializable
 class Segment(
     val start: Point,
     val end: Point,
-) {
+) : Boundable {
     operator fun plus(point: Point): Segment {
         return Segment(start + point, end + point)
     }
@@ -23,6 +23,9 @@ class Segment(
     operator fun div(scalar: Double): Segment {
         return Segment(start / scalar, end / scalar)
     }
+
+    override val bounds: Rectangle
+        get() = Rectangle(start, end)
 
     override fun toString(): String {
         return "[$start..$end]"

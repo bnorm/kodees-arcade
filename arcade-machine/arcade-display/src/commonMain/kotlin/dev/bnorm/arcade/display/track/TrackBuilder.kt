@@ -205,13 +205,16 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
                 enabled = complete,
                 onClick = {
                     focusRequester.requestFocus()
-                    // TODO compact track width and height
+
+                    val bounds = TrackPath.of(checkpoints).bounds
+                    val delta = Point(bounds.minX - TRACK_WIDTH, bounds.minY - TRACK_WIDTH)
+                    val boundedCheckpoints = checkpoints.map { it - delta }
                     val track = Track(
-                        width = size.width.toDouble(),
-                        height = size.height.toDouble(),
+                        width = bounds.width + 2.0 * TRACK_WIDTH,
+                        height = bounds.height + 2.0 * TRACK_WIDTH,
                         // Rotate checkpoints so the first defines the starting line.
-                        checkpoints = List(checkpoints.size) { checkpoints[(it + 1) % checkpoints.size] },
-                        positions = positions,
+                        checkpoints = List(checkpoints.size) { boundedCheckpoints[(it + 1) % checkpoints.size] },
+                        positions = computePositions(boundedCheckpoints),
                     )
                     onSave(track)
                 }

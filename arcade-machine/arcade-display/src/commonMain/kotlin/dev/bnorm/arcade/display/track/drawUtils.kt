@@ -117,11 +117,4 @@ internal val Rectangle.size: Size
 
 context(scope: DrawScope)
 internal val Rectangle.topLeft: Offset
-    get() {
-        val rectangle1 = this
-        return rectangle1.center.toOffset() -
-            Offset(
-                rectangle1.width.toFloat() / 2f,
-                rectangle1.height.toFloat() / 2f
-            )
-    }
+    get() = Offset(minX.toFloat(), scope.size.height - maxY.toFloat())

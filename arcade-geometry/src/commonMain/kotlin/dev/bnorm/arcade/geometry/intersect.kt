@@ -22,33 +22,33 @@ infix fun Rectangle.intersect(circle: Circle): Set<Point> {
     fun solveY(x: Double) {
         val ySum2 = (r2 - sqr(x - x0))
         if (ySum2 == 0.0) {
-            if (y0 in yRange) points.add(Point(x, y0))
+            if (y0 in minY..maxY) points.add(Point(x, y0))
         } else if (ySum2 > 0.0) {
             val ySum = sqrt(ySum2)
             val yTop = y0 + ySum
             val yBottom = y0 - ySum
-            if (yTop in yRange) points.add(Point(x, yTop))
-            if (yBottom in yRange) points.add(Point(x, yBottom))
+            if (yTop in minY..maxY) points.add(Point(x, yTop))
+            if (yBottom in minY..maxY) points.add(Point(x, yBottom))
         }
     }
 
     fun solveX(y: Double) {
         val xSum2 = (r2 - sqr(y - y0))
         if (xSum2 == 0.0) {
-            if (x0 in xRange) points.add(Point(x0, y))
+            if (x0 in minX..maxX) points.add(Point(x0, y))
         } else if (xSum2 > 0.0) {
             val xSum = sqrt(xSum2)
             val xRight = x0 + xSum
             val xLeft = x0 - xSum
-            if (xRight in xRange) points.add(Point(xRight, y))
-            if (xLeft in xRange) points.add(Point(xLeft, y))
+            if (xRight in minX..maxX) points.add(Point(xRight, y))
+            if (xLeft in minX..maxX) points.add(Point(xLeft, y))
         }
     }
 
-    solveY(xRange.start) // left
-    solveY(xRange.endInclusive) // right
-    solveX(yRange.start) // bottom
-    solveX(yRange.endInclusive) // top
+    solveY(minX) // left
+    solveY(maxX) // right
+    solveX(minY) // bottom
+    solveX(maxY) // top
 
     return points
 }
@@ -219,10 +219,10 @@ infix fun Rectangle.intersect(segment: Segment): List<Point> {
     // Both points are inside so intersection is impossible
     if (contains1 && contains2) return emptyList()
 
-    val c1 = Point(xRange.start, yRange.start)
-    val c2 = Point(xRange.endInclusive, yRange.start)
-    val c3 = Point(xRange.endInclusive, yRange.endInclusive)
-    val c4 = Point(xRange.start, yRange.endInclusive)
+    val c1 = Point(minX, minY)
+    val c2 = Point(maxX, minY)
+    val c3 = Point(maxX, maxY)
+    val c4 = Point(minX, maxY)
 
     return listOfNotNull(
         segment intersect Segment(c1, c2),

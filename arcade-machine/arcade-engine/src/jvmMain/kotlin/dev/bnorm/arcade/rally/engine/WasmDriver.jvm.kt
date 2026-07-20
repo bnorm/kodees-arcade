@@ -186,14 +186,11 @@ private class WasmtimeWasmDriver private constructor(
                             2 -> DrawRequest.Rectangle(
                                 color = Color(p1.toUInt()),
                                 rectangle = run {
-                                    val minX = p2
-                                    val maxX = p3
-                                    val minY = p4
-                                    val maxY = p5
                                     Rectangle(
-                                        center = Point((minX + maxX) / 2.0, (minY + maxY) / 2.0),
-                                        width = maxX - minX,
-                                        height = maxY - minY,
+                                        minX = p2,
+                                        maxX = p3,
+                                        minY = p4,
+                                        maxY = p5,
                                     )
                                 },
                                 style = when (p6) {

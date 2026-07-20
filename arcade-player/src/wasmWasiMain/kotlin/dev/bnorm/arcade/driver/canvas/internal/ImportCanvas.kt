@@ -116,10 +116,10 @@ internal object ImportCanvas : Canvas {
                 is DrawRequest.Rectangle -> {
                     variant0 = 2
                     variant1 = request.color.value.toInt()
-                    variant2 = request.rectangle.xRange.start
-                    variant3 = request.rectangle.xRange.endInclusive
-                    variant4 = request.rectangle.yRange.start
-                    variant5 = request.rectangle.yRange.endInclusive
+                    variant2 = request.rectangle.minX
+                    variant3 = request.rectangle.maxX
+                    variant4 = request.rectangle.minY
+                    variant5 = request.rectangle.maxX
                     when (val style = request.style) {
                         is Fill -> {
                             variant6 = 0L
