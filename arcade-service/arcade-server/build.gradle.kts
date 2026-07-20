@@ -54,7 +54,7 @@ tasks.processResources.configure {
 
 ktor {
     docker {
-        jreVersion = JavaVersion.VERSION_21
+        jreVersion = JavaVersion.VERSION_25
         localImageName = "arcade-server"
 
         externalRegistry = DockerImageRegistry.externalRegistry(
