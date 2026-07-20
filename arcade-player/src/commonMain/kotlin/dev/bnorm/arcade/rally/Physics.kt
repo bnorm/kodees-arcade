@@ -37,6 +37,7 @@ fun simulateSpeed(speed: Double, boost: Double, throttle: Double): Double {
     //  - hard acceleration causes speed increase to be lower?
     // TODO should there be skidding?
     //  - hard deceleration causes speed decrease to be lower?
+    // TODO if boost is always going to be applied, the driver needs to know about any current boost.
 
     fun simulateAcceleration(actualSpeed: Double, targetSpeed: Double): Double {
         // Let's deal with only positive target speed...

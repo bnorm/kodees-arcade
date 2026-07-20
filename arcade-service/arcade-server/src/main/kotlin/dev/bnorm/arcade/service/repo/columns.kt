@@ -7,6 +7,7 @@ import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.TrackId
 import dev.bnorm.arcade.service.api.Version
+import dev.bnorm.arcade.service.worker.WorkerId
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.uuid.Uuid
@@ -40,6 +41,10 @@ fun Table.blobId(name: String): Column<BlobId> {
 
 fun Table.raceId(name: String): Column<RaceId> {
     return uuid(name).transform(::RaceId, RaceId::uuid)
+}
+
+fun Table.workerId(name: String): Column<WorkerId> {
+    return uuid(name).transform(::WorkerId, WorkerId::uuid)
 }
 
 fun Table.driverId(name: String): Column<DriverId> {

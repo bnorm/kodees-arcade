@@ -9,6 +9,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":arcade-machine:arcade-multicade"))
     implementation(project(":arcade-service:arcade-api"))
 
     implementation(dependencies.platform(libs.ktor.bom))

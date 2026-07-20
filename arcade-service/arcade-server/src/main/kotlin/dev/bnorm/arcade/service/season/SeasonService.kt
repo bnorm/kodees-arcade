@@ -62,6 +62,7 @@ class SeasonService(
             driverId = this.driverId,
             name = this.name,
             version = this.version,
+            score = this.score,
         )
     }
 }

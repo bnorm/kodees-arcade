@@ -16,7 +16,8 @@ http-client.private.env.json
 .DS_Store
 
 ### Arcade ###
-# Server persistent file root.
+# Server persistent file roots.
 /.blobs/
+/.db/
 # Application persistent file root.
 .arcade/

@@ -102,7 +102,7 @@ object Kodee : Driver() {
                 // This is the speed we need to be going when we reach the checkpoint so we can make the next turn.
                 val nextDistance = current.distanceTo(next)
                 val targetRadius = nextDistance / (2.0 * cos(Angle.QUARTER_CIRCLE - nextAbsBearing))
-                val targetSpeed = getMaxThrottle(targetRadius)
+                val targetSpeed = getMaxSpeed(targetRadius)
 
                 // How much time will it take to decelerate?
                 val time = ceil((velocity.magnitude - targetSpeed) / DECELERATION)

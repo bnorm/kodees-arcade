@@ -22,19 +22,24 @@ import dev.bnorm.arcade.display.track.TrackBuilder
 import dev.bnorm.arcade.display.track.TrackSize
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.TrackCreateRequest
-import dev.bnorm.arcade.web.route.Route
+import dev.bnorm.arcade.web.route.RouteKey
+import dev.bnorm.arcade.web.route.RouteScreen
+import dev.bnorm.arcade.web.route.TracksKey
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlin.reflect.KClass
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class)
-class TracksRoute(
+@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+class TracksScreen(
     private val client: ArcadeClient
-) : Route {
-    override val path: String get() = "/tracks"
+) : RouteScreen<TracksKey> {
+    override val key: KClass<out TracksKey>
+        get() = TracksKey::class
 
     @Composable
-    override fun Content() {
+    override fun Content(key: TracksKey) {
         val scope = rememberCoroutineScope()
 
         Column {

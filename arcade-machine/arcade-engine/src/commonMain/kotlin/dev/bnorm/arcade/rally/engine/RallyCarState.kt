@@ -13,7 +13,8 @@ class RallyCarState(
     var speed: Double = 0.0,
     var checkpoint: Int = 0,
     var lap: Int = 0,
-    var finished: Long? = null,
+    var lapTimes: MutableList<Long> = mutableListOf(),
+    var finished: Boolean = false,
 ) {
     fun angleTo(other: RallyCarState): Angle {
         return atan2(other.y - y, other.x - x)

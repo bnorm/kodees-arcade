@@ -57,8 +57,11 @@ interface ServerGraph {
 
     @Provides
     private fun providesDatabase(): R2dbcDatabase {
+        val directory = Paths.get(".db")
+        directory.deleteRecursively()
+        directory.createDirectories()
         return R2dbcDatabase.connect(
-            url = "r2dbc:h2:mem:///test;DB_CLOSE_DELAY=-1",
+            url = "r2dbc:h2:file:///./.db/arcade;DB_CLOSE_DELAY=-1",
             databaseConfig = R2dbcDatabaseConfig {
                 sqlLogger = Slf4jSqlDebugLogger
             }

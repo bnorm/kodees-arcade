@@ -9,4 +9,5 @@ class ParticipantResponse(
     val driverId: DriverId,
     val name: String,
     val version: Version,
+    val score: Double,
 )

@@ -15,7 +15,9 @@ import dev.bnorm.arcade.service.repo.Repository
 import dev.bnorm.arcade.service.repo.TrackTable
 import dev.bnorm.arcade.service.repo.nonce
 import dev.bnorm.arcade.service.repo.raceId
+import dev.bnorm.arcade.service.repo.workerId
 import dev.bnorm.arcade.service.season.SeasonRaceTable
+import dev.bnorm.arcade.service.worker.WorkerId
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
@@ -30,6 +32,7 @@ import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.andIfNotNull
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
@@ -53,10 +56,15 @@ object RaceTable : IdTable<RaceId>("races") {
 // TODO does this really need to be another table?
 object RaceResultTable : Table("race_results") {
     val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
+
+    // Set when assigned.
+    val workerId = workerId("worker_id").nullable() // TODO table?
     val nonce = nonce("nonce")
 
+    // Set when started.
     val startTime = timestamp("start_time").nullable()
 
+    // Set when complete.
     val endTime = timestamp("end_time").nullable()
     val blobId = reference("blob_id", BlobTable, onDelete = ReferenceOption.RESTRICT).nullable()
 
@@ -70,20 +78,22 @@ val RaceResultJoin = RaceTable.join(
     otherColumn = RaceTable.id,
 )
 
-object PositionTable : Table("race_positions") {
+object RaceDriverTable : Table("race_drivers") {
     val raceId = reference("race_id", RaceTable, onDelete = ReferenceOption.CASCADE)
     val position = integer("position")
     val driverVersionId = reference("driver_version_id", DriverVersionTable, onDelete = ReferenceOption.RESTRICT)
 
+    val result = double("result").nullable()
+
     override val primaryKey = PrimaryKey(raceId, driverVersionId)
 }
 
-val PositionVersionDriverJoin = PositionTable
+val RaceVersionDriverJoin = RaceDriverTable
     .join(
         DriverVersionTable,
         JoinType.INNER,
         onColumn = DriverVersionTable.id,
-        otherColumn = PositionTable.driverVersionId,
+        otherColumn = RaceDriverTable.driverVersionId,
     )
     .join(
         DriverTable,
@@ -96,20 +106,22 @@ data class RaceEntity(
     val id: RaceId,
     val trackId: TrackId,
     val laps: Int,
-    val positions: List<PositionEntity>,
+    val drivers: List<RaceDriverEntity>,
     val nonce: Nonce,
+    val workerId: WorkerId? = null,
     val startTime: Instant? = null,
     val endTime: Instant? = null,
     val blobId: BlobId? = null,
 )
 
-class PositionEntity(
+data class RaceDriverEntity(
     val position: Int,
     val driverId: DriverId,
     val driverVersionId: DriverVersionId,
     val name: String,
     val version: Version,
     val blobId: BlobId,
+    val result: Double?,
 )
 
 val SeasonRaceResultJoin = SeasonRaceTable
@@ -128,16 +140,16 @@ val SeasonRaceResultJoin = SeasonRaceTable
 
 val SeasonRaceDriverVersionJoin = SeasonRaceTable
     .join(
-        PositionTable,
+        RaceDriverTable,
         JoinType.INNER,
-        onColumn = PositionTable.raceId,
+        onColumn = RaceDriverTable.raceId,
         otherColumn = SeasonRaceTable.raceId,
     )
     .join(
         DriverVersionTable,
         JoinType.INNER,
         onColumn = DriverVersionTable.id,
-        otherColumn = PositionTable.driverVersionId,
+        otherColumn = RaceDriverTable.driverVersionId,
     )
     .join(
         DriverTable,
@@ -147,13 +159,14 @@ val SeasonRaceDriverVersionJoin = SeasonRaceTable
     )
 
 fun ResultRow.toRaceEntity(
-    positions: List<PositionEntity>,
+    drivers: List<RaceDriverEntity>,
 ): RaceEntity {
     return RaceEntity(
         id = this[RaceTable.id].value,
         trackId = this[RaceTable.trackId].value,
         laps = this[RaceTable.laps],
-        positions = positions,
+        drivers = drivers,
+        workerId = this[RaceResultTable.workerId],
         nonce = this[RaceResultTable.nonce],
         startTime = this[RaceResultTable.startTime],
         endTime = this[RaceResultTable.endTime],
@@ -161,14 +174,15 @@ fun ResultRow.toRaceEntity(
     )
 }
 
-fun ResultRow.toPositionEntity(): PositionEntity {
-    return PositionEntity(
-        position = this[PositionTable.position],
-        driverId = this[DriverTable.id].value,
-        driverVersionId = this[PositionTable.driverVersionId].value,
-        name = this[DriverTable.name],
+fun ResultRow.toRaceDriverEntity(): RaceDriverEntity {
+    return RaceDriverEntity(
+        position = this[RaceDriverTable.position],
+        driverVersionId = this[RaceDriverTable.driverVersionId].value,
+        result = this[RaceDriverTable.result],
         version = this[DriverVersionTable.version],
         blobId = this[DriverVersionTable.blobId].value,
+        driverId = this[DriverTable.id].value,
+        name = this[DriverTable.name],
     )
 }
 
@@ -179,16 +193,16 @@ class RaceRepository(
 ) : Repository {
     override suspend fun migrate() {
         suspendTransaction(database) {
-            SchemaUtils.create(RaceTable, PositionTable, RaceResultTable)
+            SchemaUtils.create(RaceTable, RaceDriverTable, RaceResultTable)
         }
     }
 
     suspend fun getRaces(): List<RaceEntity> {
         // TODO paginate somehow
         return suspendTransaction(database) {
-            val positionsByRaceId = PositionVersionDriverJoin.selectAll().groupBy(
-                keySelector = { it[PositionTable.raceId].value },
-                valueTransform = { it.toPositionEntity() },
+            val driversByRaceId = RaceVersionDriverJoin.selectAll().groupBy(
+                keySelector = { it[RaceDriverTable.raceId].value },
+                valueTransform = { it.toRaceDriverEntity() },
             )
 
             // TODO array_agg?
@@ -197,7 +211,7 @@ class RaceRepository(
 
             RaceResultJoin.selectAll().map {
                 val raceId = it[RaceTable.id].value
-                it.toRaceEntity(positionsByRaceId[raceId].orEmpty())
+                it.toRaceEntity(driversByRaceId[raceId].orEmpty())
             }.toList()
         }
     }
@@ -208,8 +222,8 @@ class RaceRepository(
             val driverVersionIds = SeasonRaceDriverVersionJoin.selectAll()
                 .where { SeasonRaceTable.seasonId eq seasonId }
                 .groupBy(
-                    keySelector = { it[PositionTable.raceId].value },
-                    valueTransform = { it.toPositionEntity() },
+                    keySelector = { it[RaceDriverTable.raceId].value },
+                    valueTransform = { it.toRaceDriverEntity() },
                 )
 
             SeasonRaceResultJoin.selectAll()
@@ -226,11 +240,16 @@ class RaceRepository(
      * Specialized query to get only incomplete races.
      * Race entities are created without associated driver IDs to limit data.
      */
-    suspend fun getIncompleteRaces(): List<RaceEntity> {
+    suspend fun getIncompleteRaces(
+        workerId: WorkerId? = null,
+    ): List<RaceEntity> {
         // TODO paginate somehow?
         return suspendTransaction(database) {
             RaceResultJoin.selectAll()
-                .where { RaceResultTable.endTime eq null }
+                .where {
+                    (RaceResultTable.endTime eq null) andIfNotNull
+                        workerId?.let { (RaceResultTable.workerId eq it) }
+                }
                 .map { it.toRaceEntity(emptyList()) }.toList()
         }
     }
@@ -238,7 +257,7 @@ class RaceRepository(
     suspend fun createRace(
         seasonId: SeasonId?,
         trackId: TrackId,
-        positions: List<DriverVersionId>,
+        drivers: List<DriverVersionId>,
         laps: Int,
     ): RaceEntity {
         return suspendTransaction(database) {
@@ -255,10 +274,10 @@ class RaceRepository(
                 it[this.nonce] = nonce
             }
 
-            PositionTable.batchInsert(positions.withIndex()) { (position, driverVersionId) ->
-                this[PositionTable.raceId] = raceId
-                this[PositionTable.position] = position
-                this[PositionTable.driverVersionId] = driverVersionId
+            RaceDriverTable.batchInsert(drivers.withIndex()) { (position, driverVersionId) ->
+                this[RaceDriverTable.raceId] = raceId
+                this[RaceDriverTable.position] = position
+                this[RaceDriverTable.driverVersionId] = driverVersionId
             }
 
             if (seasonId != null) {
@@ -272,7 +291,7 @@ class RaceRepository(
                 id = raceId,
                 trackId = trackId,
                 laps = laps,
-                positions = getPositions(raceId),
+                drivers = getRaceDrivers(raceId),
                 nonce = nonce,
             )
         }
@@ -287,27 +306,66 @@ class RaceRepository(
 
             row ?: return@suspendTransaction null
 
-            val versionedDrivers = getPositions(id)
+            val versionedDrivers = getRaceDrivers(id)
             row.toRaceEntity(versionedDrivers)
         }
     }
 
-    suspend fun startRace(id: RaceId, nonce: Nonce, startTime: Instant): Boolean {
+    suspend fun acquireRace(workerId: WorkerId): RaceEntity? {
         return suspendTransaction(database) {
-            RaceResultTable.update(
+            val nonce = Nonce.generate()
+
+            val updates = RaceResultTable.update(
+                where = {
+                    (RaceResultTable.workerId eq null)
+                },
+                limit = 1,
+            ) {
+                it[RaceResultTable.workerId] = workerId
+                it[RaceResultTable.nonce] = nonce
+            }
+            if (updates != 1) return@suspendTransaction null
+
+            val row = RaceResultJoin.selectAll()
+                .where {
+                    (RaceResultTable.workerId eq workerId) and
+                        (RaceResultTable.nonce eq nonce)
+                }
+                .singleOrNull()
+
+            row ?: error("updated race not found...")
+
+            val id = row[RaceTable.id].value
+            val versionedDrivers = getRaceDrivers(id)
+            row.toRaceEntity(versionedDrivers)
+        }
+    }
+
+    suspend fun startRace(id: RaceId, nonce: Nonce, startTime: Instant): RaceEntity? {
+        return suspendTransaction(database) {
+            val updates = RaceResultTable.update(
                 where = {
                     (RaceResultTable.raceId eq id) and
                         (RaceResultTable.nonce eq nonce)
                 }
             ) {
                 it[RaceResultTable.startTime] = startTime
-            } == 1
+            }
+            if (updates != 1) return@suspendTransaction null
+            getRace(id)!!
         }
     }
 
-    suspend fun finishRace(id: RaceId, nonce: Nonce, endTime: Instant, blobId: BlobId): Boolean {
+    suspend fun finishRace(
+        id: RaceId,
+        nonce: Nonce,
+        endTime: Instant,
+        results: Map<DriverVersionId, Double>,
+        blobId: BlobId,
+    ): Boolean {
         return suspendTransaction(database) {
-            RaceResultTable.update(
+            var successful = true
+            successful = successful && RaceResultTable.update(
                 where = {
                     (RaceResultTable.raceId eq id) and
                         (RaceResultTable.nonce eq nonce)
@@ -316,6 +374,19 @@ class RaceRepository(
                 it[RaceResultTable.endTime] = endTime
                 it[RaceResultTable.blobId] = blobId
             } == 1
+
+            for ((driverVersionId, result) in results) {
+                successful = successful && RaceDriverTable.update(
+                    where = {
+                        (RaceDriverTable.raceId eq id) and
+                            (RaceDriverTable.driverVersionId eq driverVersionId)
+                    }
+                ) {
+                    it[RaceDriverTable.result] = result
+                } == 1
+            }
+
+            successful
         }
     }
 
@@ -328,7 +399,11 @@ class RaceRepository(
                 }
             ) {
                 it[RaceResultTable.nonce] = Nonce.generate()
+                it[RaceResultTable.workerId] = null
                 it[RaceResultTable.startTime] = null
+                // These should not be set, but let's be safe.
+                it[RaceResultTable.endTime] = null
+                it[RaceResultTable.blobId] = null
             }
             if (rows != 1) return@suspendTransaction null
 
@@ -336,10 +411,10 @@ class RaceRepository(
         }
     }
 
-    private suspend fun getPositions(id: RaceId): List<PositionEntity> {
-        return PositionVersionDriverJoin.selectAll()
-            .where { PositionTable.raceId eq id }
-            .map { it.toPositionEntity() }
+    private suspend fun getRaceDrivers(id: RaceId): List<RaceDriverEntity> {
+        return RaceVersionDriverJoin.selectAll()
+            .where { RaceDriverTable.raceId eq id }
+            .map { it.toRaceDriverEntity() }
             .toList()
     }
 }

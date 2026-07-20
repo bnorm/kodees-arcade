@@ -1,5 +1,7 @@
 @file:OptIn(ExperimentalWasmDsl::class)
 
+import dev.zacsweers.metro.gradle.DelicateMetroGradleApi
+import dev.zacsweers.metro.gradle.RequiresIdeSupport
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
@@ -38,9 +40,15 @@ kotlin {
 
             implementation(libs.compose.material3)
             implementation(libs.compose.resources)
+            implementation(libs.compose.navigation3)
+            implementation(libs.compose.navigation3.browser)
             implementation(libs.filekit.dialogs.compose)
-            implementation(libs.routing.compose)
             implementation(libs.kotlinx.serialization.json)
         }
     }
+}
+
+metro {
+    @OptIn(DelicateMetroGradleApi::class, RequiresIdeSupport::class)
+    enableTopLevelFunctionInjection = true
 }

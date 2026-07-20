@@ -1,20 +1,18 @@
 package dev.bnorm.arcade.web.route.drivers
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -30,55 +28,45 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.icons.sports_motorsports
+import dev.bnorm.arcade.display.asset.icon.sports_motorsports
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverCreateRequest
 import dev.bnorm.arcade.service.api.DriverResponse
-import dev.bnorm.arcade.web.route.Route
+import dev.bnorm.arcade.web.components.MaxWidthContent
+import dev.bnorm.arcade.web.route.DriversKey
+import dev.bnorm.arcade.web.route.RouteKey
+import dev.bnorm.arcade.web.route.RouteScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlin.reflect.KClass
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class)
-class DriversRoute(
+@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+class DriversScreen(
     private val client: ArcadeClient
-) : Route {
-    override val path: String get() = "/drivers"
+) : RouteScreen<DriversKey> {
+    override val key: KClass<out DriversKey>
+        get() = DriversKey::class
+
+    private val drivers = mutableStateListOf<DriverResponse>()
 
     @Composable
-    override fun Content() {
-        val drivers = remember { mutableStateListOf<DriverResponse>() }
+    override fun Content(key: DriversKey) {
         LaunchedEffect(Unit) {
             val elements = client.getDrivers()
             drivers.clear()
             drivers.addAll(elements)
         }
 
+//        CreateDriverButton(client, onCreate = { drivers.add(it) })
         Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier
-                .padding(16.dp)
+                .width(IntrinsicSize.Max)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Drivers", style = MaterialTheme.typography.displayLarge)
-                Spacer(Modifier.weight(1f))
-                CreateDriverButton(client, onCreate = { drivers.add(it) })
-            }
-            Spacer(
-                Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
-
-            Spacer(Modifier.height(16.dp))
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .width(IntrinsicSize.Max)
-            ) {
-                for ((index, driver) in drivers.withIndex()) {
-                    DriverCard(driver, client, onUpload = { drivers[index] = it })
-                }
+            for ((index, driver) in drivers.withIndex()) {
+                DriverCard(driver, client, onUpload = { drivers[index] = it })
             }
         }
     }

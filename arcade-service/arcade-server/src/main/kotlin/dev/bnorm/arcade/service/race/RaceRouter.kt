@@ -6,7 +6,10 @@ import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
+import dev.bnorm.arcade.service.logger
 import dev.bnorm.arcade.service.route.Router
+import dev.bnorm.arcade.service.worker.RaceWorkerQueue
+import dev.bnorm.arcade.service.worker.WorkerId
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
@@ -34,7 +37,12 @@ import kotlinx.serialization.json.Json
 @ContributesIntoSet(AppScope::class)
 class RaceRouter(
     private val races: RaceService,
+    private val queue: RaceWorkerQueue,
 ) : Router {
+    companion object {
+        private val log = logger<RaceRouter>()
+    }
+
     context(route: Route)
     override fun route() {
         route.route("/api/rally/seasons/{seasonId}/races") {
@@ -63,7 +71,10 @@ class RaceRouter(
 
             sse("/listen") {
                 heartbeat()
-                races.listen().collect {
+                // TODO id must be provided by worker
+                //  - should this also require an auth token?
+                queue.listen(WorkerId.generate()).collect {
+                    log.info("sending race to worker: ${it.id}")
                     send(Json.encodeToString(RaceProcessEvent.serializer(), it))
                 }
             }
@@ -77,7 +88,7 @@ class RaceRouter(
 
             put("/{raceId}/reset") {
                 val raceId = call.parameters.raceId
-                val race = races.resetRace(raceId)
+                val race = queue.resetRace(raceId)
                     ?: throw NotFoundException()
                 call.respond(race)
             }

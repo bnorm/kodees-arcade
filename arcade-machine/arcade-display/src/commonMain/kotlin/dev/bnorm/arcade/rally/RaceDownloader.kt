@@ -43,7 +43,7 @@ fun RaceDownloader(
         try {
             val foundRaces = client.getRaces()
             races.clear()
-            races.addAll(foundRaces.map { race -> RaceDisplay(race.id, race.positions.map { it.name }) })
+            races.addAll(foundRaces.map { race -> RaceDisplay(race.id, race.drivers.map { it.name }) })
         } catch (t: Throwable) {
             onError(t)
         }

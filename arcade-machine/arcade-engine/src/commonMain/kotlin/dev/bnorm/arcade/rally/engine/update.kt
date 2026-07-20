@@ -28,24 +28,10 @@ private const val draftDist = 10 * 6 + impactDist // 10 meters + impact
 fun update(gameState: RallyGameState, track: Track) {
     gameState.time++
 
-    // TODO consider drafting behind another car
-    //  - find cars which are located "behind" another car based on heading
-    //  - give a max speed boost (and acceleration?) to those cars
-    //    based on the leading car's speed
-    //     - can't weave behind a car that is going slower to gain a speed boost
-    //  - a car receives the largest of all available speed boosts
-    //  - speed boost should slowly decay, slow enough to allow following car to overtake
-    //     - boosted speed should increase understeer!
-
     val drivers = gameState.driverStates
     for (state in drivers) {
         // Skip updating drivers which are finished.
-        if (state.lap >= gameState.laps && state.checkpoint > 0) {
-            if (state.finished == null) {
-                state.finished = gameState.time
-            }
-            continue
-        }
+        if (state.finished) continue
 
         val steering = state.driver.steering
         val throttle = state.driver.throttle
@@ -81,12 +67,12 @@ fun update(gameState: RallyGameState, track: Track) {
 
     for ((i, driver1) in drivers.withIndex()) {
         // Skip updating drivers which are finished.
-        if (driver1.finished != null) continue
+        if (driver1.finished) continue
 
         for (j in (i + 1)..<drivers.size) {
             val driver2 = drivers[j]
             // Skip updating drivers which are finished.
-            if (driver2.finished != null) continue
+            if (driver2.finished) continue
 
             val dx = driver1.x - driver2.x
             val dy = driver1.y - driver2.y
@@ -117,19 +103,30 @@ fun update(gameState: RallyGameState, track: Track) {
 
         if (distSq < radius * radius) {
             driverState.checkpoint += 1
+
+            // Proceed to the next lap.
             if (driverState.checkpoint >= track.checkpoints.size) {
                 driverState.lap += 1
                 driverState.checkpoint = 0
             }
+
+            // Record lap time *after crossing* the 0th checkpoint.
+            if (driverState.lap != 0 && driverState.checkpoint == 1) {
+                driverState.lapTimes.add(gameState.time)
+            }
+
+            if (driverState.lap >= gameState.laps && driverState.checkpoint > 0) {
+                driverState.finished = true
+            }
         }
     }
 
-    gameState.finished = drivers.all { it.finished != null }
+    gameState.finished = drivers.all { it.finished }
 }
 
 private fun RallyCarState.computeDraftBoost(other: RallyCarState): Double {
     if (this === other) return 0.0
-    if (other.finished != null) return 0.0
+    if (other.finished) return 0.0
 
     val distSq = distanceSq(other)
     if (distSq < draftDist * draftDist) {

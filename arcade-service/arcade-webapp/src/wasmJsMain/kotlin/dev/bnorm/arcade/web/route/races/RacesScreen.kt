@@ -1,6 +1,5 @@
 package dev.bnorm.arcade.web.route.races
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -14,12 +13,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -29,84 +31,72 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import dev.bnorm.arcade.display.asset.icon.play_arrow
+import dev.bnorm.arcade.display.asset.icon.replay
+import dev.bnorm.arcade.display.asset.icon.sports_motorsports
+import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.display.track.TrackViewModel
-import dev.bnorm.arcade.icons.play_arrow
-import dev.bnorm.arcade.icons.replay
-import dev.bnorm.arcade.icons.sports_motorsports
-import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.rally.race.DownloadGame
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
-import dev.bnorm.arcade.service.api.TrackId
-import dev.bnorm.arcade.service.api.TrackResponse
-import dev.bnorm.arcade.web.route.Route
+import dev.bnorm.arcade.web.route.RacesKey
+import dev.bnorm.arcade.web.route.RouteKey
+import dev.bnorm.arcade.web.route.RouteScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlin.math.roundToInt
+import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class)
-class RacesRoute(
-    private val client: ArcadeClient
-) : Route {
-    override val path: String get() = "/races"
+@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+class RacesScreen(
+    private val client: ArcadeClient,
+) : RouteScreen<RacesKey> {
+    override val key: KClass<out RacesKey>
+        get() = RacesKey::class
+
+    private val races = mutableStateListOf<RaceModel>()
 
     @Composable
-    override fun Content() {
-        val races = remember { mutableStateListOf<RaceResponse>() }
-        val tracks = remember { mutableStateMapOf<TrackId, TrackResponse>() }
+    override fun Content(key: RacesKey) {
         LaunchedEffect(Unit) {
-            val apiTracks = client.getTracks().associateBy { it.id }
-            val apiRaces = client.getRaces()
-            races.clear()
-            races.addAll(apiRaces)
-            tracks.clear()
-            tracks.putAll(apiTracks)
+            val tracks = client.getTracks().associateBy { it.id }
+            races.addAll(client.getRaces().map { race ->
+                race.toModel(tracks[race.trackId])
+            })
         }
 
-        var watchRaceId by remember { mutableStateOf<RaceId?>(null) }
-        WatchRaceDialog(client, watchRaceId, onDismiss = { watchRaceId = null })
-
+//        RaceCreateButton(
+//            client,
+//            onCreate = {
+//                scope.launch {
+//                    val track = client.getTrack(it.trackId)
+//                    races.add(it.toModel(track))
+//                }
+//            }
+//        )
         Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier
-                .padding(16.dp)
+                .width(IntrinsicSize.Max)
+                .verticalScroll(rememberScrollState())
+                .padding(top = 16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Races", style = MaterialTheme.typography.displayLarge)
-                Spacer(Modifier.weight(1f))
-                RaceCreateButton(client, onCreate = { races.add(it) })
-            }
-            Spacer(
-                Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
-
-            Spacer(Modifier.height(16.dp))
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .width(IntrinsicSize.Max)
-            ) {
-                for (race in races) {
-                    RaceCard(client, race, tracks, onWatch = {
-                        watchRaceId = race.id
-                    })
-                }
+            for (race in races) {
+                RaceCard(client, race)
             }
         }
     }
@@ -160,7 +150,7 @@ private fun RaceCreateButton(client: ArcadeClient, onCreate: (RaceResponse) -> U
         }
     }
 
-    TextButton(
+    Button(
         onClick = { displayDialog = true }
     ) {
         // TODO better icon
@@ -171,12 +161,13 @@ private fun RaceCreateButton(client: ArcadeClient, onCreate: (RaceResponse) -> U
 }
 
 @Composable
-private fun RaceCard(
+fun RaceCard(
     client: ArcadeClient,
-    race: RaceResponse,
-    tracks: SnapshotStateMap<TrackId, TrackResponse>,
-    onWatch: () -> Unit,
+    race: RaceModel,
 ) {
+    var watch by remember { mutableStateOf(false) }
+    WatchRaceDialog(client, race.id.takeIf { watch }, onDismiss = { watch = false })
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -189,12 +180,11 @@ private fun RaceCard(
             val startTime = race.startTime
             val endTime = race.endTime
 
-            val track = tracks.getValue(race.trackId)
             Row {
-                Text(track.name, style = MaterialTheme.typography.titleLarge)
+                Text(race.track.name, style = MaterialTheme.typography.titleLarge)
                 if (endTime != null) {
                     Spacer(Modifier.weight(1f).widthIn(min = 32.dp))
-                    PlayRaceButton(onWatch)
+                    PlayRaceButton(onWatch = { watch = true })
                 } else {
                     Spacer(Modifier.weight(1f).widthIn(min = 32.dp))
                     ResetRaceButton(client, race.id)
@@ -203,38 +193,40 @@ private fun RaceCard(
 
             // TODO show duration?
             if (endTime != null) {
-                // TODO tooltip only on ago string
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-                    state = rememberTooltipState(isPersistent = true),
-                    tooltip = {
-                        PlainTooltip {
-                            // TODO with timezone formatter
-                            Text(text = endTime.toString())
+                Row {
+                    ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
+                        Text("Finished ")
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+                            state = rememberTooltipState(isPersistent = true),
+                            tooltip = {
+                                PlainTooltip {
+                                    // TODO with timezone formatter
+                                    Text(text = endTime.toString())
+                                }
+                            },
+                        ) {
+                            Text("${(now - endTime).toAgoString()} ago.")
                         }
-                    },
-                ) {
-                    Text(
-                        text = "Finished ${(now - endTime).toAgoString()} ago.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    }
                 }
             } else if (startTime != null) {
-                // TODO tooltip only on ago string
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-                    state = rememberTooltipState(isPersistent = true),
-                    tooltip = {
-                        PlainTooltip {
-                            // TODO with timezone formatter
-                            Text(text = startTime.toString())
+                Row {
+                    ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
+                        Text("Started ")
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+                            state = rememberTooltipState(isPersistent = true),
+                            tooltip = {
+                                PlainTooltip {
+                                    // TODO with timezone formatter
+                                    Text(text = startTime.toString())
+                                }
+                            },
+                        ) {
+                            Text("${(now - startTime).toAgoString()} ago.")
                         }
-                    },
-                ) {
-                    Text(
-                        text = "Started ${(now - startTime).toAgoString()} ago.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    }
                 }
             } else {
                 Text(
@@ -244,10 +236,24 @@ private fun RaceCard(
             }
 
             Column {
-                // TODO this should be the same as race results
-                for (position in race.positions) {
-                    Text(position.name, style = MaterialTheme.typography.bodyLarge)
-                    // TODO include driver version
+                for (driver in race.drivers.sortedBy { it.result ?: Double.MAX_VALUE }) {
+                    Row {
+                        Text(
+                            text = buildString {
+                                val result = driver.result
+                                if (result != null) {
+                                    append(result.roundToInt() + 1)
+                                    append(". ")
+                                } else if (endTime != null) {
+                                    append("DNF. ")
+                                }
+                                append(driver.name)
+                                append(" ")
+                                append(driver.version)
+                            },
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
                 }
             }
         }
