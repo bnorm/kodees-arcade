@@ -1,6 +1,7 @@
 package dev.bnorm.arcade.display.menu
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,10 @@ class TrackBuilderItem(
                 state = state,
                 onCloseRequest = { visible = false }
             ) {
+                // TODO this is needed to initialize the lazy models so the 'new' call is handled.
+                //  - we may want this anyways, so you can select a track and edit it.
+                //  - build this as more of a track manager/editor.
+                trackViewModel.models.collectAsState()
                 TrackBuilder(
                     initialSize = IntSize(600, 600),
                     onSave = {
