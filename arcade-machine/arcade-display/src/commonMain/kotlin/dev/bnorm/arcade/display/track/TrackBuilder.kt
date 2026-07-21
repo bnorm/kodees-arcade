@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.roundToIntSize
 import androidx.compose.ui.unit.toSize
+import dev.bnorm.arcade.display.SCROLL_NORMALIZER
 import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.display.internal.onKeyboard
 import dev.bnorm.arcade.display.internal.rememberKeyboardState
@@ -78,8 +79,8 @@ private enum class BuilderMode {
     /** Close the track with two final segments. */
     Close,
 
-    /** Move all segments together with the mouse. */
-    Shift,
+    /** Transform segments due to mouse move or scroll. */
+    Transform,
 
     ;
 }
@@ -128,7 +129,7 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
         when (keyboardState.pressed.singleOrNull()) {
             Key.C -> BuilderMode.Close
             Key.S -> BuilderMode.Straight
-            Key.MetaLeft, Key.MetaRight -> BuilderMode.Shift
+            Key.MetaLeft, Key.MetaRight -> BuilderMode.Transform
             else -> BuilderMode.Curve
         }
     }
@@ -137,7 +138,7 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
         val mouse = mouse
         val point = point
         when (mode) {
-            BuilderMode.Shift -> null
+            BuilderMode.Transform -> null
             else if (complete || mouse == null) -> null
             else if point != null -> computeFirstSegment(mouse, point)
 
@@ -253,15 +254,16 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
                                         val location = change.position.toPoint()
                                         mouse = if (!complete) location else null
 
-                                        if (mode == BuilderMode.Shift && change.pressed) {
+                                        if (mode == BuilderMode.Transform && change.pressed) {
                                             move(change.position.toPoint() - change.previousPosition.toPoint())
                                         }
                                     }
 
                                     PointerEventType.Scroll -> {
-                                        if (mode == BuilderMode.Shift) {
+                                        if (mode == BuilderMode.Transform) {
                                             val change = event.changes.first()
-                                            scale(change.scrollDelta.y / 4f, change.position.toPoint())
+                                            println(change.scrollDelta.y)
+                                            scale(change.scrollDelta.y / SCROLL_NORMALIZER, change.position.toPoint())
                                         }
                                     }
 
