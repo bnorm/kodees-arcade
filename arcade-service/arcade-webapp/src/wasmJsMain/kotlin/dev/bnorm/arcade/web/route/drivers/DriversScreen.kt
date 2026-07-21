@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -32,17 +30,14 @@ import dev.bnorm.arcade.display.asset.icon.sports_motorsports
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverCreateRequest
 import dev.bnorm.arcade.service.api.DriverResponse
-import dev.bnorm.arcade.web.components.MaxWidthContent
 import dev.bnorm.arcade.web.route.DriversKey
-import dev.bnorm.arcade.web.route.RouteKey
 import dev.bnorm.arcade.web.route.RouteScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
-import dev.zacsweers.metro.binding
 import kotlin.reflect.KClass
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+@ContributesIntoSet(AppScope::class)
 class DriversScreen(
     private val client: ArcadeClient
 ) : RouteScreen<DriversKey> {

@@ -22,11 +22,10 @@ import dev.bnorm.arcade.web.route.RouteScreen
 import dev.bnorm.arcade.web.route.TracksKey
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
-import dev.zacsweers.metro.binding
 import kotlin.reflect.KClass
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+@ContributesIntoSet(AppScope::class)
 class TracksScreen(
     private val client: ArcadeClient
 ) : RouteScreen<TracksKey> {
