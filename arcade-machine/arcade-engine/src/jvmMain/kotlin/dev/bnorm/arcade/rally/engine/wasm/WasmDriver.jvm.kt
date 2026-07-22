@@ -104,12 +104,12 @@ private class WasmtimeWasmDriver private constructor() : WasmDriver {
                     "wasi_snapshot_preview1", "proc_exit",
                     FunctionType(arrayOf(I32), arrayOf()),
                     voidFunction { (errorCode) ->
-                        // TODO exit?
+                        // TODO how to exit?
                     },
                 )
 
                 defineHostFunction(
-                    "bnorm:arcade/controls", "throttle-set",
+                    "bnorm:arcade/controls", "throttle-get",
                     FunctionType(arrayOf(), arrayOf(F64)),
                     singleValue { f64(driver.throttle) },
                 )
