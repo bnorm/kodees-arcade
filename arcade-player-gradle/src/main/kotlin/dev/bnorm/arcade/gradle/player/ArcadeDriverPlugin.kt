@@ -2,6 +2,7 @@ package dev.bnorm.arcade.gradle.player
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.Sync
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
@@ -34,6 +35,18 @@ class ArcadeDriverPlugin : Plugin<Project> {
                 sourceSet.kotlin.srcDir("src")
                 sourceSet.kotlin.srcDir("src")
             }
+        }
+
+        val sync = target.tasks.register("arcadeDriverSync", Sync::class.java) {
+            it.into(target.layout.buildDirectory.dir("drivers"))
+            it.from(target.tasks.named("compileProductionExecutableKotlinWasmWasi")) {
+                it.include { it.name.endsWith(".wasm") }
+                it.rename { "${extension.className.get().substringAfterLast(".")}.wasm" }
+            }
+        }
+
+        target.tasks.named("assemble").configure {
+            it.dependsOn(sync)
         }
     }
 }
