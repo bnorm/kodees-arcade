@@ -14,7 +14,8 @@ interface MenuItem {
 
     enum class Category {
         Race,
-        Track
+        Track,
+        Settings,
     }
 }
 

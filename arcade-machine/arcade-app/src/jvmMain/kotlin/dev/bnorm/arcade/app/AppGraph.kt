@@ -4,15 +4,21 @@ import dev.bnorm.arcade.Cache
 import dev.bnorm.arcade.FileSystemCache
 import dev.bnorm.arcade.NestedCache
 import dev.bnorm.arcade.SerializedStringCache
+import dev.bnorm.arcade.TransformedCache
+import dev.bnorm.arcade.display.AvailableDriverViewModel
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Binds
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.absoluteFile
+import io.github.vinceglb.filekit.path
 import java.nio.file.Paths
 import kotlin.io.path.createDirectories
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +55,19 @@ interface AppGraph {
         }
         return cache
     }
+
+    @SingleIn(AppScope::class)
+    @Provides
+    fun providesWatchedDirectoryCache(cache: Cache<String>): Cache<PlatformFile> {
+        return TransformedCache(
+            delegate = NestedCache(cache, part = "watched"),
+            getter = { PlatformFile(it) },
+            setter = { it.absoluteFile().path },
+        )
+    }
+
+    @Binds
+    val AvailableDriverViewModel.binding: AvailableDriverViewModel?
 
     @DependencyGraph.Factory
     interface Factory {

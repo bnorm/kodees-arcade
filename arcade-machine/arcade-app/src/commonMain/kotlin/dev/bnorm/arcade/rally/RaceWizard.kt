@@ -55,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import dev.bnorm.arcade.display.AvailableDriverViewModel
 import dev.bnorm.arcade.display.asset.icon.progress_activity
 import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.display.track.TrackViewModel
@@ -88,6 +89,7 @@ import kotlinx.coroutines.launch
 class RaceWizardScreen(
     private val client: ArcadeClient,
     private val trackViewModel: TrackViewModel,
+    private val availableDriverViewModel: AvailableDriverViewModel? = null,
 ) {
     private val compilerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -125,10 +127,9 @@ class RaceWizardScreen(
     private fun pickDriverName(baseName: String): String {
         val existingNames = drivers.mapTo(mutableSetOf()) { it.name }
         var name = baseName
-        if (name in existingNames) name = "$name (1)"
         var i = 1
         while (name in existingNames) {
-            name = name.substringBeforeLast(" ") + " (${i++})"
+            name = baseName + " (${i++})"
         }
         return name
     }
@@ -295,9 +296,21 @@ class RaceWizardScreen(
                 }
             }
 
+            Row {
+                SelectedDrivers(selectedTrack, modifier = Modifier.weight(1f))
+                AvailableDrivers(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+
+    @Composable
+    private fun SelectedDrivers(
+        selectedTrack: Track?,
+        modifier: Modifier = Modifier,
+    ) {
+        Column(modifier = modifier) {
             // TODO allow reordering
             // TODO allow removing specific driver
-            val selectedTrack = selectedTrack
             Text("Selected Drivers:", style = MaterialTheme.typography.titleLarge)
             LazyColumn(
                 state = rememberLazyListState(),
@@ -362,6 +375,26 @@ class RaceWizardScreen(
                             modifier = Modifier
                                 .width(32.dp)
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun AvailableDrivers(modifier: Modifier = Modifier) {
+        Column(modifier = modifier) {
+            Text("Available Drivers:", style = MaterialTheme.typography.titleLarge)
+            if (availableDriverViewModel != null) {
+                val model by availableDriverViewModel.models.collectAsState()
+                println(model.drivers.size)
+                for (driver in model.drivers) {
+                    Button(
+                        onClick = {
+                            selectDriverFile(driver.file)
+                        }
+                    ) {
+                        Text(driver.name)
                     }
                 }
             }
