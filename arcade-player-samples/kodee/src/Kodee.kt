@@ -1,5 +1,3 @@
-package dev.bnorm.arcade.driver.sample
-
 import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Controls
 import dev.bnorm.arcade.driver.Driver

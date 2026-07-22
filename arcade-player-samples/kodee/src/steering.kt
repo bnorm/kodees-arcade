@@ -1,5 +1,3 @@
-package dev.bnorm.arcade.driver.sample
-
 import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.Vector
 import dev.bnorm.arcade.geometry.abs

@@ -1,19 +1,16 @@
-@file:OptIn(ExperimentalWasmDsl::class)
-
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
+    id("dev.bnorm.arcade.arcade-driver")
 }
 
-kotlin {
-    wasmWasi {
-        binaries.executable()
-    }
+arcade {
+    className = "Snail"
+}
 
+// TODO include build dependency substitution doesn't seem to work automatically?
+kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":arcade-player-samples:shared"))
+            implementation(project(":arcade-player"))
         }
     }
 }

@@ -1,12 +1,15 @@
-package dev.bnorm.arcade.driver.sample
-
 import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Controls
 import dev.bnorm.arcade.driver.Driver
 import dev.bnorm.arcade.driver.Race
 import dev.bnorm.arcade.driver.Track
-import dev.bnorm.arcade.geometry.atan2
+import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.geometry.center
+import dev.bnorm.arcade.geometry.sign
+import dev.bnorm.arcade.geometry.toRelative
+import dev.bnorm.arcade.rally.MAX_STEER
+import dev.bnorm.arcade.rally.MIN_STEER
+import dev.bnorm.arcade.rally.getTurn
 import kotlin.random.Random
 
 object Snail : Driver() {
@@ -25,7 +28,16 @@ object Snail : Driver() {
         controls.throttle = 0.4 - safety
 
         // Figure out how to steer.
-        val targetHeading = atan2(target.y - car.location.y, target.x - car.location.x)
-        controls.steering = steeringToHeading(targetHeading, car.velocity)
+        val speed = car.velocity.magnitude
+        val heading = car.velocity.angle
+        val turn = (car.location.angleTo(target) - heading).toRelative()
+        controls.steering = when {
+            turn == Angle.ZERO -> 0.0
+            speed == 0.0 -> sign(turn) * MAX_STEER
+            else -> {
+                val maxTurn = getTurn(speed, steering = MAX_STEER, traction = 1.0)
+                (turn / maxTurn).coerceIn(MIN_STEER, MAX_STEER)
+            }
+        }
     }
 }
