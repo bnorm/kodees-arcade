@@ -34,6 +34,8 @@ import kotlinx.io.DelicateIoApi
 import kotlinx.io.RawSource
 import kotlinx.io.Sink
 import kotlinx.io.UnsafeIoApi
+import kotlinx.io.readLine
+import kotlinx.io.readString
 import kotlinx.io.unsafe.UnsafeBufferOperations
 import kotlinx.io.writeToInternalBuffer
 
@@ -78,6 +80,31 @@ private class WasmtimeWasmDriver private constructor() : WasmDriver {
                     FunctionType(arrayOf(I32, I32), arrayOf(I32)),
                     singleValue { (bufLen, bufPtr) ->
                         i32(randomGet(guest.memory, driver.random, bufLen.asInt(), bufPtr.asInt()))
+                    },
+                )
+                defineHostFunction(
+                    "wasi_snapshot_preview1", "environ_sizes_get",
+                    FunctionType(arrayOf(I32, I32), arrayOf(I32)),
+                    singleValue { (environCountPtr, environBufferSizePtr) ->
+                        // TODO what environment variables should we expose?
+                        guest.memory.writeInt32(environCountPtr.asInt().toLong(), 0)
+                        guest.memory.writeInt32(environBufferSizePtr.asInt().toLong(), 0)
+                        i32(0)
+                    },
+                )
+                defineHostFunction(
+                    "wasi_snapshot_preview1", "environ_get",
+                    FunctionType(arrayOf(I32, I32), arrayOf(I32)),
+                    singleValue { (environPtr, environBufferPtr) ->
+                        // TODO what environment variables should we expose?
+                        i32(0)
+                    },
+                )
+                defineHostFunction(
+                    "wasi_snapshot_preview1", "proc_exit",
+                    FunctionType(arrayOf(I32), arrayOf()),
+                    voidFunction { (errorCode) ->
+                        // TODO exit?
                     },
                 )
 
