@@ -17,8 +17,8 @@ class Initializer(
 ) : Service {
     override suspend fun initialize() {
 //        tracks.addTrack("track.json")
-        drivers.addDriver("Kodee")
-        drivers.addDriver("Snail")
+//        drivers.addDriver("Kodee")
+//        drivers.addDriver("Snail")
     }
 
 //    private suspend fun TrackRepository.addTrack(resource: String) {
@@ -31,14 +31,14 @@ class Initializer(
 //            positions = track.positions,
 //        )
 //    }
-
-    private suspend fun DriverRepository.addDriver(name: String) {
-        val driver = createDriver(name = name)
-        uploadDriverVersion(
-            driverId = driver.id,
-            version = Version.parse("0.1.0"),
-            channel = ClassLoader.getSystemResource("drivers/files/$name.wasm")
-                .toURI().toPath().readChannel()
-        )
-    }
+//
+//    private suspend fun DriverRepository.addDriver(name: String) {
+//        val driver = createDriver(name = name)
+//        uploadDriverVersion(
+//            driverId = driver.id,
+//            version = Version.parse("0.1.0"),
+//            channel = ClassLoader.getSystemResource("drivers/files/$name.wasm")
+//                .toURI().toPath().readChannel()
+//        )
+//    }
 }

@@ -17,4 +17,9 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-rootProject.name = "arcade-player-gradle"
+rootProject.name = "arcade-player-samples"
+
+include(":kodee")
+include(":snail")
+
+includeBuild("..")

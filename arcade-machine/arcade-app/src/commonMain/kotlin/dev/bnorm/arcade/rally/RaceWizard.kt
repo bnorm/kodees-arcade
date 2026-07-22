@@ -55,7 +55,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.arcade_player_samples.generated.resources.BundledDrivers
 import dev.bnorm.arcade.display.asset.icon.progress_activity
 import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.display.track.TrackViewModel
@@ -83,8 +82,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-
-private val BUNDLED_DRIVERS = listOf("Kodee", "Snail")
 
 @Inject
 @SingleIn(AppScope::class)
@@ -150,15 +147,6 @@ class RaceWizardScreen(
             }
         }
         drivers.add(SelectedDriver(pickDriverName(name), module))
-    }
-
-    private fun selectDriverBundled(driver: String) {
-        val module = moduleCache.getOrPut(driver) {
-            compilerScope.async {
-                WasmModule(BundledDrivers.readBytes("files/$driver.wasm"))
-            }
-        }
-        drivers.add(SelectedDriver(pickDriverName(driver), module))
     }
 
     private fun validDrivers(): Boolean {
@@ -304,18 +292,6 @@ class RaceWizardScreen(
                     }
                 ) {
                     Text("Clear")
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Quick Add: ")
-                for (driver in BUNDLED_DRIVERS) {
-                    Button(
-                        onClick = {
-                            selectDriverBundled(driver)
-                        }
-                    ) {
-                        Text(driver)
-                    }
                 }
             }
 
