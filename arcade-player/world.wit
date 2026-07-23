@@ -1,0 +1,134 @@
+package bnorm:arcade;
+
+interface geometry {
+  record angle {
+    radians: f64,
+  }
+
+  record point {
+    x: f64,
+    y: f64,
+  }
+
+  record vector {
+    angle: angle,
+    magnitude: f64,
+  }
+
+  record circle {
+    center: point,
+    radius: f64,
+  }
+
+  record segment {
+    start: point,
+    end: point,
+  }
+
+  record position {
+    location: point,
+    heading: angle,
+  }
+
+  record rectangle {
+    min-x: f64,
+    max-x: f64,
+    min-y: f64,
+    max-y: f64,
+  }
+}
+
+interface draw {
+  use geometry.{angle, segment, circle, rectangle};
+
+  record color {
+    value: u32,
+  }
+
+  record stroke {
+    width: f32,
+  }
+
+  variant draw-style {
+    fill,
+    stroke(stroke),
+  }
+
+  record draw-segment {
+    color: color,
+    segment: segment,
+    stroke: stroke,
+  }
+
+  record draw-circle {
+    color: color,
+    circle: circle,
+    start: angle,
+    sweep: angle,
+    style: draw-style,
+  }
+
+  record draw-rectangle {
+    color: color,
+    rectangle: rectangle,
+    style: draw-style,
+  }
+
+  variant draw-request {
+    segment(draw-segment),
+    circle(draw-circle),
+    rectangle(draw-rectangle),
+  }
+}
+
+interface canvas {
+  use draw.{draw-request};
+
+  draw: func(request: draw-request);
+}
+
+interface types {
+  use geometry.{point, vector, segment, position};
+
+  record track {
+    width: f64,
+    height: f64,
+    checkpoints: list<segment>,
+    positions: list<position>,
+  }
+
+  record race {
+    track: track,
+    laps: s32,
+  }
+
+  record car {
+    time: s64,
+    location: point,
+    velocity: vector,
+    lap: s32,
+    next-checkpoint:s32,
+  }
+}
+
+interface controls {
+  throttle-get: func() -> f64;
+  throttle-set: func(value: f64);
+  steering-get: func() -> f64;
+  steering-set: func(value: f64);
+}
+
+
+interface driver {
+  use types.{race, car};
+
+  on-race: func(race: race);
+  on-turn: func(car: car);
+  on-draw: func();
+}
+
+world player {
+  import controls;
+  import canvas;
+  export driver;
+}
