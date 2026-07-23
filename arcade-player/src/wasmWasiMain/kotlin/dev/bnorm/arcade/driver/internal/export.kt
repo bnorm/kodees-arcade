@@ -88,7 +88,7 @@ fun driverOnRace(
  * Helper function to use Wasm memory and imported host functions for a [Car] and [Controls].
  */
 @DriverExport
-fun driverMove(
+fun driverOnTurn(
     driver: Driver,
     time: Long,
     x: Double,

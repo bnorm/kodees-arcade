@@ -1,19 +1,7 @@
-@file:OptIn(ExperimentalWasmDsl::class)
-
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
+    id("dev.bnorm.arcade.arcade-driver")
 }
 
-kotlin {
-    wasmWasi {
-        binaries.executable()
-    }
-
-    sourceSets {
-        commonMain.dependencies {
-            implementation(project(":arcade-player-samples:shared"))
-        }
-    }
+arcade {
+    className = "Kodee"
 }

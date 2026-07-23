@@ -42,7 +42,6 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":arcade-machine:arcade-engine"))
-            implementation(project(":arcade-player-samples"))
             implementation(project(":arcade-service:arcade-client"))
             implementation(project(":arcade-machine:arcade-display"))
 

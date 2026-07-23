@@ -1,245 +1,426 @@
 package dev.bnorm.arcade.rally
 
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TextFieldLabelScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import dev.bnorm.arcade.arcade_player_samples.generated.resources.BundledDrivers
-import dev.bnorm.arcade.display.track.TrackViewModel
-import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.race.WasmGame
-import dev.bnorm.arcade.rally.race.Driver
+import dev.bnorm.arcade.display.AvailableDriverViewModel
+import dev.bnorm.arcade.display.asset.icon.progress_activity
 import dev.bnorm.arcade.display.track.TrackImage
+import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.driver.Track
+import dev.bnorm.arcade.machine.Game
+import dev.bnorm.arcade.rally.engine.WasmDriver
+import dev.bnorm.arcade.rally.engine.WasmGame
+import dev.bnorm.arcade.rally.engine.WasmModule
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.Version
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.nameWithoutExtension
 import io.github.vinceglb.filekit.readBytes
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-private val BUNDLED_DRIVERS = listOf("Kodee", "Snail")
-
-@Composable
-fun RaceWizard(
-    client: ArcadeClient?,
-    trackViewModel: TrackViewModel,
-    onStart: (Game) -> Unit,
-    modifier: Modifier = Modifier,
+@Inject
+@SingleIn(AppScope::class)
+class RaceWizardScreen(
+    private val client: ArcadeClient,
+    private val trackViewModel: TrackViewModel,
+    private val availableDriverViewModel: AvailableDriverViewModel? = null,
 ) {
-    val scope = rememberCoroutineScope()
+    private val compilerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    val selectedTrack = remember { mutableStateOf<Track?>(null) }
+    private val moduleCache = mutableStateMapOf<Any, Deferred<WasmModule>>()
+    private inner class SelectedDriver(
+        val name: String,
+        module: Deferred<WasmModule>,
+    ) {
+        var ready by mutableStateOf(false)
+            private set
 
-    val lapsTextState = rememberTextFieldState("25")
-    val laps = lapsTextState.text.toString().toIntOrNull()
+        var error by mutableStateOf<Throwable?>(null)
+            private set
 
-    val drivers = remember { mutableStateListOf<Driver>() }
+        private var module: Deferred<WasmModule> = compilerScope.async {
+            try {
+                module.await()
+            } catch (t: Throwable) {
+                error = t
+                throw t
+            } finally {
+                ready = true
+            }
+        }
 
-    fun pickDriverName(baseName: String): String {
+        suspend fun createWasmDriver(): WasmDriver {
+            return module.await().createDriver(name)
+        }
+    }
+
+    private var selectedTrack by mutableStateOf<Track?>(null)
+    private var laps by mutableIntStateOf(25)
+    private val drivers = mutableStateListOf<SelectedDriver>()
+
+    private fun pickDriverName(baseName: String): String {
         val existingNames = drivers.mapTo(mutableSetOf()) { it.name }
         var name = baseName
-        if (name in existingNames) name = "$name (1)"
         var i = 1
         while (name in existingNames) {
-            name = name.substringBeforeLast(" ") + " (${i++})"
+            name = baseName + " (${i++})"
         }
         return name
     }
 
-    fun canAddDriver(): Boolean {
-        return selectedTrack.value != null && drivers.size < selectedTrack.value!!.positions.size
+    private fun selectDriverFile(file: PlatformFile) {
+        val module = compilerScope.async {
+            WasmModule(file.readBytes())
+        }
+        drivers.add(SelectedDriver(pickDriverName(file.nameWithoutExtension), module))
     }
 
-    val driversLauncher = rememberFilePickerLauncher(
-        mode = FileKitMode.Single,
-        type = FileKitType.File("wasm"),
-//        directory = PlatformFile("../arcade-player-samples/build/drivers/files"),
-    ) { file ->
-        if (file != null) {
-            scope.launch {
-                drivers.add(
-                    Driver(
-                        name = pickDriverName(file.name.substringBeforeLast(".")),
-                        bytes = file.readBytes(),
-                    )
-                )
+    private fun selectDriverDownload(name: String, id: DriverId, version: Version) {
+        val module = moduleCache.getOrPut(id to version) {
+            compilerScope.async {
+                WasmModule(client.downloadDriverVersion(id, version))
             }
+        }
+        drivers.add(SelectedDriver(pickDriverName(name), module))
+    }
+
+    private fun validDrivers(): Boolean {
+        val selectedTrack = selectedTrack
+        return selectedTrack != null &&
+            drivers.size in 1..selectedTrack.positions.size &&
+            drivers.all { it.ready && it.error == null }
+    }
+
+    private fun validLaps(): Boolean {
+        return laps > 0
+    }
+
+    @Composable
+    fun Content(
+        onStart: (Game) -> Unit,
+        modifier: Modifier = Modifier,
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = modifier
+                .padding(8.dp)
+        ) {
+            val model by trackViewModel.models.collectAsState()
+            TrackSelector(
+                tracks = model.tracks,
+                selectedTrack = selectedTrack,
+                onTrackSelected = { selectedTrack = it },
+            )
+            Laps()
+            DriverSelection(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            )
+            StartButton(
+                onStart = onStart,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+            )
         }
     }
 
-    class DriverDisplay(
-        val id: DriverId,
-        val version: Version,
-        val name: String,
-    )
+    @Composable
+    private fun Laps() {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("Laps:", style = MaterialTheme.typography.titleLarge)
+            IntNumberField(
+                initial = laps,
+                onValueChange = { laps = it ?: 0 },
+                isError = !validLaps(),
+            )
+        }
+    }
 
-    var showDownloader by remember { mutableStateOf(false) }
-    val serverDrivers = remember { mutableStateListOf<DriverDisplay>() }
-    if (client != null && showDownloader) {
-        LaunchedEffect(Unit) {
-            try {
-                val foundDrivers = client.getDrivers()
-                val foundVersions = foundDrivers
-                    .flatMap { driver ->
-                        client.getDriverVersions(driver.id)
-                            .map { DriverDisplay(driver.id, it.version, driver.name) }
-                    }
-                serverDrivers.clear()
-                serverDrivers.addAll(foundVersions)
-            } catch (_: Throwable) {
+    @Composable
+    private fun DriverSelection(
+        modifier: Modifier = Modifier,
+    ) {
+        val driversLauncher = rememberFilePickerLauncher(
+            mode = FileKitMode.Single,
+            type = FileKitType.File("wasm"),
+        ) { file ->
+            if (file != null) {
+                selectDriverFile(file)
             }
         }
 
-        Dialog(onDismissRequest = { showDownloader = false }) {
-            Surface(shape = RoundedCornerShape(16.dp)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Drivers", style = MaterialTheme.typography.headlineSmall)
-                    LazyColumn(Modifier.fillMaxWidth()) {
-                        items(serverDrivers) { driver ->
-                            val version = driver.version
-                            val name = "${driver.name} $version"
-                            Text(
-                                text = name,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        scope.launch {
-                                            val wasm = client.downloadDriverVersion(driver.id, version)
-                                            drivers.add(Driver(pickDriverName(name), wasm))
+        class DriverDisplay(
+            val id: DriverId,
+            val version: Version,
+            val name: String,
+        )
+
+        var showDownloader by remember { mutableStateOf(false) }
+        val serverDrivers = remember { mutableStateListOf<DriverDisplay>() }
+        if (showDownloader) {
+            LaunchedEffect(Unit) {
+                try {
+                    val foundDrivers = client.getDrivers()
+                    val foundVersions = foundDrivers
+                        .flatMap { driver ->
+                            client.getDriverVersions(driver.id)
+                                .map { DriverDisplay(driver.id, it.version, driver.name) }
+                        }
+                    serverDrivers.clear()
+                    serverDrivers.addAll(foundVersions)
+                } catch (_: Throwable) {
+                }
+            }
+
+            Dialog(onDismissRequest = { showDownloader = false }) {
+                Surface(shape = RoundedCornerShape(16.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Drivers", style = MaterialTheme.typography.headlineSmall)
+                        LazyColumn(Modifier.fillMaxWidth()) {
+                            items(serverDrivers) { driver ->
+                                val version = driver.version
+                                val name = "${driver.name} $version"
+                                Text(
+                                    text = name,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectDriverDownload(name, driver.id, version)
                                             showDownloader = false
                                         }
-                                    }
-                                    .padding(4.dp)
-                            )
+                                        .padding(4.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    Column(
-        modifier = modifier
-            .padding(8.dp)
-    ) {
-        val model by trackViewModel.models.collectAsState()
-        TrackSelector(model.tracks, selectedTrack)
-
-        Spacer(Modifier.width(8.dp))
-
-        Text("Laps:", style = MaterialTheme.typography.titleLarge)
-        TextField(
-            state = lapsTextState,
-            isError = laps == null,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
-
-        Spacer(Modifier.width(8.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                enabled = canAddDriver(),
-                onClick = {
-                    driversLauncher.launch()
-                }
-            ) {
-                Text("Load Driver")
-            }
-            if (client != null) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = modifier,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
-                    enabled = canAddDriver(),
+                    onClick = {
+                        driversLauncher.launch()
+                    }
+                ) {
+                    Text("Load Driver")
+                }
+                Button(
                     onClick = {
                         showDownloader = true
                     }
                 ) {
                     Text("Download")
                 }
-            }
-            Button(
-                enabled = drivers.isNotEmpty(),
-                onClick = {
-                    drivers.clear()
-                }
-            ) {
-                Text("Clear")
-            }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Quick Add: ")
-            for (driver in BUNDLED_DRIVERS) {
                 Button(
-                    enabled = canAddDriver(),
+                    enabled = drivers.isNotEmpty(),
                     onClick = {
-                        scope.launch {
-                            drivers.add(
-                                Driver(
-                                    name = pickDriverName(driver),
-                                    bytes = BundledDrivers.readBytes("files/$driver.wasm"),
-                                )
-                            )
-                        }
+                        drivers.clear()
                     }
                 ) {
-                    Text(driver)
+                    Text("Clear")
+                }
+            }
+
+            Row {
+                SelectedDrivers(selectedTrack, modifier = Modifier.weight(1f))
+                AvailableDrivers(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+
+    @Composable
+    private fun SelectedDrivers(
+        selectedTrack: Track?,
+        modifier: Modifier = Modifier,
+    ) {
+        Column(modifier = modifier) {
+            // TODO allow reordering
+            // TODO allow removing specific driver
+            Text("Selected Drivers:", style = MaterialTheme.typography.titleLarge)
+            LazyColumn(
+                state = rememberLazyListState(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                itemsIndexed(drivers) { position, driver ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        val validPosition = selectedTrack != null && position < selectedTrack.positions.size
+                        if (validPosition) {
+                            Text(
+                                text = "P${position + 1}",
+                                textAlign = TextAlign.End,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .width(32.dp)
+                            )
+                            Text(
+                                text = driver.name,
+                            )
+                        } else {
+                            Spacer(
+                                modifier = Modifier
+                                    .width(32.dp)
+                            )
+                            Text(
+                                text = driver.name,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        val error = driver.error
+                        if (!driver.ready) {
+                            // TODO size the icon together with the text
+                            val transition = rememberInfiniteTransition()
+                            val rotation by transition.animateFloat(
+                                initialValue = 0f, targetValue = 360f,
+                                animationSpec = infiniteRepeatable(tween(1000))
+                            )
+                            Icon(
+                                painter = rememberVectorPainter(progress_activity),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .graphicsLayer { rotationZ = rotation }
+                            )
+                        } else if (error != null) {
+                            Text(error.message ?: "compilation error!")
+                        }
+                    }
+                }
+                if (selectedTrack != null) {
+                    val drivers = drivers.size
+                    val remaining = selectedTrack.positions.size - drivers
+                    items(remaining.coerceAtLeast(0)) { index ->
+                        Text(
+                            text = "P${drivers + index + 1}",
+                            textAlign = TextAlign.End,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .width(32.dp)
+                        )
+                    }
                 }
             }
         }
+    }
 
-        Text("Selected Drivers:", style = MaterialTheme.typography.titleLarge)
-
-        for (driver in drivers) {
-            Spacer(Modifier.width(8.dp))
-            Text(driver.name)
+    @Composable
+    fun AvailableDrivers(modifier: Modifier = Modifier) {
+        Column(modifier = modifier) {
+            Text("Available Drivers:", style = MaterialTheme.typography.titleLarge)
+            if (availableDriverViewModel != null) {
+                val model by availableDriverViewModel.models.collectAsState()
+                println(model.drivers.size)
+                for (driver in model.drivers) {
+                    Button(
+                        onClick = {
+                            selectDriverFile(driver.file)
+                        }
+                    ) {
+                        Text(driver.name)
+                    }
+                }
+            }
         }
+    }
 
-        Spacer(Modifier.weight(1f))
-
+    @Composable
+    private fun StartButton(
+        onStart: (Game) -> Unit,
+        modifier: Modifier = Modifier,
+    ) {
+        val scope = rememberCoroutineScope()
+        val selectedTrack = selectedTrack
+        val enabled = selectedTrack != null && validDrivers() && validLaps()
         Button(
-            enabled = drivers.isNotEmpty() && selectedTrack.value != null && laps != null,
+            enabled = enabled,
             onClick = {
-                onStart(WasmGame(selectedTrack.value!!, drivers.toList(), laps!!))
+                if (enabled) {
+                    scope.launch {
+                        val drivers = drivers.map { it.createWasmDriver() }
+                        val game = WasmGame(selectedTrack, drivers, laps)
+                        onStart(game)
+                    }
+                }
             },
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
+            modifier = modifier
         ) {
             Text("Start!")
         }
@@ -249,41 +430,72 @@ fun RaceWizard(
 @Composable
 private fun TrackSelector(
     tracks: List<Track>,
-    selectedTrack: MutableState<Track?>
+    selectedTrack: Track?,
+    onTrackSelected: (Track) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val state = rememberScrollState()
-
     Column(
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
+        modifier = modifier
     ) {
         Text("Available Tracks:", style = MaterialTheme.typography.titleLarge)
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        LazyRow(
+            state = rememberLazyListState(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(state)
         ) {
-            for (track in tracks) {
-                key(track) {
-                    val selected = selectedTrack.value == track
-                    TrackImage(
-                        track = track,
-                        modifier = Modifier
-                            .size(200.dp, 200.dp)
-                            .border(
-                                width = 4.dp,
-                                color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(6.dp)
-                            .clickable { selectedTrack.value = track }
-                    )
-                }
+            items(tracks) { track ->
+                TrackImage(
+                    track = track,
+                    modifier = Modifier
+                        .size(200.dp, 200.dp)
+                        .border(
+                            width = 4.dp,
+                            color = when (track) {
+                                selectedTrack -> MaterialTheme.colorScheme.primary
+                                else -> Color.Transparent
+                            },
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(6.dp)
+                        .clickable { onTrackSelected(track) }
+                )
+
             }
         }
     }
+}
+
+@Composable
+fun IntNumberField(
+    initial: Int,
+    onValueChange: (Int?) -> Unit,
+    modifier: Modifier = Modifier,
+    label: @Composable (TextFieldLabelScope.() -> Unit)? = null,
+    isError: Boolean = false,
+    contentPadding: PaddingValues = TextFieldDefaults.contentPaddingWithoutLabel()
+) {
+    val text = rememberTextFieldState(initial.toString())
+    LaunchedEffect(text) {
+        snapshotFlow { text.text.toString() }.collectLatest {
+            onValueChange(it.toIntOrNull())
+        }
+    }
+
+    TextField(
+        state = text,
+        modifier = modifier,
+        label = label,
+        isError = isError,
+        inputTransformation = InputTransformation {
+            if (asCharSequence().any { !it.isDigit() }) {
+                revertAllChanges()
+            }
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        contentPadding = contentPadding,
+    )
 }

@@ -16,10 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.bnorm.arcade.display.game.GameViewModel
-import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.machine.ReplayGame
 import dev.bnorm.arcade.rally.RaceDownloader
-import dev.bnorm.arcade.rally.RaceWizard
+import dev.bnorm.arcade.rally.RaceWizardScreen
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
@@ -31,8 +30,8 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 @SingleIn(AppScope::class)
 @Inject
 class WebMenu(
+    private val raceWizardScreen: RaceWizardScreen,
     private val client: ArcadeClient? = null,
-    private val trackViewModel: TrackViewModel,
     private val gameViewModel: GameViewModel,
 ) {
     @Composable
@@ -69,9 +68,7 @@ class WebMenu(
                 onDismissRequest = { showWizard = false }
             ) {
                 Surface(modifier = Modifier.height(IntrinsicSize.Min)) {
-                    RaceWizard(
-                        client,
-                        trackViewModel,
+                    raceWizardScreen.Content(
                         onStart = {
                             gameViewModel.new(it)
                             showWizard = false

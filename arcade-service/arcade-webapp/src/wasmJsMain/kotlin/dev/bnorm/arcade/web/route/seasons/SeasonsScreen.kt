@@ -22,10 +22,9 @@ import dev.bnorm.arcade.web.route.SeasonKey
 import dev.bnorm.arcade.web.route.SeasonsKey
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
-import dev.zacsweers.metro.binding
 import kotlin.reflect.KClass
 
-@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+@ContributesIntoSet(AppScope::class)
 class SeasonsScreen(
     private val client: ArcadeClient,
     private val backStack: NavBackStack<RouteKey>,

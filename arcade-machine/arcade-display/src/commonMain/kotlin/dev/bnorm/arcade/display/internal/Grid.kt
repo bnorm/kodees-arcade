@@ -54,7 +54,7 @@ fun Grid(
         }
 
         val totalHeight = rowHeights.sum()
-        val layoutHeight = minOf(totalHeight / 2, constraints.maxHeight)
+        val layoutHeight = minOf(totalHeight, constraints.maxHeight)
         vertical.updateBounds((totalHeight - layoutHeight).coerceAtLeast(0))
 
         val totalWidth = columnsWidths.sum()

@@ -50,18 +50,16 @@ import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.web.route.RacesKey
-import dev.bnorm.arcade.web.route.RouteKey
 import dev.bnorm.arcade.web.route.RouteScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
-import dev.zacsweers.metro.binding
 import kotlin.math.roundToInt
 import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+@ContributesIntoSet(AppScope::class)
 class RacesScreen(
     private val client: ArcadeClient,
 ) : RouteScreen<RacesKey> {

@@ -9,17 +9,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.display.track.TrackBuilder
-import dev.bnorm.arcade.display.track.TrackSize
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.TrackCreateRequest
 import dev.bnorm.arcade.web.route.RouteKey
@@ -27,11 +22,10 @@ import dev.bnorm.arcade.web.route.RouteScreen
 import dev.bnorm.arcade.web.route.TracksKey
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
-import dev.zacsweers.metro.binding
 import kotlin.reflect.KClass
 import kotlinx.coroutines.launch
 
-@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+@ContributesIntoSet(AppScope::class)
 class TracksScreen(
     private val client: ArcadeClient
 ) : RouteScreen<TracksKey> {
@@ -52,10 +46,8 @@ class TracksScreen(
                     isError = name.text.isBlank(),
                 )
             }
-            var size by remember { mutableStateOf(IntSize(1000, 1000)) }
-            TrackSize(size, onSizeChanged = { size = it })
             TrackBuilder(
-                size,
+                initialSize = IntSize(1000, 1000),
                 onSave = {
                     if (name.text.isNotBlank()) {
                         scope.launch {

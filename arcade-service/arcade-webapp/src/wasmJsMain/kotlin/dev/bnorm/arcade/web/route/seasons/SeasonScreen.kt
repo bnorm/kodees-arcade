@@ -28,7 +28,6 @@ import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.bnorm.arcade.service.api.ParticipantResponse
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonResponse
-import dev.bnorm.arcade.web.route.RouteKey
 import dev.bnorm.arcade.web.route.RouteScreen
 import dev.bnorm.arcade.web.route.SeasonKey
 import dev.bnorm.arcade.web.route.races.RaceCard
@@ -36,11 +35,10 @@ import dev.bnorm.arcade.web.route.races.RaceModel
 import dev.bnorm.arcade.web.route.races.toModel
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
-import dev.zacsweers.metro.binding
 import kotlin.math.roundToInt
 import kotlin.reflect.KClass
 
-@ContributesIntoSet(AppScope::class, binding<RouteScreen<RouteKey>>())
+@ContributesIntoSet(AppScope::class)
 class SeasonScreen(
     private val client: ArcadeClient,
 ) : RouteScreen<SeasonKey> {
