@@ -102,7 +102,7 @@ private class BrowserWasmDriver private constructor(
                 },
                 environSizesGet = { environCountPtr, environBufferSizePtr ->
                     // TODO what environment variables should we expose?
-                    val view = DataView(guest.memory.buffer)
+                    val view = DataView(driver.memory.buffer)
                     view.setInt32(environCountPtr.toInt(), 0)
                     view.setInt32(environBufferSizePtr.toInt(), 0)
                     0.toJsInt()
@@ -171,7 +171,7 @@ private class BrowserWasmDriver private constructor(
                 race.track.positions.size * 24
         )
 
-        val view = DataView(guest.memory.buffer, byteOffset = 0)
+        val view = DataView(memory.buffer, byteOffset = 0)
 
         val checkpointsPtr = 0
         for ((i, checkpoint) in race.track.checkpoints.withIndex()) {
@@ -364,14 +364,11 @@ private fun readDrawRequest(
         2 -> DrawRequest.Rectangle(
             color = Color(p1.toUInt()),
             rectangle = run {
-                val minX = p2
-                val maxX = p3
-                val minY = p4
-                val maxY = p5
                 Rectangle(
-                    center = Point((minX + maxX) / 2.0, (minY + maxY) / 2.0),
-                    width = maxX - minX,
-                    height = maxY - minY,
+                    minX = p2,
+                    maxX = p3,
+                    minY = p4,
+                    maxY = p5,
                 )
             },
             style = when (p6) {

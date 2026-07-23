@@ -26,14 +26,11 @@ interface AppGraph {
 
     @SingleIn(AppScope::class)
     @Provides
-    fun provideArcadeClient(): ArcadeClient? {
+    fun provideArcadeClient(): ArcadeClient {
         val hostname = window.location.hostname
-        val port = window.location.port.toIntOrNull() ?: 8080
-        return if (hostname == "localhost") {
-            ArcadeClient(host = hostname, port = port)
-        } else {
-            null
-        }
+        val port = window.location.port.toIntOrNull()
+        val secure = window.location.protocol == "https:"
+        return ArcadeClient(host = hostname, port = port, secure = secure)
     }
 
     @SingleIn(AppScope::class)
