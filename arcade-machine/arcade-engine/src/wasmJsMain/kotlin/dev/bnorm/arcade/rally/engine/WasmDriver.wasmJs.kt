@@ -6,7 +6,6 @@ import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Race
 import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
 import js.array.Tuple
-import js.buffer.DataView
 import js.buffer.toArrayBuffer
 import js.function.JsFunction
 import js.numbers.JsDouble
@@ -16,16 +15,12 @@ import js.numbers.JsNumbers.toJsDouble
 import js.numbers.JsNumbers.toJsInt
 import js.numbers.JsNumbers.toKotlinFloat
 import js.objects.get
-import js.typedarrays.Uint8Array
-import js.typedarrays.toUint8Array
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
-import kotlinx.io.Sink
 import web.assembly.Imports
 import web.assembly.Instance
-import web.assembly.Memory
 import web.assembly.Module
 import web.assembly.compile
 import web.assembly.instantiate
@@ -79,13 +74,13 @@ private class BrowserWasmDriver private constructor(
                 },
                 fdWrite = { fd, iovs, iovs_len, nwritten ->
                     fdWrite(
-                        driver.memory,
-                        iovs_len.toInt(),
-                        iovs.toInt(),
-                        fd.toInt(),
-                        nwritten.toInt(),
-                        driver.stdout,
-                        driver.stderr,
+                        memory = driver.memory,
+                        iovs = iovs.toInt(),
+                        iovs_len = iovs_len.toInt(),
+                        fd = fd.toInt(),
+                        nwritten = nwritten.toInt(),
+                        stdout = driver.stdout,
+                        stderr = driver.stderr,
                     ).toJsInt()
                 },
                 randomGet = { bufPtr, bufLen ->
@@ -93,9 +88,8 @@ private class BrowserWasmDriver private constructor(
                 },
                 environSizesGet = { environCountPtr, environBufferSizePtr ->
                     // TODO what environment variables should we expose?
-                    val view = DataView(driver.memory.buffer)
-                    view.setInt32(environCountPtr.toInt(), 0)
-                    view.setInt32(environBufferSizePtr.toInt(), 0)
+                    driver.memory.writeInt32(environCountPtr.toInt(), 0)
+                    driver.memory.writeInt32(environBufferSizePtr.toInt(), 0)
                     0.toJsInt()
                 },
                 environGet = { environPtr, environBufferPtr ->
@@ -108,13 +102,13 @@ private class BrowserWasmDriver private constructor(
             )
 
             driver.instance = instantiate(module, imports)
-            driver.memory = driver.instance.exports["memory"]!!.unsafeCast()
+            driver.memory = BrowserWasmInstanceMemory(driver.instance.exports["memory"]!!.unsafeCast())
             return driver
         }
     }
 
     lateinit var instance: Instance
-    lateinit var memory: Memory<*>
+    lateinit var memory: WasmInstanceMemory
 
     override var steering: Double = 0.0
         private set
@@ -150,23 +144,21 @@ private class BrowserWasmDriver private constructor(
                 race.track.positions.size * 24
         )
 
-        val view = DataView(memory.buffer, byteOffset = 0)
-
         val checkpointsPtr = 0
         for ((i, checkpoint) in race.track.checkpoints.withIndex()) {
             val base = (checkpointsPtr) + (i * 32)
-            view.setFloat64(base + 0, checkpoint.start.x, littleEndian = true)
-            view.setFloat64(base + 8, checkpoint.start.y, littleEndian = true)
-            view.setFloat64(base + 16, checkpoint.end.x, littleEndian = true)
-            view.setFloat64(base + 24, checkpoint.end.y, littleEndian = true)
+            memory.writeFloat64(base + 0, checkpoint.start.x)
+            memory.writeFloat64(base + 8, checkpoint.start.y)
+            memory.writeFloat64(base + 16, checkpoint.end.x)
+            memory.writeFloat64(base + 24, checkpoint.end.y)
         }
 
         val positionsPtr = race.track.checkpoints.size * 32
         for ((i, position) in race.track.positions.withIndex()) {
             val base = (positionsPtr) + (i * 24)
-            view.setFloat64(base + 0, position.location.x, littleEndian = true)
-            view.setFloat64(base + 8, position.location.y, littleEndian = true)
-            view.setFloat64(base + 16, position.heading.radians, littleEndian = true)
+            memory.writeFloat64(base + 0, position.location.x)
+            memory.writeFloat64(base + 8, position.location.y)
+            memory.writeFloat64(base + 16, position.heading.radians)
         }
 
         onRace.invoke(
@@ -294,57 +286,3 @@ private fun Imports(
         })
     """
 )
-
-private fun Memory<*>.require(byteCount: Int) {
-    val pages = byteCount
-    if (buffer.byteLength < pages) {
-        if (grow(pages - buffer.byteLength) == -1) {
-            error("unable to allocate sufficient memory: $byteCount")
-        }
-    }
-}
-
-private fun fdWrite(
-    memory: Memory<*>,
-    iovs_len: Int,
-    iovs: Int,
-    fd: Int,
-    nwritten: Int,
-    stdout: Sink,
-    stderr: Sink,
-): Int {
-    val view = DataView(memory.buffer)
-    var bytesWritten = 0
-
-    val sink = when (fd) {
-        1 -> stdout
-        2 -> stderr
-        else -> {
-            view.setUint32(nwritten, 0, littleEndian = true)
-            return 1
-        }
-    }
-
-    for (i in 0..<iovs_len) {
-        val offset = view.getUint32(iovs + i * 8, littleEndian = true)
-        val length = view.getUint32(iovs + i * 8 + 4, littleEndian = true)
-        val slice = memory.buffer.slice(offset, offset + length)
-        sink.transferFrom(slice.toSource())
-        bytesWritten += length
-    }
-
-    view.setUint32(nwritten, bytesWritten, littleEndian = true)
-    return 0
-}
-
-private fun randomGet(
-    memory: Memory<*>,
-    random: Random,
-    bufLen: Int,
-    bufPtr: Int
-): Int {
-    val memory = Uint8Array(memory.buffer)
-    val randomBytes = random.nextBytes(bufLen).toUint8Array()
-    memory.set(randomBytes, bufPtr)
-    return 0
-}

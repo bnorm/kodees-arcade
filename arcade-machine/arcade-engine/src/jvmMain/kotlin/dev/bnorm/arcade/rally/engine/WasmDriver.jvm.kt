@@ -4,7 +4,6 @@ import ai.tegmentum.wasmtime4j.Instance
 import ai.tegmentum.wasmtime4j.Linker
 import ai.tegmentum.wasmtime4j.Module
 import ai.tegmentum.wasmtime4j.Store
-import ai.tegmentum.wasmtime4j.WasmMemory
 import ai.tegmentum.wasmtime4j.WasmValue.f64
 import ai.tegmentum.wasmtime4j.WasmValue.i32
 import ai.tegmentum.wasmtime4j.WasmValue.i64
@@ -22,12 +21,7 @@ import kotlin.jvm.optionals.getOrNull
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlinx.io.Buffer
-import kotlinx.io.DelicateIoApi
 import kotlinx.io.RawSource
-import kotlinx.io.Sink
-import kotlinx.io.UnsafeIoApi
-import kotlinx.io.unsafe.UnsafeBufferOperations
-import kotlinx.io.writeToInternalBuffer
 
 actual suspend fun WasmModule(bytes: ByteArray): WasmModule {
     return WasmtimeWasmModule(engine.compileModule(bytes))
@@ -80,8 +74,8 @@ private class WasmtimeWasmDriver private constructor(
                     FunctionType(arrayOf(I32, I32), arrayOf(I32)),
                     singleValue { (environCountPtr, environBufferSizePtr) ->
                         // TODO what environment variables should we expose?
-                        guest.memory.writeInt32(environCountPtr.asInt().toLong(), 0)
-                        guest.memory.writeInt32(environBufferSizePtr.asInt().toLong(), 0)
+                        guest.memory.writeInt32(environCountPtr.asInt(), 0)
+                        guest.memory.writeInt32(environBufferSizePtr.asInt(), 0)
                         i32(0)
                     },
                 )
@@ -144,7 +138,7 @@ private class WasmtimeWasmDriver private constructor(
             }
 
             guest.instance = guest.linker.instantiate(guest.store, module)
-            guest.memory = guest.instance.defaultMemory.orElseThrow()
+            guest.memory = WasmtimeWasmInstanceMemory(guest.instance.defaultMemory.orElseThrow())
 
             return driver
         }
@@ -189,7 +183,7 @@ private class WasmtimeWasmDriver private constructor(
 
         val checkpointsPtr = 0
         for ((i, checkpoint) in race.track.checkpoints.withIndex()) {
-            val base = (checkpointsPtr) + (i * 32L)
+            val base = (checkpointsPtr) + (i * 32)
             memory.writeFloat64(base + 0, checkpoint.start.x)
             memory.writeFloat64(base + 8, checkpoint.start.y)
             memory.writeFloat64(base + 16, checkpoint.end.x)
@@ -198,7 +192,7 @@ private class WasmtimeWasmDriver private constructor(
 
         val positionsPtr = race.track.checkpoints.size * 32
         for ((i, position) in race.track.positions.withIndex()) {
-            val base = (positionsPtr) + (i * 24L)
+            val base = (positionsPtr) + (i * 24)
             memory.writeFloat64(base + 0, position.location.x)
             memory.writeFloat64(base + 8, position.location.y)
             memory.writeFloat64(base + 16, position.heading.radians)
@@ -243,85 +237,11 @@ private class WasmGuest : AutoCloseable {
     lateinit var store: Store
     lateinit var linker: Linker<*>
     lateinit var instance: Instance
-    lateinit var memory: WasmMemory
+    lateinit var memory: WasmInstanceMemory
 
     override fun close() {
         instance.close()
         linker.close()
         store.close()
-    }
-}
-
-private fun WasmMemory.require(byteCount: Int) {
-    val pages = byteCount / pageSize() + (byteCount % pageSize()).coerceAtMost(1)
-    if (size < pages) {
-        if (grow(pages - size) == -1) {
-            error("unable to allocate sufficient memory: $byteCount")
-        }
-    }
-}
-
-private fun fdWrite(
-    memory: WasmMemory,
-    iovs: Int,
-    iovs_len: Int,
-    fd: Int,
-    nwritten: Int,
-    stdout: Sink,
-    stderr: Sink,
-): Int {
-    var bytesWritten = 0
-
-    val sink = when (fd) {
-        1 -> stdout
-        2 -> stderr
-        else -> {
-            memory.writeInt32(nwritten.toLong(), 0)
-            return 1
-        }
-    }
-
-    for (i in 0L..<iovs_len) {
-        val startIndex = memory.readInt32(iovs + i * 8L)
-        val byteCount = memory.readInt32(iovs + i * 8L + 4L)
-        sink.write(memory, startIndex, byteCount)
-        bytesWritten += byteCount
-    }
-
-    memory.writeInt32(nwritten.toLong(), bytesWritten)
-    return 0
-}
-
-private fun randomGet(
-    memory: WasmMemory,
-    random: Random,
-    bufLen: Int,
-    bufPtr: Int
-): Int {
-    val randomBytes = random.nextBytes(bufLen)
-    memory.writeBytes(bufPtr, randomBytes, 0, randomBytes.size)
-    return 0
-}
-
-@OptIn(UnsafeIoApi::class, DelicateIoApi::class)
-private fun Sink.write(
-    memory: WasmMemory,
-    startIndex: Int,
-    byteCount: Int
-) {
-    var remaining = byteCount
-    var offset = startIndex
-
-    writeToInternalBuffer { buffer ->
-        while (remaining > 0) {
-            val length = minOf(remaining, 8192)
-            UnsafeBufferOperations.writeToTail(buffer, length) { dest, destOffset, _ ->
-                memory.readBytes(offset, dest, destOffset, length)
-                length
-            }
-
-            remaining -= length
-            offset += length
-        }
     }
 }
