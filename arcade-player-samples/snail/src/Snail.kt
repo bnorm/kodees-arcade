@@ -20,7 +20,7 @@ object Snail : Driver() {
         this.safety = Random.nextDouble(0.1)
     }
 
-    override fun move(car: Car, controls: Controls) {
+    override fun onTurn(car: Car, controls: Controls) {
         val next = track.checkpoints[car.nextCheckpoint]
         val target = next.center
 

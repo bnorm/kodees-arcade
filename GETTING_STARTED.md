@@ -12,7 +12,7 @@ which can be used by the Arcade.
 
 To run the desktop application, use the following Gradle command from the root directory.
 
-```
+```shell
 > ./gradlew arcadeRun
 ```
 
@@ -28,13 +28,13 @@ Each of these samples extends the `Driver` abstract class to help implement the 
 
 ### Callbacks
 
-#### `fun move(car: Car, controls: Controls)`
+#### `fun onTurn(car: Car, controls: Controls)`
 
 This is the only required callback for a driver.
 Provides information about the car (`Car`) including position and next required checkpoint,
 and provides a way to control (`Controls`) the throttle and steering of the car.
 
-#### `onRace(race: Race)`
+#### `fun onRace(race: Race)`
 
 Called before a race starts.
 Provides information about the race, including track information and number of laps.

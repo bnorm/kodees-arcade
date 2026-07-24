@@ -61,7 +61,7 @@ class WasmGame(
                 for (state in gameState.driverStates) {
                     if (state.finished) continue
 
-                    state.driver.move(
+                    state.driver.onTurn(
                         Car(
                             time = gameState.time,
                             location = Point(state.x, state.y),

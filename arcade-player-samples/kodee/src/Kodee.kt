@@ -76,7 +76,7 @@ object Kodee : Driver() {
     }
 
     private lateinit var car: Car
-    override fun move(car: Car, controls: Controls) {
+    override fun onTurn(car: Car, controls: Controls) {
         this.car = car
 
         val velocity = car.velocity

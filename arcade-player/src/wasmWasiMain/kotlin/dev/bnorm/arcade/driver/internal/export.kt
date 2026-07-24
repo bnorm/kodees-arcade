@@ -100,7 +100,7 @@ fun driverOnTurn(
 ) {
     freeAllComponentModelReallocAllocatedMemory()
     withScopedMemoryAllocator {
-        driver.move(
+        driver.onTurn(
             Car(
                 time = time,
                 location = Point(x, y),

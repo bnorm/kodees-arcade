@@ -17,15 +17,7 @@ import ai.tegmentum.wasmtime4j.func.HostFunction.voidFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
 import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Race
-import dev.bnorm.arcade.driver.canvas.Color
-import dev.bnorm.arcade.driver.canvas.Fill
-import dev.bnorm.arcade.driver.canvas.Stroke
 import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
-import dev.bnorm.arcade.geometry.Angle
-import dev.bnorm.arcade.geometry.Circle
-import dev.bnorm.arcade.geometry.Point
-import dev.bnorm.arcade.geometry.Rectangle
-import dev.bnorm.arcade.geometry.Segment
 import kotlin.jvm.optionals.getOrNull
 import kotlin.random.Random
 import kotlin.time.Clock
@@ -34,8 +26,6 @@ import kotlinx.io.DelicateIoApi
 import kotlinx.io.RawSource
 import kotlinx.io.Sink
 import kotlinx.io.UnsafeIoApi
-import kotlinx.io.readLine
-import kotlinx.io.readString
 import kotlinx.io.unsafe.UnsafeBufferOperations
 import kotlinx.io.writeToInternalBuffer
 
@@ -136,76 +126,19 @@ private class WasmtimeWasmDriver private constructor(
                     "bnorm:arcade/canvas", "draw",
                     FunctionType(arrayOf(I32, I32, F64, F64, F64, F64, I64, I32, F32), arrayOf()),
                     voidFunction { params ->
-                        val p0 = params[0].asInt()
-                        val p1 = params[1].asInt()
-                        val p2 = params[2].asDouble()
-                        val p3 = params[3].asDouble()
-                        val p4 = params[4].asDouble()
-                        val p5 = params[5].asDouble()
-                        val p6 = params[6].asLong()
-                        val p7 = params[7].asInt()
-                        val p8 = params[8].asFloat()
-
-                        val request = when (p0) {
-                            0 -> DrawRequest.Segment(
-                                color = Color(p1.toUInt()),
-                                segment = Segment(
-                                    start = Point(
-                                        x = p2,
-                                        y = p3,
-                                    ),
-                                    end = Point(
-                                        x = p4,
-                                        y = p5,
-                                    )
-                                ),
-                                stroke = Stroke(Float.fromBits(p6.toInt())),
+                        driver.drawRequests.add(
+                            readDrawRequest(
+                                params[0].asInt(),
+                                params[1].asInt(),
+                                params[2].asDouble(),
+                                params[3].asDouble(),
+                                params[4].asDouble(),
+                                params[5].asDouble(),
+                                params[6].asLong(),
+                                params[7].asInt(),
+                                params[8].asFloat()
                             )
-
-                            1 -> DrawRequest.Circle(
-                                color = Color(p1.toUInt()),
-                                circle = Circle(
-                                    center = Point(
-                                        x = p2,
-                                        y = p3,
-                                    ),
-                                    radius = p4,
-                                ),
-                                startAngle = Angle.ofRadians(p5),
-                                sweepAngle = Angle.ofRadians(Double.fromBits(p6)),
-                                style = when (p7) {
-                                    0 -> Fill
-                                    1 -> Stroke(
-                                        width = p8,
-                                    )
-
-                                    else -> error("!")
-                                }
-                            )
-
-                            2 -> DrawRequest.Rectangle(
-                                color = Color(p1.toUInt()),
-                                rectangle = run {
-                                    Rectangle(
-                                        minX = p2,
-                                        maxX = p3,
-                                        minY = p4,
-                                        maxY = p5,
-                                    )
-                                },
-                                style = when (p6) {
-                                    0L -> Fill
-                                    1L -> Stroke(
-                                        width = Float.fromBits(p7),
-                                    )
-
-                                    else -> error("!")
-                                }
-                            )
-
-                            else -> error("!")
-                        }
-                        driver.drawRequests.add(request)
+                        )
                     },
                 )
             }
@@ -235,28 +168,16 @@ private class WasmtimeWasmDriver private constructor(
 
     private val drawRequests = mutableListOf<DrawRequest>()
 
-    private val move by lazy(LazyThreadSafetyMode.NONE) {
-        guest.instance.getFunction("bnorm:arcade/driver#on-turn").getOrNull()!!
-    }
-
     private val onRace by lazy(LazyThreadSafetyMode.NONE) {
         guest.instance.getFunction("bnorm:arcade/driver#on-race").getOrNull()!!
     }
 
-    private val onDraw by lazy(LazyThreadSafetyMode.NONE) {
-        guest.instance.getFunction("bnorm:arcade/driver#on-draw").getOrNull()
+    private val onTurn by lazy(LazyThreadSafetyMode.NONE) {
+        guest.instance.getFunction("bnorm:arcade/driver#on-turn").getOrNull()!!
     }
 
-    override fun move(car: Car) {
-        move.call(
-            i64(car.time),
-            f64(car.location.x),
-            f64(car.location.y),
-            f64(car.velocity.angle.radians),
-            f64(car.velocity.magnitude),
-            i32(car.lap),
-            i32(car.nextCheckpoint),
-        )
+    private val onDraw by lazy(LazyThreadSafetyMode.NONE) {
+        guest.instance.getFunction("bnorm:arcade/driver#on-draw").getOrNull()
     }
 
     override fun onRace(race: Race) {
@@ -291,6 +212,18 @@ private class WasmtimeWasmDriver private constructor(
             i32(positionsPtr),
             i32(race.track.positions.size),
             i32(race.laps),
+        )
+    }
+
+    override fun onTurn(car: Car) {
+        onTurn.call(
+            i64(car.time),
+            f64(car.location.x),
+            f64(car.location.y),
+            f64(car.velocity.angle.radians),
+            f64(car.velocity.magnitude),
+            i32(car.lap),
+            i32(car.nextCheckpoint),
         )
     }
 
