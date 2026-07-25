@@ -1,8 +1,10 @@
-package dev.bnorm.arcade.service.repo
+package dev.bnorm.arcade.service.track
 
 import dev.bnorm.arcade.geometry.Position
 import dev.bnorm.arcade.geometry.Segment
+import dev.bnorm.arcade.service.Repository
 import dev.bnorm.arcade.service.api.TrackId
+import dev.bnorm.arcade.service.trackId
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.Inject

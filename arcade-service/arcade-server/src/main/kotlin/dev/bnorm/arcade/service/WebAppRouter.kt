@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.service.route
+package dev.bnorm.arcade.service
 
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet

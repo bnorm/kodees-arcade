@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.service.route
+package dev.bnorm.arcade.service
 
 import io.ktor.http.Parameters
 import io.ktor.server.plugins.MissingRequestParameterException

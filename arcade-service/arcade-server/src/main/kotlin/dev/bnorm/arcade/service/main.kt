@@ -1,7 +1,5 @@
 package dev.bnorm.arcade.service
 
-import dev.bnorm.arcade.service.repo.Repository
-import dev.bnorm.arcade.service.route.Router
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides

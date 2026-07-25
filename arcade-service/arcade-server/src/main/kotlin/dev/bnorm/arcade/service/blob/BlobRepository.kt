@@ -1,6 +1,10 @@
-package dev.bnorm.arcade.service.repo
+package dev.bnorm.arcade.service.blob
 
 import dev.bnorm.arcade.service.BlobDirectory
+import dev.bnorm.arcade.service.BlobId
+import dev.bnorm.arcade.service.Repository
+import dev.bnorm.arcade.service.blobId
+import dev.bnorm.arcade.service.nioPath
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.Inject
@@ -12,9 +16,7 @@ import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.copyAndClose
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.singleOrNull
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.EntityID

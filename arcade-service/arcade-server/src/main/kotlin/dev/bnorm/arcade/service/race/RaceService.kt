@@ -11,9 +11,9 @@ import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.RaceResponse
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
+import dev.bnorm.arcade.service.blob.BlobRepository
+import dev.bnorm.arcade.service.driver.DriverRepository
 import dev.bnorm.arcade.service.logger
-import dev.bnorm.arcade.service.repo.BlobRepository
-import dev.bnorm.arcade.service.repo.DriverRepository
 import dev.bnorm.arcade.service.season.SeasonRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet

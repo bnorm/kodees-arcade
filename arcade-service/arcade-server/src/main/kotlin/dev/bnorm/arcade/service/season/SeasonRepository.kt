@@ -1,18 +1,18 @@
 package dev.bnorm.arcade.service.season
 
+import dev.bnorm.arcade.service.DriverVersionId
+import dev.bnorm.arcade.service.Repository
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.ParticipantId
 import dev.bnorm.arcade.service.api.RaceId
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.Version
+import dev.bnorm.arcade.service.driver.DriverTable
+import dev.bnorm.arcade.service.driver.DriverVersionTable
+import dev.bnorm.arcade.service.participantId
 import dev.bnorm.arcade.service.race.RaceDriverTable
 import dev.bnorm.arcade.service.race.RaceTable
-import dev.bnorm.arcade.service.repo.DriverTable
-import dev.bnorm.arcade.service.repo.DriverVersionId
-import dev.bnorm.arcade.service.repo.DriverVersionTable
-import dev.bnorm.arcade.service.repo.Repository
-import dev.bnorm.arcade.service.repo.participantId
-import dev.bnorm.arcade.service.repo.seasonId
+import dev.bnorm.arcade.service.seasonId
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn

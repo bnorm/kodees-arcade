@@ -1,7 +1,15 @@
-package dev.bnorm.arcade.service.repo
+package dev.bnorm.arcade.service.driver
 
+import dev.bnorm.arcade.service.BlobId
+import dev.bnorm.arcade.service.DriverVersionId
+import dev.bnorm.arcade.service.Repository
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.Version
+import dev.bnorm.arcade.service.blob.BlobRepository
+import dev.bnorm.arcade.service.blob.BlobTable
+import dev.bnorm.arcade.service.driverId
+import dev.bnorm.arcade.service.driverVersionId
+import dev.bnorm.arcade.service.version
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.Inject

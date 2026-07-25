@@ -7,7 +7,7 @@ import dev.bnorm.arcade.service.api.ParticipantResponse
 import dev.bnorm.arcade.service.api.SeasonCreateRequest
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonResponse
-import dev.bnorm.arcade.service.repo.DriverRepository
+import dev.bnorm.arcade.service.driver.DriverRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn

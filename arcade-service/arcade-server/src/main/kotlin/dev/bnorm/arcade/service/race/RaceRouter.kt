@@ -1,5 +1,6 @@
 package dev.bnorm.arcade.service.race
 
+import dev.bnorm.arcade.service.Router
 import dev.bnorm.arcade.service.api.Nonce
 import dev.bnorm.arcade.service.api.RaceCreateRequest
 import dev.bnorm.arcade.service.api.RaceId
@@ -7,7 +8,6 @@ import dev.bnorm.arcade.service.api.RaceProcessEvent
 import dev.bnorm.arcade.service.api.SeasonId
 import dev.bnorm.arcade.service.api.SeasonRaceCreateRequest
 import dev.bnorm.arcade.service.logger
-import dev.bnorm.arcade.service.route.Router
 import dev.bnorm.arcade.service.worker.RaceWorkerQueue
 import dev.bnorm.arcade.service.worker.WorkerId
 import dev.zacsweers.metro.AppScope

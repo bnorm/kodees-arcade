@@ -1,4 +1,4 @@
-package dev.bnorm.arcade.service.repo
+package dev.bnorm.arcade.service
 
 import dev.bnorm.arcade.service.api.DriverId
 import dev.bnorm.arcade.service.api.Nonce
