@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 @Inject
 @SingleIn(AppScope::class)
 @ContributesBinding(AppScope::class, binding<AvailableDriverViewModel>())
+@ContributesBinding(AppScope::class, binding<AvailableDriverViewModel?>())
 class DesktopAvailableDriverViewModel(
     @ViewModelCoroutineScope scope: CoroutineScope,
     private val cache: Cache<PlatformFile>,

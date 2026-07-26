@@ -5,14 +5,12 @@ import dev.bnorm.arcade.FileSystemCache
 import dev.bnorm.arcade.NestedCache
 import dev.bnorm.arcade.SerializedStringCache
 import dev.bnorm.arcade.TransformedCache
-import dev.bnorm.arcade.display.AvailableDriverViewModel
+import dev.bnorm.arcade.display.ArcadeWindow
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
-import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.Binds
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
@@ -26,9 +24,7 @@ import kotlinx.serialization.json.Json
 
 @DependencyGraph(AppScope::class)
 interface AppGraph {
-    val windowGraphFactory: WindowGraph.Factory
-
-    val gameScreen: GameScreen
+    val windows: Set<ArcadeWindow>
 
     @SingleIn(AppScope::class)
     @Provides
@@ -65,9 +61,6 @@ interface AppGraph {
             setter = { it.absoluteFile().path },
         )
     }
-
-    @Binds
-    val AvailableDriverViewModel.binding: AvailableDriverViewModel?
 
     @DependencyGraph.Factory
     interface Factory {
