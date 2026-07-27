@@ -44,6 +44,7 @@ import dev.bnorm.arcade.display.asset.icon.replay
 import dev.bnorm.arcade.display.asset.icon.sports_motorsports
 import dev.bnorm.arcade.display.game.GameScreen
 import dev.bnorm.arcade.display.game.GameViewModel
+import dev.bnorm.arcade.display.game.driver.DriverDebugViewModel
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.rally.race.DownloadGame
 import dev.bnorm.arcade.server.client.ArcadeClient
@@ -108,8 +109,11 @@ private fun WatchRaceDialog(client: ArcadeClient, raceId: RaceId?, onDismiss: ()
         onDismiss()
     }) {
         val scope = rememberCoroutineScope()
-        val gameViewModel = remember {
-            GameViewModel(TrackViewModel.INITIAL_TRACK, scope)
+        val driverDebugViewModel = remember {
+            DriverDebugViewModel(scope)
+        }
+        val gameViewModel = remember(driverDebugViewModel) {
+            GameViewModel(TrackViewModel.INITIAL_TRACK, scope, driverDebugViewModel)
         }
 
         LaunchedEffect(Unit) {
@@ -119,6 +123,7 @@ private fun WatchRaceDialog(client: ArcadeClient, raceId: RaceId?, onDismiss: ()
         Card {
             GameScreen(
                 gameViewModel,
+                driverDebugViewModel,
                 showDebug = false,
                 modifier = Modifier
                     .padding(16.dp)

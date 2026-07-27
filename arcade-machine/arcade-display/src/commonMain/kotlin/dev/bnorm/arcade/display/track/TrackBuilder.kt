@@ -262,7 +262,6 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
                                     PointerEventType.Scroll -> {
                                         if (mode == BuilderMode.Transform) {
                                             val change = event.changes.first()
-                                            println(change.scrollDelta.y)
                                             scale(change.scrollDelta.y / SCROLL_NORMALIZER, change.position.toPoint())
                                         }
                                     }

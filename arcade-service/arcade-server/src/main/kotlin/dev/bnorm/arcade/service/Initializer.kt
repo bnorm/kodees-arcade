@@ -1,13 +1,10 @@
 package dev.bnorm.arcade.service
 
-import dev.bnorm.arcade.service.api.Version
-import dev.bnorm.arcade.service.repo.DriverRepository
-import dev.bnorm.arcade.service.repo.TrackRepository
+import dev.bnorm.arcade.service.driver.DriverRepository
+import dev.bnorm.arcade.service.track.TrackRepository
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
-import io.ktor.util.cio.readChannel
-import kotlin.io.path.toPath
 
 @SingleIn(AppScope::class)
 @ContributesIntoSet(AppScope::class)

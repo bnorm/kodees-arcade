@@ -12,7 +12,7 @@ import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.rememberDialogState
-import dev.bnorm.arcade.display.MenuItem
+import dev.bnorm.arcade.display.ArcadeMenuItem
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.display.track.TrackDownloader
 import dev.bnorm.arcade.server.client.ArcadeClient
@@ -22,8 +22,8 @@ import dev.zacsweers.metro.ContributesIntoSet
 class TrackDownloadItem(
     private val client: ArcadeClient,
     private val trackViewModel: TrackViewModel,
-) : MenuItem {
-    override val category get() = MenuItem.Category.Track
+) : ArcadeMenuItem {
+    override val category get() = ArcadeMenuItem.Category.Track
     override val order get() = 2
 
     @Composable

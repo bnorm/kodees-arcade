@@ -1,10 +1,10 @@
 package dev.bnorm.arcade.service.season
 
+import dev.bnorm.arcade.service.Router
 import dev.bnorm.arcade.service.api.ParticipantCreateRequest
 import dev.bnorm.arcade.service.api.ParticipantId
 import dev.bnorm.arcade.service.api.SeasonCreateRequest
 import dev.bnorm.arcade.service.api.SeasonId
-import dev.bnorm.arcade.service.route.Router
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn

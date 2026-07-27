@@ -4,17 +4,8 @@ package dev.bnorm.arcade.rally.engine
 
 import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Race
-import dev.bnorm.arcade.driver.canvas.Color
-import dev.bnorm.arcade.driver.canvas.Fill
-import dev.bnorm.arcade.driver.canvas.Stroke
 import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
-import dev.bnorm.arcade.geometry.Angle
-import dev.bnorm.arcade.geometry.Circle
-import dev.bnorm.arcade.geometry.Point
-import dev.bnorm.arcade.geometry.Rectangle
-import dev.bnorm.arcade.geometry.Segment
 import js.array.Tuple
-import js.buffer.DataView
 import js.buffer.toArrayBuffer
 import js.function.JsFunction
 import js.numbers.JsDouble
@@ -24,17 +15,12 @@ import js.numbers.JsNumbers.toJsDouble
 import js.numbers.JsNumbers.toJsInt
 import js.numbers.JsNumbers.toKotlinFloat
 import js.objects.get
-import js.typedarrays.Uint8Array
-import js.typedarrays.toByteArray
-import js.typedarrays.toUint8Array
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
-import kotlinx.io.Sink
 import web.assembly.Imports
 import web.assembly.Instance
-import web.assembly.Memory
 import web.assembly.Module
 import web.assembly.compile
 import web.assembly.instantiate
@@ -88,13 +74,13 @@ private class BrowserWasmDriver private constructor(
                 },
                 fdWrite = { fd, iovs, iovs_len, nwritten ->
                     fdWrite(
-                        driver.memory,
-                        iovs_len.toInt(),
-                        iovs.toInt(),
-                        fd.toInt(),
-                        nwritten.toInt(),
-                        driver.stdout,
-                        driver.stderr,
+                        memory = driver.memory,
+                        iovs = iovs.toInt(),
+                        iovs_len = iovs_len.toInt(),
+                        fd = fd.toInt(),
+                        nwritten = nwritten.toInt(),
+                        stdout = driver.stdout,
+                        stderr = driver.stderr,
                     ).toJsInt()
                 },
                 randomGet = { bufPtr, bufLen ->
@@ -102,9 +88,8 @@ private class BrowserWasmDriver private constructor(
                 },
                 environSizesGet = { environCountPtr, environBufferSizePtr ->
                     // TODO what environment variables should we expose?
-                    val view = DataView(driver.memory.buffer)
-                    view.setInt32(environCountPtr.toInt(), 0)
-                    view.setInt32(environBufferSizePtr.toInt(), 0)
+                    driver.memory.writeInt32(environCountPtr.toInt(), 0)
+                    driver.memory.writeInt32(environBufferSizePtr.toInt(), 0)
                     0.toJsInt()
                 },
                 environGet = { environPtr, environBufferPtr ->
@@ -117,13 +102,13 @@ private class BrowserWasmDriver private constructor(
             )
 
             driver.instance = instantiate(module, imports)
-            driver.memory = driver.instance.exports["memory"]!!.unsafeCast()
+            driver.memory = BrowserWasmInstanceMemory(driver.instance.exports["memory"]!!.unsafeCast())
             return driver
         }
     }
 
     lateinit var instance: Instance
-    lateinit var memory: Memory<*>
+    lateinit var memory: WasmInstanceMemory
 
     override var steering: Double = 0.0
         private set
@@ -141,28 +126,16 @@ private class BrowserWasmDriver private constructor(
 
     private val drawRequests = mutableListOf<DrawRequest>()
 
-    private val move: JsFunction<Tuple, JsAny?> by lazy(LazyThreadSafetyMode.NONE) {
-        instance.exports["bnorm:arcade/driver#on-turn"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
+    private val onRace: JsFunction<Tuple, JsAny?> by lazy(LazyThreadSafetyMode.NONE) {
+        instance.exports["bnorm:arcade/driver#on-race"]!!.unsafeCast()
     }
 
-    private val onRace by lazy(LazyThreadSafetyMode.NONE) {
-        instance.exports["bnorm:arcade/driver#on-race"]!!.unsafeCast<JsFunction<Tuple, JsAny?>>()
+    private val onTurn: JsFunction<Tuple, JsAny?> by lazy(LazyThreadSafetyMode.NONE) {
+        instance.exports["bnorm:arcade/driver#on-turn"]!!.unsafeCast()
     }
 
-    private val onDraw by lazy(LazyThreadSafetyMode.NONE) {
-        instance.exports["bnorm:arcade/driver#on-draw"]?.unsafeCast<JsFunction<Tuple, JsAny?>>()
-    }
-
-    override fun move(car: Car) {
-        move.invoke(
-            car.time,
-            car.location.x,
-            car.location.y,
-            car.velocity.angle.radians,
-            car.velocity.magnitude,
-            car.lap,
-            car.nextCheckpoint,
-        )
+    private val onDraw: JsFunction<Tuple, JsAny?>? by lazy(LazyThreadSafetyMode.NONE) {
+        instance.exports["bnorm:arcade/driver#on-draw"]?.unsafeCast()
     }
 
     override fun onRace(race: Race) {
@@ -171,23 +144,21 @@ private class BrowserWasmDriver private constructor(
                 race.track.positions.size * 24
         )
 
-        val view = DataView(memory.buffer, byteOffset = 0)
-
         val checkpointsPtr = 0
         for ((i, checkpoint) in race.track.checkpoints.withIndex()) {
             val base = (checkpointsPtr) + (i * 32)
-            view.setFloat64(base + 0, checkpoint.start.x, littleEndian = true)
-            view.setFloat64(base + 8, checkpoint.start.y, littleEndian = true)
-            view.setFloat64(base + 16, checkpoint.end.x, littleEndian = true)
-            view.setFloat64(base + 24, checkpoint.end.y, littleEndian = true)
+            memory.writeFloat64(base + 0, checkpoint.start.x)
+            memory.writeFloat64(base + 8, checkpoint.start.y)
+            memory.writeFloat64(base + 16, checkpoint.end.x)
+            memory.writeFloat64(base + 24, checkpoint.end.y)
         }
 
         val positionsPtr = race.track.checkpoints.size * 32
         for ((i, position) in race.track.positions.withIndex()) {
             val base = (positionsPtr) + (i * 24)
-            view.setFloat64(base + 0, position.location.x, littleEndian = true)
-            view.setFloat64(base + 8, position.location.y, littleEndian = true)
-            view.setFloat64(base + 16, position.heading.radians, littleEndian = true)
+            memory.writeFloat64(base + 0, position.location.x)
+            memory.writeFloat64(base + 8, position.location.y)
+            memory.writeFloat64(base + 16, position.heading.radians)
         }
 
         onRace.invoke(
@@ -198,6 +169,18 @@ private class BrowserWasmDriver private constructor(
             positionsPtr,
             race.track.positions.size,
             race.laps,
+        )
+    }
+
+    override fun onTurn(car: Car) {
+        onTurn.invoke(
+            car.time,
+            car.location.x,
+            car.location.y,
+            car.velocity.angle.radians,
+            car.velocity.magnitude,
+            car.lap,
+            car.nextCheckpoint,
         )
     }
 
@@ -303,126 +286,3 @@ private fun Imports(
         })
     """
 )
-
-private fun Memory<*>.require(byteCount: Int) {
-    val pages = byteCount
-    if (buffer.byteLength < pages) {
-        if (grow(pages - buffer.byteLength) == -1) {
-            error("unable to allocate sufficient memory: $byteCount")
-        }
-    }
-}
-
-private fun readDrawRequest(
-    p0: Int,
-    p1: Int,
-    p2: Double,
-    p3: Double,
-    p4: Double,
-    p5: Double,
-    p6: Long,
-    p7: Int,
-    p8: Float,
-): DrawRequest {
-    return when (p0) {
-        0 -> DrawRequest.Segment(
-            color = Color(p1.toUInt()),
-            segment = Segment(
-                start = Point(
-                    x = p2,
-                    y = p3,
-                ),
-                end = Point(
-                    x = p4,
-                    y = p5,
-                )
-            ),
-            stroke = Stroke(Float.fromBits(p6.toInt())),
-        )
-
-        1 -> DrawRequest.Circle(
-            color = Color(p1.toUInt()),
-            circle = Circle(
-                center = Point(
-                    x = p2,
-                    y = p3,
-                ),
-                radius = p4,
-            ),
-            startAngle = Angle.ofRadians(p5),
-            sweepAngle = Angle.ofRadians(Double.fromBits(p6)),
-            style = when (p7) {
-                0 -> Fill
-                1 -> Stroke(
-                    width = p8,
-                )
-
-                else -> error("!")
-            }
-        )
-
-        2 -> DrawRequest.Rectangle(
-            color = Color(p1.toUInt()),
-            rectangle = run {
-                Rectangle(
-                    minX = p2,
-                    maxX = p3,
-                    minY = p4,
-                    maxY = p5,
-                )
-            },
-            style = when (p6) {
-                0L -> Fill
-                1L -> Stroke(
-                    width = Float.fromBits(p7),
-                )
-
-                else -> error("!")
-            }
-        )
-
-        else -> error("!")
-    }
-}
-
-private fun fdWrite(
-    memory: Memory<*>,
-    iovs_len: Int,
-    iovs: Int,
-    fd: Int,
-    nwritten: Int,
-    stdout: Sink,
-    stderr: Sink,
-): Int {
-    val view = DataView(memory.buffer)
-    var bytesWritten = 0
-
-    for (i in 0..<iovs_len) {
-        val iov_base = view.getUint32(iovs + i * 8, true)
-        val iov_len = view.getUint32(iovs + i * 8 + 4, true)
-
-        val buffer = Uint8Array(memory.buffer, iov_base, iov_len)
-
-        when (fd) {
-            1 -> stdout.write(buffer.toByteArray())
-            2 -> stderr.write(buffer.toByteArray())
-        }
-
-        bytesWritten += iov_len
-    }
-
-    view.setUint32(nwritten, bytesWritten, true)
-    return 0
-}
-
-private fun randomGet(
-    memory: Memory<*>,
-    random: Random,
-    bufLen: Int,
-    bufPtr: Int
-): Int {
-    val memory = Uint8Array(memory.buffer)
-    val randomBytes = random.nextBytes(bufLen).toUint8Array()
-    memory.set(randomBytes, bufPtr)
-    return 0
-}

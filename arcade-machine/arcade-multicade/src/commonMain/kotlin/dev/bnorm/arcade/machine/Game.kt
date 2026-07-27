@@ -10,8 +10,15 @@ import kotlinx.serialization.Transient
 interface Game {
     suspend fun start(onEvent: suspend (Event) -> Unit)
 
-    // TODO it's a little ugly to have this exposed like this...
-    fun setDebug(driver: String, debug: Boolean) {}
+    interface DriverDebug {
+        fun isEnabled(driver: String): Boolean
+
+        companion object {
+            val Disabled = object : DriverDebug {
+                override fun isEnabled(driver: String): Boolean = false
+            }
+        }
+    }
 
     @Serializable
     sealed interface Event {

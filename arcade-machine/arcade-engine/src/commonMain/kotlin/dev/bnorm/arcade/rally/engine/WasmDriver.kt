@@ -20,7 +20,7 @@ interface WasmDriver : AutoCloseable {
     val stdout: RawSource
     val stderr: RawSource
 
-    fun move(car: Car)
     fun onRace(race: Race)
+    fun onTurn(car: Car)
     fun onDraw(): List<DrawRequest>
 }

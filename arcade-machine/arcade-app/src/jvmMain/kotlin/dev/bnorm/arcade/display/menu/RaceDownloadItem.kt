@@ -13,7 +13,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.rememberDialogState
 import dev.bnorm.arcade.display.game.GameViewModel
-import dev.bnorm.arcade.display.MenuItem
+import dev.bnorm.arcade.display.ArcadeMenuItem
 import dev.bnorm.arcade.rally.RaceDownloader
 import dev.bnorm.arcade.server.client.ArcadeClient
 import dev.zacsweers.metro.ContributesIntoSet
@@ -22,8 +22,8 @@ import dev.zacsweers.metro.ContributesIntoSet
 class RaceDownloadItem(
     private val client: ArcadeClient,
     private val gameViewModel: GameViewModel,
-) : MenuItem {
-    override val category get() = MenuItem.Category.Race
+) : ArcadeMenuItem {
+    override val category get() = ArcadeMenuItem.Category.Race
     override val order get() = 3
 
     @Composable

@@ -4,7 +4,7 @@ import dev.bnorm.arcade.driver.canvas.Canvas
 
 abstract class Driver {
     open fun onRace(race: Race) {}
-    abstract fun move(car: Car, controls: Controls)
+    abstract fun onTurn(car: Car, controls: Controls)
 
     open fun onDraw(canvas: Canvas) {}
 

@@ -13,26 +13,32 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TextFieldLabelScope
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -89,6 +95,7 @@ import kotlinx.coroutines.launch
 class RaceWizardScreen(
     private val client: ArcadeClient,
     private val trackViewModel: TrackViewModel,
+    private val driverDebug: Game.DriverDebug = Game.DriverDebug.Disabled,
     private val availableDriverViewModel: AvailableDriverViewModel? = null,
 ) {
     private val compilerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -286,14 +293,6 @@ class RaceWizardScreen(
                 ) {
                     Text("Download")
                 }
-                Button(
-                    enabled = drivers.isNotEmpty(),
-                    onClick = {
-                        drivers.clear()
-                    }
-                ) {
-                    Text("Clear")
-                }
             }
 
             Row {
@@ -309,72 +308,128 @@ class RaceWizardScreen(
         modifier: Modifier = Modifier,
     ) {
         Column(modifier = modifier) {
-            // TODO allow reordering
-            // TODO allow removing specific driver
             Text("Selected Drivers:", style = MaterialTheme.typography.titleLarge)
-            LazyColumn(
-                state = rememberLazyListState(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
             ) {
-                itemsIndexed(drivers) { position, driver ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        val validPosition = selectedTrack != null && position < selectedTrack.positions.size
-                        if (validPosition) {
-                            Text(
-                                text = "P${position + 1}",
-                                textAlign = TextAlign.End,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .width(32.dp)
-                            )
-                            Text(
-                                text = driver.name,
-                            )
-                        } else {
-                            Spacer(
-                                modifier = Modifier
-                                    .width(32.dp)
-                            )
-                            Text(
-                                text = driver.name,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
+                val positions =
+                    if (selectedTrack != null) maxOf(drivers.size, selectedTrack.positions.size) else drivers.size
+                repeat(positions) { position ->
+                    val driver = drivers.getOrNull(position)
+                    SelectedDriver(selectedTrack, position, driver)
+                }
+            }
+        }
+    }
 
-                        val error = driver.error
-                        if (!driver.ready) {
-                            // TODO size the icon together with the text
-                            val transition = rememberInfiniteTransition()
-                            val rotation by transition.animateFloat(
-                                initialValue = 0f, targetValue = 360f,
-                                animationSpec = infiniteRepeatable(tween(1000))
-                            )
-                            Icon(
-                                painter = rememberVectorPainter(progress_activity),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .graphicsLayer { rotationZ = rotation }
-                            )
-                        } else if (error != null) {
-                            Text(error.message ?: "compilation error!")
-                        }
+    @Composable
+    private fun SelectedDriver(
+        selectedTrack: Track?,
+        position: Int,
+        driver: SelectedDriver?
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .height(40.dp) // TODO can we make the icons smaller?
+        ) {
+            val validPosition = selectedTrack != null && position < selectedTrack.positions.size
+            if (validPosition) {
+                Text(
+                    text = "P${position + 1}",
+                    textAlign = TextAlign.End,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .width(32.dp)
+                )
+            } else {
+                Spacer(Modifier.width(32.dp))
+            }
+
+            if (driver != null) {
+                Text(
+                    text = driver.name,
+                    color = if (validPosition) Color.Unspecified else MaterialTheme.colorScheme.error,
+                )
+
+                val error = driver.error
+                if (!driver.ready) {
+                    // TODO size the icon together with the text
+                    val transition = rememberInfiniteTransition()
+                    val rotation by transition.animateFloat(
+                        initialValue = 0f, targetValue = 360f,
+                        animationSpec = infiniteRepeatable(tween(1000))
+                    )
+                    Icon(
+                        painter = rememberVectorPainter(progress_activity),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .graphicsLayer { rotationZ = rotation }
+                    )
+                } else if (error != null) {
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below
+                        ),
+                        state = rememberTooltipState(isPersistent = true),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(error.stackTraceToString())
+                            }
+                        },
+                    ) {
+                        // TODO icon
+                        Text("!!")
                     }
                 }
-                if (selectedTrack != null) {
-                    val drivers = drivers.size
-                    val remaining = selectedTrack.positions.size - drivers
-                    items(remaining.coerceAtLeast(0)) { index ->
-                        Text(
-                            text = "P${drivers + index + 1}",
-                            textAlign = TextAlign.End,
-                            fontWeight = FontWeight.Bold,
+
+                Spacer(Modifier.weight(1f))
+
+                Row {
+                    // TODO drag and drop might be better?
+                    if (position != drivers.lastIndex) {
+                        IconButton(
+                            onClick = {
+                                val tmp = drivers[position]
+                                drivers[position] = drivers[position + 1]
+                                drivers[position + 1] = tmp
+
+                            },
                             modifier = Modifier
-                                .width(32.dp)
-                        )
+                        ) {
+                            // TODO icon
+                            Text("D")
+                        }
+                    } else {
+                        Spacer(Modifier.width(40.dp))
+                    }
+                    if (position != 0) {
+                        IconButton(
+                            onClick = {
+                                val tmp = drivers[position]
+                                drivers[position] = drivers[position - 1]
+                                drivers[position - 1] = tmp
+                            },
+                            modifier = Modifier
+                        ) {
+                            // TODO icon
+                            Text("U")
+                        }
+                    } else {
+                        Spacer(Modifier.width(40.dp))
+                    }
+                    IconButton(
+                        onClick = {
+                            // TODO wrap with snapshot?
+                            drivers.removeAt(position)
+                        },
+                        modifier = Modifier
+                    ) {
+                        // TODO icon
+                        Text("X")
                     }
                 }
             }
@@ -387,7 +442,6 @@ class RaceWizardScreen(
             Text("Available Drivers:", style = MaterialTheme.typography.titleLarge)
             if (availableDriverViewModel != null) {
                 val model by availableDriverViewModel.models.collectAsState()
-                println(model.drivers.size)
                 for (driver in model.drivers) {
                     Button(
                         onClick = {
@@ -415,7 +469,7 @@ class RaceWizardScreen(
                 if (enabled) {
                     scope.launch {
                         val drivers = drivers.map { it.createWasmDriver() }
-                        val game = WasmGame(selectedTrack, drivers, laps)
+                        val game = WasmGame(selectedTrack, drivers, laps, driverDebug)
                         onStart(game)
                     }
                 }
@@ -441,13 +495,12 @@ private fun TrackSelector(
     ) {
         Text("Available Tracks:", style = MaterialTheme.typography.titleLarge)
 
-        LazyRow(
-            state = rememberLazyListState(),
+        Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
         ) {
-            items(tracks) { track ->
+            for (track in tracks) {
                 TrackImage(
                     track = track,
                     modifier = Modifier

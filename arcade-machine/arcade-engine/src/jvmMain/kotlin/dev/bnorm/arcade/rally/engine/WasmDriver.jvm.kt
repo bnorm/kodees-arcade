@@ -4,7 +4,6 @@ import ai.tegmentum.wasmtime4j.Instance
 import ai.tegmentum.wasmtime4j.Linker
 import ai.tegmentum.wasmtime4j.Module
 import ai.tegmentum.wasmtime4j.Store
-import ai.tegmentum.wasmtime4j.WasmMemory
 import ai.tegmentum.wasmtime4j.WasmValue.f64
 import ai.tegmentum.wasmtime4j.WasmValue.i32
 import ai.tegmentum.wasmtime4j.WasmValue.i64
@@ -17,27 +16,12 @@ import ai.tegmentum.wasmtime4j.func.HostFunction.voidFunction
 import ai.tegmentum.wasmtime4j.type.FunctionType
 import dev.bnorm.arcade.driver.Car
 import dev.bnorm.arcade.driver.Race
-import dev.bnorm.arcade.driver.canvas.Color
-import dev.bnorm.arcade.driver.canvas.Fill
-import dev.bnorm.arcade.driver.canvas.Stroke
 import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
-import dev.bnorm.arcade.geometry.Angle
-import dev.bnorm.arcade.geometry.Circle
-import dev.bnorm.arcade.geometry.Point
-import dev.bnorm.arcade.geometry.Rectangle
-import dev.bnorm.arcade.geometry.Segment
 import kotlin.jvm.optionals.getOrNull
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlinx.io.Buffer
-import kotlinx.io.DelicateIoApi
 import kotlinx.io.RawSource
-import kotlinx.io.Sink
-import kotlinx.io.UnsafeIoApi
-import kotlinx.io.readLine
-import kotlinx.io.readString
-import kotlinx.io.unsafe.UnsafeBufferOperations
-import kotlinx.io.writeToInternalBuffer
 
 actual suspend fun WasmModule(bytes: ByteArray): WasmModule {
     return WasmtimeWasmModule(engine.compileModule(bytes))
@@ -90,8 +74,8 @@ private class WasmtimeWasmDriver private constructor(
                     FunctionType(arrayOf(I32, I32), arrayOf(I32)),
                     singleValue { (environCountPtr, environBufferSizePtr) ->
                         // TODO what environment variables should we expose?
-                        guest.memory.writeInt32(environCountPtr.asInt().toLong(), 0)
-                        guest.memory.writeInt32(environBufferSizePtr.asInt().toLong(), 0)
+                        guest.memory.writeInt32(environCountPtr.asInt(), 0)
+                        guest.memory.writeInt32(environBufferSizePtr.asInt(), 0)
                         i32(0)
                     },
                 )
@@ -136,82 +120,25 @@ private class WasmtimeWasmDriver private constructor(
                     "bnorm:arcade/canvas", "draw",
                     FunctionType(arrayOf(I32, I32, F64, F64, F64, F64, I64, I32, F32), arrayOf()),
                     voidFunction { params ->
-                        val p0 = params[0].asInt()
-                        val p1 = params[1].asInt()
-                        val p2 = params[2].asDouble()
-                        val p3 = params[3].asDouble()
-                        val p4 = params[4].asDouble()
-                        val p5 = params[5].asDouble()
-                        val p6 = params[6].asLong()
-                        val p7 = params[7].asInt()
-                        val p8 = params[8].asFloat()
-
-                        val request = when (p0) {
-                            0 -> DrawRequest.Segment(
-                                color = Color(p1.toUInt()),
-                                segment = Segment(
-                                    start = Point(
-                                        x = p2,
-                                        y = p3,
-                                    ),
-                                    end = Point(
-                                        x = p4,
-                                        y = p5,
-                                    )
-                                ),
-                                stroke = Stroke(Float.fromBits(p6.toInt())),
+                        driver.drawRequests.add(
+                            readDrawRequest(
+                                params[0].asInt(),
+                                params[1].asInt(),
+                                params[2].asDouble(),
+                                params[3].asDouble(),
+                                params[4].asDouble(),
+                                params[5].asDouble(),
+                                params[6].asLong(),
+                                params[7].asInt(),
+                                params[8].asFloat()
                             )
-
-                            1 -> DrawRequest.Circle(
-                                color = Color(p1.toUInt()),
-                                circle = Circle(
-                                    center = Point(
-                                        x = p2,
-                                        y = p3,
-                                    ),
-                                    radius = p4,
-                                ),
-                                startAngle = Angle.ofRadians(p5),
-                                sweepAngle = Angle.ofRadians(Double.fromBits(p6)),
-                                style = when (p7) {
-                                    0 -> Fill
-                                    1 -> Stroke(
-                                        width = p8,
-                                    )
-
-                                    else -> error("!")
-                                }
-                            )
-
-                            2 -> DrawRequest.Rectangle(
-                                color = Color(p1.toUInt()),
-                                rectangle = run {
-                                    Rectangle(
-                                        minX = p2,
-                                        maxX = p3,
-                                        minY = p4,
-                                        maxY = p5,
-                                    )
-                                },
-                                style = when (p6) {
-                                    0L -> Fill
-                                    1L -> Stroke(
-                                        width = Float.fromBits(p7),
-                                    )
-
-                                    else -> error("!")
-                                }
-                            )
-
-                            else -> error("!")
-                        }
-                        driver.drawRequests.add(request)
+                        )
                     },
                 )
             }
 
             guest.instance = guest.linker.instantiate(guest.store, module)
-            guest.memory = guest.instance.defaultMemory.orElseThrow()
+            guest.memory = WasmtimeWasmInstanceMemory(guest.instance.defaultMemory.orElseThrow())
 
             return driver
         }
@@ -235,28 +162,16 @@ private class WasmtimeWasmDriver private constructor(
 
     private val drawRequests = mutableListOf<DrawRequest>()
 
-    private val move by lazy(LazyThreadSafetyMode.NONE) {
-        guest.instance.getFunction("bnorm:arcade/driver#on-turn").getOrNull()!!
-    }
-
     private val onRace by lazy(LazyThreadSafetyMode.NONE) {
         guest.instance.getFunction("bnorm:arcade/driver#on-race").getOrNull()!!
     }
 
-    private val onDraw by lazy(LazyThreadSafetyMode.NONE) {
-        guest.instance.getFunction("bnorm:arcade/driver#on-draw").getOrNull()
+    private val onTurn by lazy(LazyThreadSafetyMode.NONE) {
+        guest.instance.getFunction("bnorm:arcade/driver#on-turn").getOrNull()!!
     }
 
-    override fun move(car: Car) {
-        move.call(
-            i64(car.time),
-            f64(car.location.x),
-            f64(car.location.y),
-            f64(car.velocity.angle.radians),
-            f64(car.velocity.magnitude),
-            i32(car.lap),
-            i32(car.nextCheckpoint),
-        )
+    private val onDraw by lazy(LazyThreadSafetyMode.NONE) {
+        guest.instance.getFunction("bnorm:arcade/driver#on-draw").getOrNull()
     }
 
     override fun onRace(race: Race) {
@@ -268,7 +183,7 @@ private class WasmtimeWasmDriver private constructor(
 
         val checkpointsPtr = 0
         for ((i, checkpoint) in race.track.checkpoints.withIndex()) {
-            val base = (checkpointsPtr) + (i * 32L)
+            val base = (checkpointsPtr) + (i * 32)
             memory.writeFloat64(base + 0, checkpoint.start.x)
             memory.writeFloat64(base + 8, checkpoint.start.y)
             memory.writeFloat64(base + 16, checkpoint.end.x)
@@ -277,7 +192,7 @@ private class WasmtimeWasmDriver private constructor(
 
         val positionsPtr = race.track.checkpoints.size * 32
         for ((i, position) in race.track.positions.withIndex()) {
-            val base = (positionsPtr) + (i * 24L)
+            val base = (positionsPtr) + (i * 24)
             memory.writeFloat64(base + 0, position.location.x)
             memory.writeFloat64(base + 8, position.location.y)
             memory.writeFloat64(base + 16, position.heading.radians)
@@ -291,6 +206,18 @@ private class WasmtimeWasmDriver private constructor(
             i32(positionsPtr),
             i32(race.track.positions.size),
             i32(race.laps),
+        )
+    }
+
+    override fun onTurn(car: Car) {
+        onTurn.call(
+            i64(car.time),
+            f64(car.location.x),
+            f64(car.location.y),
+            f64(car.velocity.angle.radians),
+            f64(car.velocity.magnitude),
+            i32(car.lap),
+            i32(car.nextCheckpoint),
         )
     }
 
@@ -310,85 +237,11 @@ private class WasmGuest : AutoCloseable {
     lateinit var store: Store
     lateinit var linker: Linker<*>
     lateinit var instance: Instance
-    lateinit var memory: WasmMemory
+    lateinit var memory: WasmInstanceMemory
 
     override fun close() {
         instance.close()
         linker.close()
         store.close()
-    }
-}
-
-private fun WasmMemory.require(byteCount: Int) {
-    val pages = byteCount / pageSize() + (byteCount % pageSize()).coerceAtMost(1)
-    if (size < pages) {
-        if (grow(pages - size) == -1) {
-            error("unable to allocate sufficient memory: $byteCount")
-        }
-    }
-}
-
-private fun fdWrite(
-    memory: WasmMemory,
-    iovs: Int,
-    iovs_len: Int,
-    fd: Int,
-    nwritten: Int,
-    stdout: Sink,
-    stderr: Sink,
-): Int {
-    var bytesWritten = 0
-
-    val sink = when (fd) {
-        1 -> stdout
-        2 -> stderr
-        else -> {
-            memory.writeInt32(nwritten.toLong(), 0)
-            return 1
-        }
-    }
-
-    for (i in 0L..<iovs_len) {
-        val startIndex = memory.readInt32(iovs + i * 8L)
-        val byteCount = memory.readInt32(iovs + i * 8L + 4L)
-        sink.write(memory, startIndex, byteCount)
-        bytesWritten += byteCount
-    }
-
-    memory.writeInt32(nwritten.toLong(), bytesWritten)
-    return 0
-}
-
-private fun randomGet(
-    memory: WasmMemory,
-    random: Random,
-    bufLen: Int,
-    bufPtr: Int
-): Int {
-    val randomBytes = random.nextBytes(bufLen)
-    memory.writeBytes(bufPtr, randomBytes, 0, randomBytes.size)
-    return 0
-}
-
-@OptIn(UnsafeIoApi::class, DelicateIoApi::class)
-private fun Sink.write(
-    memory: WasmMemory,
-    startIndex: Int,
-    byteCount: Int
-) {
-    var remaining = byteCount
-    var offset = startIndex
-
-    writeToInternalBuffer { buffer ->
-        while (remaining > 0) {
-            val length = minOf(remaining, 8192)
-            UnsafeBufferOperations.writeToTail(buffer, length) { dest, destOffset, _ ->
-                memory.readBytes(offset, dest, destOffset, length)
-                length
-            }
-
-            remaining -= length
-            offset += length
-        }
     }
 }

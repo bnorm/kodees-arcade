@@ -10,10 +10,36 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.driver.Track
+import dev.bnorm.arcade.service.api.TrackResponse
 
 @Composable
 fun TrackImage(
     track: Track,
+    modifier: Modifier = Modifier
+) {
+    FixedSize(
+        size = IntSize(track.width.toInt(), track.height.toInt()),
+        density = Density(1f),
+        modifier = modifier
+            .background(Color(red = 0x00, green = 0x55, blue = 0x00))
+            .fillMaxSize()
+    ) {
+        Canvas(
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            drawTrack(
+                checkpoints = track.checkpoints,
+                startingLine = track.checkpoints.firstOrNull(),
+                positions = track.positions,
+                complete = true,
+            )
+        }
+    }
+}
+
+@Composable
+fun TrackImage(
+    track: TrackResponse,
     modifier: Modifier = Modifier
 ) {
     FixedSize(
