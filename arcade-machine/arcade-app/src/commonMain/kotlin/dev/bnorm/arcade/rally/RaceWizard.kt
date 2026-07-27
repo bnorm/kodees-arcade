@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.visible
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -96,6 +95,7 @@ import kotlinx.coroutines.launch
 class RaceWizardScreen(
     private val client: ArcadeClient,
     private val trackViewModel: TrackViewModel,
+    private val driverDebug: Game.DriverDebug = Game.DriverDebug.Disabled,
     private val availableDriverViewModel: AvailableDriverViewModel? = null,
 ) {
     private val compilerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -337,14 +337,17 @@ class RaceWizardScreen(
                 .height(40.dp) // TODO can we make the icons smaller?
         ) {
             val validPosition = selectedTrack != null && position < selectedTrack.positions.size
-            Text(
-                text = "P${position + 1}",
-                textAlign = TextAlign.End,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .width(32.dp)
-                    .visible(validPosition)
-            )
+            if (validPosition) {
+                Text(
+                    text = "P${position + 1}",
+                    textAlign = TextAlign.End,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .width(32.dp)
+                )
+            } else {
+                Spacer(Modifier.width(32.dp))
+            }
 
             if (driver != null) {
                 Text(
@@ -387,30 +390,36 @@ class RaceWizardScreen(
 
                 Row {
                     // TODO drag and drop might be better?
-                    IconButton(
-                        onClick = {
-                            val tmp = drivers[position]
-                            drivers[position] = drivers[position + 1]
-                            drivers[position + 1] = tmp
+                    if (position != drivers.lastIndex) {
+                        IconButton(
+                            onClick = {
+                                val tmp = drivers[position]
+                                drivers[position] = drivers[position + 1]
+                                drivers[position + 1] = tmp
 
-                        },
-                        modifier = Modifier
-                            .visible(position != drivers.lastIndex)
-                    ) {
-                        // TODO icon
-                        Text("D")
+                            },
+                            modifier = Modifier
+                        ) {
+                            // TODO icon
+                            Text("D")
+                        }
+                    } else {
+                        Spacer(Modifier.width(40.dp))
                     }
-                    IconButton(
-                        onClick = {
-                            val tmp = drivers[position]
-                            drivers[position] = drivers[position - 1]
-                            drivers[position - 1] = tmp
-                        },
-                        modifier = Modifier
-                            .visible(position != 0)
-                    ) {
-                        // TODO icon
-                        Text("U")
+                    if (position != 0) {
+                        IconButton(
+                            onClick = {
+                                val tmp = drivers[position]
+                                drivers[position] = drivers[position - 1]
+                                drivers[position - 1] = tmp
+                            },
+                            modifier = Modifier
+                        ) {
+                            // TODO icon
+                            Text("U")
+                        }
+                    } else {
+                        Spacer(Modifier.width(40.dp))
                     }
                     IconButton(
                         onClick = {
@@ -460,7 +469,7 @@ class RaceWizardScreen(
                 if (enabled) {
                     scope.launch {
                         val drivers = drivers.map { it.createWasmDriver() }
-                        val game = WasmGame(selectedTrack, drivers, laps)
+                        val game = WasmGame(selectedTrack, drivers, laps, driverDebug)
                         onStart(game)
                     }
                 }

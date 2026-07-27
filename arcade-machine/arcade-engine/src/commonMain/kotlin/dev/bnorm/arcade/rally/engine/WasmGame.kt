@@ -13,14 +13,10 @@ class WasmGame(
     private val track: Track,
     private val drivers: List<WasmDriver>,
     private val laps: Int,
+    private val driverDebug: Game.DriverDebug = Game.DriverDebug.Disabled,
 ) : Game {
     init {
         require(drivers.size <= track.positions.size)
-    }
-
-    private val debug = mutableSetOf<String>()
-    override fun setDebug(driver: String, debug: Boolean) {
-        if (debug) this.debug += driver else this.debug -= driver
     }
 
     override suspend fun start(onEvent: suspend (Game.Event) -> Unit) {
@@ -82,8 +78,10 @@ class WasmGame(
                                 Game.Event.Update.Driver.Debug(
                                     stdout = state.driver.stdout.buffered().readString().takeIf { it.isNotEmpty() },
                                     stderr = state.driver.stderr.buffered().readString().takeIf { it.isNotEmpty() },
-                                    drawRequests = state.takeIf { state.driver.name in debug }
-                                        ?.driver?.onDraw().orEmpty(),
+                                    drawRequests = when (driverDebug.isEnabled(state.driver.name)) {
+                                        true -> state.driver.onDraw()
+                                        false -> emptyList()
+                                    },
                                 )
                             )
                         },

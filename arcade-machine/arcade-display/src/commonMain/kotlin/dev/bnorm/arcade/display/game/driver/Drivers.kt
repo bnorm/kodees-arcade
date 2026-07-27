@@ -24,11 +24,10 @@ import dev.bnorm.arcade.display.game.GameViewModel
 @Composable
 fun Drivers(
     model: GameModel,
-    gameViewModel: GameViewModel,
+    driverDebugViewModel: DriverDebugViewModel,
     modifier: Modifier = Modifier,
 ) {
     val vertical = rememberScrollState()
-    val debug = remember { mutableStateSetOf<String>() }
 
     Box(
         modifier
@@ -47,7 +46,7 @@ fun Drivers(
         ) {
             for (name in model.start.drivers) {
                 key(name) {
-                    DriverInfo(name, debug, gameViewModel, model)
+                    DriverInfo(name, driverDebugViewModel, model)
                 }
             }
         }

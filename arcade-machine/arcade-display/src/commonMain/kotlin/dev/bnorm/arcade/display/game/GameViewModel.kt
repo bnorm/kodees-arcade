@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import dev.bnorm.arcade.display.ViewModel
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
+import dev.bnorm.arcade.display.game.driver.DriverDebugViewModel
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.machine.Game
@@ -35,12 +36,16 @@ import kotlinx.coroutines.withContext
 class GameViewModel(
     private val initialTrack: Track = TrackViewModel.INITIAL_TRACK,
     @ViewModelCoroutineScope scope: CoroutineScope,
+    private val driverDebugViewModel: DriverDebugViewModel,
 ) : ViewModel<GameViewEvent, GameModel>(scope) {
     fun clear() {
         take(GameViewEvent.Clear)
     }
 
     fun new(game: Game) {
+        // TODO should we clear?
+        // TODO is this best place to clear?
+        driverDebugViewModel.clear()
         take(GameViewEvent.New(game))
     }
 
@@ -60,10 +65,6 @@ class GameViewModel(
         take(GameViewEvent.Ups(ups))
     }
 
-    fun setDebug(driver: String, debug: Boolean) {
-        take(GameViewEvent.SetDebug(driver, debug))
-    }
-
     @Composable
     override fun models(events: Flow<GameViewEvent>): GameModel {
         return GamePresenter(initialTrack, events)
@@ -77,8 +78,6 @@ sealed class GameViewEvent {
     data object TogglePlayPause : GameViewEvent()
     data object Step : GameViewEvent()
     data class Ups(val ups: Float) : GameViewEvent()
-
-    data class SetDebug(val driver: String, val debug: Boolean) : GameViewEvent()
 }
 
 data class GameModel(
@@ -132,10 +131,6 @@ fun GamePresenter(
 
                 is GameViewEvent.Ups -> {
                     desiredUps = it.ups
-                }
-
-                is GameViewEvent.SetDebug -> {
-                    game?.setDebug(it.driver, it.debug)
                 }
             }
         }

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import dev.bnorm.arcade.display.car.CarBackground
 import dev.bnorm.arcade.display.car.CarColor
 import dev.bnorm.arcade.display.car.CarTop
+import dev.bnorm.arcade.display.game.driver.DriverDebugViewModel
 import dev.bnorm.arcade.display.game.driver.Drivers
 import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.display.internal.LogarithmicSlider
@@ -51,16 +52,18 @@ import dev.zacsweers.metro.Inject
 @Inject
 class GameScreen(
     private val gameViewModel: GameViewModel,
+    private val driverDebugViewModel: DriverDebugViewModel,
 ) {
     @Composable
     fun Content() {
-        GameScreen(gameViewModel, modifier = Modifier.fillMaxSize())
+        GameScreen(gameViewModel, driverDebugViewModel, modifier = Modifier.fillMaxSize())
     }
 }
 
 @Composable
 fun GameScreen(
     gameViewModel: GameViewModel,
+    driverDebugViewModel: DriverDebugViewModel,
     modifier: Modifier = Modifier,
     showDebug: Boolean = true,
 ) {
@@ -106,7 +109,7 @@ fun GameScreen(
 
                 Drivers(
                     model,
-                    gameViewModel,
+                    driverDebugViewModel,
                     modifier = Modifier
                 )
             }
