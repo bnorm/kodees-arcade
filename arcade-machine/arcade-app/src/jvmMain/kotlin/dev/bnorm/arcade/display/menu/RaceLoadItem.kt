@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowScope
 import dev.bnorm.arcade.display.game.GameViewModel
-import dev.bnorm.arcade.display.MenuItem
+import dev.bnorm.arcade.display.ArcadeMenuItem
 import dev.bnorm.arcade.machine.ReplayGame
 import dev.zacsweers.metro.ContributesIntoSet
 import io.github.vinceglb.filekit.dialogs.FileKitMode
@@ -15,8 +15,8 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 class RaceLoadItem(
     private val gameViewModel: GameViewModel,
     private val scope: WindowScope,
-) : MenuItem {
-    override val category get() = MenuItem.Category.Race
+) : ArcadeMenuItem {
+    override val category get() = ArcadeMenuItem.Category.Race
     override val order get() = 2
 
     @Composable

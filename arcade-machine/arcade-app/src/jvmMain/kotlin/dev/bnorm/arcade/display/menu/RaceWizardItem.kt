@@ -12,7 +12,7 @@ import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.rememberDialogState
-import dev.bnorm.arcade.display.MenuItem
+import dev.bnorm.arcade.display.ArcadeMenuItem
 import dev.bnorm.arcade.display.game.GameViewModel
 import dev.bnorm.arcade.rally.RaceWizardScreen
 import dev.zacsweers.metro.ContributesIntoSet
@@ -21,8 +21,8 @@ import dev.zacsweers.metro.ContributesIntoSet
 class RaceWizardItem(
     private val gameViewModel: GameViewModel,
     private val raceWizardScreen: RaceWizardScreen,
-) : MenuItem {
-    override val category get() = MenuItem.Category.Race
+) : ArcadeMenuItem {
+    override val category get() = ArcadeMenuItem.Category.Race
     override val order get() = 1
 
     @Composable

@@ -5,7 +5,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowScope
 import dev.bnorm.arcade.display.AvailableDriverViewModel
-import dev.bnorm.arcade.display.MenuItem
+import dev.bnorm.arcade.display.ArcadeMenuItem
 import dev.zacsweers.metro.ContributesIntoSet
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 
@@ -13,8 +13,8 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLaunche
 class WatchedDirectoryItem(
     private val availableDriverViewModel: AvailableDriverViewModel,
     private val scope: WindowScope,
-) : MenuItem {
-    override val category get() = MenuItem.Category.Settings
+) : ArcadeMenuItem {
+    override val category get() = ArcadeMenuItem.Category.Settings
     override val order get() = 1
 
     @Composable
