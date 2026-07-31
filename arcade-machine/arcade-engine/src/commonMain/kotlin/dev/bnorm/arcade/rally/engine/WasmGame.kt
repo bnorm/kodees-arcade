@@ -11,16 +11,17 @@ import dev.bnorm.arcade.driver.Race as DriverRaceModel
 
 class WasmGame(
     private val track: Track,
-    private val drivers: List<WasmDriver>,
+    private val modules: List<Pair<String, WasmModule>>,
     private val laps: Int,
     private val driverDebug: Game.DriverDebug = Game.DriverDebug.Disabled,
 ) : Game {
     init {
-        require(drivers.size <= track.positions.size)
+        require(modules.size <= track.positions.size)
     }
 
     override suspend fun start(onEvent: suspend (Game.Event) -> Unit) {
         val raceModel = DriverRaceModel(track, laps)
+        val drivers = modules.map { (name, module) -> module.createDriver(name) }
 
         onEvent(Game.Event.Start(track, drivers.map { it.name }))
 

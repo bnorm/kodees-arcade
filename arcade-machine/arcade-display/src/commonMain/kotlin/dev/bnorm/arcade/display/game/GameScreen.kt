@@ -153,13 +153,23 @@ private fun GameControls(
         modifier = modifier
             .padding(16.dp)
     ) {
-        Button(
-            enabled = model.active,
-            onClick = {
-                gameViewModel.stop()
+        if (model.active || model.start.drivers.isEmpty()) {
+            Button(
+                enabled = model.active,
+                onClick = {
+                    gameViewModel.stop()
+                }
+            ) {
+                Text("Stop")
             }
-        ) {
-            Text("Stop!")
+        } else {
+            Button(
+                onClick = {
+                    gameViewModel.restart()
+                }
+            ) {
+                Text("Restart")
+            }
         }
 
         Button(
@@ -177,7 +187,7 @@ private fun GameControls(
         }
 
         Text(
-            text = "FPS: ${model.desiredUps.toInt()}",
+            text = "UPS: ${model.desiredUps.toInt()}",
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.width(96.dp)
         )

@@ -121,8 +121,8 @@ class RaceWizardScreen(
             }
         }
 
-        suspend fun createWasmDriver(): WasmDriver {
-            return module.await().createDriver(name)
+        suspend fun awaitWasmModule(): Pair<String, WasmModule> {
+            return name to module.await()
         }
     }
 
@@ -475,8 +475,8 @@ class RaceWizardScreen(
             onClick = {
                 if (enabled) {
                     scope.launch {
-                        val drivers = drivers.map { it.createWasmDriver() }
-                        val game = WasmGame(selectedTrack, drivers, laps, driverDebug)
+                        val modules = drivers.map { it.awaitWasmModule() }
+                        val game = WasmGame(selectedTrack, modules, laps, driverDebug)
                         onStart(game)
                     }
                 }

@@ -49,6 +49,10 @@ class GameViewModel(
         take(GameViewEvent.New(game))
     }
 
+    fun restart() {
+        take(GameViewEvent.Restart)
+    }
+
     fun stop() {
         take(GameViewEvent.Clear)
     }
@@ -73,6 +77,7 @@ class GameViewModel(
 
 sealed class GameViewEvent {
     data object Clear : GameViewEvent()
+    data object Restart : GameViewEvent()
     data class New(val game: Game) : GameViewEvent()
 
     data object TogglePlayPause : GameViewEvent()
@@ -97,16 +102,15 @@ fun GamePresenter(
     events: Flow<GameViewEvent>,
 ): GameModel {
     var game by remember { mutableStateOf<Game?>(null) }
+    var active by remember { mutableStateOf(false) }
 
     var ticker by remember { mutableStateOf<Channel<Unit>>(Channel()) }
     var desiredUps by remember { mutableFloatStateOf(60f) }
     var running by remember { mutableStateOf(true) }
 
-    var start by remember {
-        mutableStateOf(Game.Event.Start(initialTrack, emptyList()))
-    }
-    var update by remember(game) { mutableStateOf<Game.Event.Update?>(null) }
-    var complete by remember(game) { mutableStateOf<Game.Event.Complete?>(null) }
+    var start by remember { mutableStateOf(Game.Event.Start(initialTrack, emptyList())) }
+    var update by remember { mutableStateOf<Game.Event.Update?>(null) }
+    var complete by remember { mutableStateOf<Game.Event.Complete?>(null) }
 
     val driverOutput = remember { mutableStateMapOf<String, TextLines>() }
 
@@ -114,11 +118,22 @@ fun GamePresenter(
         events.collect {
             when (it) {
                 GameViewEvent.Clear -> {
-                    game = null
+                    active = false
+                    update = null
+                    complete = null
                 }
 
                 is GameViewEvent.New -> {
                     game = it.game
+                    active = true
+                    update = null
+                    complete = null
+                }
+
+                GameViewEvent.Restart -> {
+                    active = true
+                    update = null
+                    complete = null
                 }
 
                 GameViewEvent.TogglePlayPause -> {
@@ -137,7 +152,8 @@ fun GamePresenter(
     }
 
     // Start the game and consume events.
-    LaunchedEffect(game) {
+    LaunchedEffect(active, game) {
+        if (!active) return@LaunchedEffect
         withContext(Dispatchers.Default) {
             game?.start { event ->
                 when (event) {
@@ -174,13 +190,14 @@ fun GamePresenter(
                 // and we will see debug information on the very next tick.
                 ticker.receive()
             }
+            active = false
         }
     }
 
     // Launch a "ticker", that controls how quickly events are computed by the game.
-    LaunchedEffect(game, ticker, running) {
+    LaunchedEffect(active, game, ticker, running) {
         withContext(Dispatchers.Default) {
-            if (game != null && running) {
+            if (active && running && game != null) {
                 val startTime = TimeSource.Monotonic.markNow()
                 var targetTime = 0.seconds
 
@@ -196,7 +213,7 @@ fun GamePresenter(
     }
 
     return GameModel(
-        active = game != null,
+        active = active,
         running = running,
         desiredUps = desiredUps,
         actualUps = desiredUps,
