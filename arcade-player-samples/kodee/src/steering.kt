@@ -5,7 +5,7 @@ import dev.bnorm.arcade.geometry.sign
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.MAX_SPEED
 import dev.bnorm.arcade.rally.MAX_STEER
-import dev.bnorm.arcade.rally.TURNING_RADIUS
+import dev.bnorm.arcade.rally.MIN_TURNING_RADIUS
 import dev.bnorm.arcade.rally.getTurn
 import dev.bnorm.arcade.rally.getTurningRadius
 import kotlin.math.sqrt
@@ -30,7 +30,7 @@ fun steeringToBearing(
 fun getMaxSteering(speed: Double, traction: Double = 1.0): Double {
     val optimalRadius = getTurningRadius(speed, traction)
     // Cannot turn smaller than TURNING_RADIUS.
-    if (optimalRadius <= TURNING_RADIUS) return MAX_STEER
+    if (optimalRadius <= MIN_TURNING_RADIUS) return MAX_STEER
 
     // Because of the understeer calculation,
     // we can actually push steering a little further,
@@ -65,8 +65,8 @@ fun getMaxSteering(speed: Double, traction: Double = 1.0): Double {
     val targetRadius = optimalRadius - 1.0 / (2.0 * sqr(speedRatio))
 
     // Cannot turn smaller than TURNING_RADIUS.
-    if (targetRadius <= TURNING_RADIUS) return MAX_STEER
-    return TURNING_RADIUS / targetRadius
+    if (targetRadius <= MIN_TURNING_RADIUS) return MAX_STEER
+    return MIN_TURNING_RADIUS / targetRadius
 }
 
 fun getMaxTurn(speed: Double, traction: Double = 1.0): Angle {
@@ -90,7 +90,7 @@ fun getSteeringForTurn(turn: Angle, speed: Double, traction: Double = 1.0): Doub
     }
 
     val optimalRadius = getTurningRadius(speed, traction)
-    if (optimalRadius <= TURNING_RADIUS) {
+    if (optimalRadius <= MIN_TURNING_RADIUS) {
         // Safe to turn without understeer!
         return turn / maxTurn
     }
@@ -115,7 +115,7 @@ fun getSteeringForTurn(turn: Angle, speed: Double, traction: Double = 1.0): Doub
     //  assuming we want the smaller value to maximize steering, use the negative?
     val sqrt = sqrt(sqr(b) - 4.0 * a * c)
     val targetRadius = (-b - sqrt) / (2.0 * a)
-    return sign * TURNING_RADIUS / targetRadius
+    return sign * MIN_TURNING_RADIUS / targetRadius
 }
 
 @Suppress("NOTHING_TO_INLINE")

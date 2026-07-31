@@ -68,6 +68,7 @@ import dev.bnorm.arcade.geometry.toNormal
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
+import dev.bnorm.arcade.rally.TRACK_WIDTH
 import kotlin.math.abs
 import kotlin.math.sqrt
 

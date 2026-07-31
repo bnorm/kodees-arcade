@@ -14,6 +14,7 @@ private const val UPS_TARGET = 30.0
 // TODO consider adjusting the scale
 //  - also make sure more things are dependent on this number
 private const val SCALE = 6.0
+const val TRACK_WIDTH = 15.0 * SCALE
 
 // THROTTLE AND SPEED
 
@@ -22,15 +23,15 @@ const val MAX_THROTTLE = 1.0
 const val MIN_THROTTLE = -1.0
 
 // Measurements in meters per second squared (m/s^2).
-const val ACCELERATION = 30.0 / (UPS_TARGET * UPS_TARGET) * SCALE
-const val DECELERATION = 60.0 / (UPS_TARGET * UPS_TARGET) * SCALE
-const val CORNERING = 65.0 / (UPS_TARGET * UPS_TARGET) * SCALE
+const val ACCELERATION = 30.0 / (UPS_TARGET * UPS_TARGET) * SCALE // About 3Gs.
+const val DECELERATION = 60.0 / (UPS_TARGET * UPS_TARGET) * SCALE // About 6Gs.
+const val CORNERING = 65.0 / (UPS_TARGET * UPS_TARGET) * SCALE // About 6.5Gs.
 const val BOOST_DEGRADE = 0.5 / (UPS_TARGET * UPS_TARGET) * SCALE
 
 // Measurements in meters per second (m/s).
-const val MAX_SPEED = 50.0 / UPS_TARGET * SCALE
-const val MAX_SPEED_BOOST = 5.0 / UPS_TARGET * SCALE
-const val MIN_SPEED = -10.0 / UPS_TARGET * SCALE
+const val MAX_SPEED = 50.0 / UPS_TARGET * SCALE // 180 kph / ~112 mph.
+const val MAX_SPEED_BOOST = 5.0 / UPS_TARGET * SCALE // 18 kph / ~11 mph.
+const val MIN_SPEED = -10.0 / UPS_TARGET * SCALE // 36 kph / 22 mph.
 
 fun simulateSpeed(speed: Double, boost: Double, throttle: Double): Double {
     // TODO should there be burnout?
@@ -81,11 +82,11 @@ const val MAX_STEER = 1.0
 const val MIN_STEER = -1.0
 
 // Measurements in meters.
-const val TURNING_RADIUS = 5.0 * SCALE
+const val MIN_TURNING_RADIUS = 5.0 * SCALE
 
 fun getTurningRadius(speed: Double, traction: Double = 1.0): Double {
     return (speed * speed / (CORNERING * traction))
-        .coerceAtLeast(TURNING_RADIUS)
+        .coerceAtLeast(MIN_TURNING_RADIUS)
 }
 
 fun getTurn(speed: Double, steering: Double, traction: Double = 1.0): Angle {
@@ -94,7 +95,7 @@ fun getTurn(speed: Double, steering: Double, traction: Double = 1.0): Angle {
     // Compute optimal and target turning radius.
     // Traction effects optimal turn radius by reducing cornering.
     val optimalRadius = getTurningRadius(speed, traction)
-    val targetRadius = TURNING_RADIUS / abs(steering)
+    val targetRadius = MIN_TURNING_RADIUS / abs(steering)
 
     val actualRadius = if (targetRadius >= optimalRadius) {
         targetRadius

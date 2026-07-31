@@ -12,6 +12,7 @@ import dev.bnorm.arcade.geometry.intersect
 import dev.bnorm.arcade.geometry.merge
 import dev.bnorm.arcade.geometry.toLine
 import dev.bnorm.arcade.geometry.toRelative
+import dev.bnorm.arcade.rally.TRACK_WIDTH
 
 class TrackPath private constructor(
     val parts: List<TrackPart>

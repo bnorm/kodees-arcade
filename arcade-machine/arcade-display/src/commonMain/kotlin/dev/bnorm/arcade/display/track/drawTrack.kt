@@ -20,9 +20,9 @@ import dev.bnorm.arcade.geometry.toLine
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
+import dev.bnorm.arcade.rally.TRACK_WIDTH
 
 // TODO move these to physics?
-internal const val TRACK_WIDTH = 90.0
 internal const val CAR_WIDTH = 20.0
 
 
