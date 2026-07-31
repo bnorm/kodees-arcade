@@ -12,7 +12,6 @@ import dev.bnorm.arcade.driver.canvas.Fill
 import dev.bnorm.arcade.driver.canvas.Stroke
 import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
 import dev.bnorm.arcade.geometry.Angle
-import dev.bnorm.arcade.geometry.Rectangle
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.drawscope.DrawStyle as ComposeDrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill as ComposeFill
@@ -28,14 +27,16 @@ internal fun DrawRequest.draw() {
             strokeWidth = stroke.width,
         )
 
-        is DrawRequest.Circle -> when (this.sweepAngle < Angle.FULL_CIRCLE) {
+        is DrawRequest.Circle -> when (isArc()) {
             true -> {
+                val radius = circle.radius.toFloat()
+                val size = 2f * radius
                 scope.drawArc(
                     color = color.toComposeColor(),
-                    startAngle = startAngle.degrees.toFloat(),
-                    sweepAngle = -sweepAngle.degrees.toFloat(),
-                    topLeft = circle.center.toOffset() - Offset(circle.radius.toFloat(), circle.radius.toFloat()),
-                    size = Size(2f * circle.radius.toFloat(), 2f * circle.radius.toFloat()),
+                    startAngle = -startAngle.degrees.toFloat(), // Compose rotates clockwise.
+                    sweepAngle = -sweepAngle.degrees.toFloat(), // Compose rotates clockwise.
+                    topLeft = circle.center.toOffset() - Offset(radius, radius),
+                    size = Size(size, size),
                     useCenter = false,
                     style = style.toComposeDrawStyle(),
                 )
@@ -62,6 +63,7 @@ internal fun DrawRequest.draw() {
     }
 }
 
+private fun DrawRequest.Circle.isArc(): Boolean = sweepAngle > -Angle.FULL_CIRCLE && sweepAngle < Angle.FULL_CIRCLE
 
 private fun Color.toComposeColor(): ComposeColor = ComposeColor(value.toInt())
 
