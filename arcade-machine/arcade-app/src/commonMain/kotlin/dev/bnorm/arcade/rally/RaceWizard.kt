@@ -55,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -355,7 +354,7 @@ class RaceWizardScreen(
                     color = if (validPosition) Color.Unspecified else MaterialTheme.colorScheme.error,
                 )
 
-                val error = driver.error
+                val throwable = driver.error
                 if (!driver.ready) {
                     // TODO size the icon together with the text
                     val transition = rememberInfiniteTransition()
@@ -364,12 +363,12 @@ class RaceWizardScreen(
                         animationSpec = infiniteRepeatable(tween(1000))
                     )
                     Icon(
-                        painter = rememberVectorPainter(progress_activity),
+                        imageVector = progress_activity,
                         contentDescription = null,
                         modifier = Modifier
                             .graphicsLayer { rotationZ = rotation }
                     )
-                } else if (error != null) {
+                } else if (throwable != null) {
                     TooltipBox(
                         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                             TooltipAnchorPosition.Below
@@ -377,12 +376,14 @@ class RaceWizardScreen(
                         state = rememberTooltipState(isPersistent = true),
                         tooltip = {
                             PlainTooltip {
-                                Text(error.stackTraceToString())
+                                Text(throwable.stackTraceToString())
                             }
                         },
                     ) {
-                        // TODO icon
-                        Text("!!")
+                        Icon(
+                            imageVector = dev.bnorm.arcade.display.asset.icon.error,
+                            contentDescription = "Compilation Error"
+                        )
                     }
                 }
 
@@ -400,11 +401,13 @@ class RaceWizardScreen(
                             },
                             modifier = Modifier
                         ) {
-                            // TODO icon
-                            Text("D")
+                            Icon(
+                                imageVector = dev.bnorm.arcade.display.asset.icon.keyboard_arrow_down,
+                                contentDescription = "Move driver down."
+                            )
                         }
                     } else {
-                        Spacer(Modifier.width(40.dp))
+                        Spacer(Modifier.width(48.dp))
                     }
                     if (position != 0) {
                         IconButton(
@@ -415,11 +418,13 @@ class RaceWizardScreen(
                             },
                             modifier = Modifier
                         ) {
-                            // TODO icon
-                            Text("U")
+                            Icon(
+                                imageVector = dev.bnorm.arcade.display.asset.icon.keyboard_arrow_up,
+                                contentDescription = "Move driver up."
+                            )
                         }
                     } else {
-                        Spacer(Modifier.width(40.dp))
+                        Spacer(Modifier.width(48.dp))
                     }
                     IconButton(
                         onClick = {
@@ -428,8 +433,10 @@ class RaceWizardScreen(
                         },
                         modifier = Modifier
                     ) {
-                        // TODO icon
-                        Text("X")
+                        Icon(
+                            imageVector = dev.bnorm.arcade.display.asset.icon.close,
+                            contentDescription = "Remove driver."
+                        )
                     }
                 }
             }
