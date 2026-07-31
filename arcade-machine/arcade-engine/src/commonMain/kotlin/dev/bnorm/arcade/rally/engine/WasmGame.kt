@@ -78,7 +78,7 @@ class WasmGame(
                                 Game.Event.Update.Driver.Debug(
                                     stdout = state.driver.stdout.buffered().readString().takeIf { it.isNotEmpty() },
                                     stderr = state.driver.stderr.buffered().readString().takeIf { it.isNotEmpty() },
-                                    drawRequests = when (driverDebug.isEnabled(state.driver.name)) {
+                                    drawRequests = when (driverDebug.isDrawingEnabled(state.driver.name)) {
                                         true -> state.driver.onDraw()
                                         false -> emptyList()
                                     },
