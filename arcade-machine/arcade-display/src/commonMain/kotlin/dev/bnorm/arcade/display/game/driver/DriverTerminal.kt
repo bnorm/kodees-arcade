@@ -2,6 +2,7 @@ package dev.bnorm.arcade.display.game.driver
 
 import androidx.compose.foundation.HorizontalScrollbar
 import androidx.compose.foundation.LocalScrollbarStyle
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -65,14 +66,8 @@ fun DriverTerminal(
     LaunchedEffect(output.lines, pinned) {
         if (pinned) {
             // Cancel any current scroll behavior and immediately scroll to the last item.
-            try {
-                vertical.requestScrollToItem((output.lines.last - output.lines.first).toInt())
-            } catch (_: IndexOutOfBoundsException) {
-                // TODO this occasionally causes an 'IndexOutOfBoundsException' to be thrown because of a force remeasure...
-                //  - why?!?!
-                //  - something about the requested item index being the size of the internal list
-                //  - like the new item hasn't been added to the lazy column yet...
-            }
+            vertical.scroll(MutatePriority.PreventUserInput) {}
+            vertical.scrollToItem((output.lines.last - output.lines.first).toInt())
         }
     }
 
