@@ -1,7 +1,6 @@
 package dev.bnorm.arcade.display.game
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -69,67 +68,89 @@ fun GameScreen(
 ) {
     val model by gameViewModel.models.collectAsState()
 
-    var showResults by remember(model.complete) { mutableStateOf(true) }
-    model.complete?.let {
-        if (showResults) {
-            BasicAlertDialog(
-                onDismissRequest = {
-                    showResults = false
-                    gameViewModel.clear()
-                },
+    val complete = model.complete
+    var showResults by remember(complete) { mutableStateOf(true) }
+    if (complete != null && showResults) {
+        BasicAlertDialog(
+            onDismissRequest = {
+                showResults = false
+                gameViewModel.clear()
+            },
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.large,
             ) {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                ) {
-                    RaceResults(
-                        results = it.results,
-                        modifier = Modifier
-                            .padding(16.dp)
-                    )
-                }
+                RaceResults(
+                    results = complete.results,
+                    modifier = Modifier
+                        .padding(16.dp)
+                )
             }
         }
     }
 
-    Column(modifier) {
-        Row(
+    val shape = MaterialTheme.shapes.large
+    val shadowElevation = 4.dp
+    val padding = 16.dp
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = modifier
+    ) {
+        Column(
             Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .padding(padding)
         ) {
-            Game(
-                model = model,
-                modifier = Modifier
+            Row(
+                Modifier
                     .weight(1f)
-                    .fillMaxHeight()
-            )
-
-            if (showDebug) {
-                Spacer(Modifier.fillMaxHeight().width(2.dp).background(Color.Black))
-
-                Drivers(
-                    model,
-                    driverDebugViewModel,
+                    .fillMaxWidth()
+            ) {
+                Surface(
+                    shape = shape,
+                    shadowElevation = shadowElevation,
+                    color = Color(red = 0x00, green = 0x55, blue = 0x00),
                     modifier = Modifier
-                )
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    Game(model, modifier = Modifier.fillMaxSize())
+                }
+
+                if (showDebug) {
+                    Spacer(Modifier.width(padding))
+
+                    Surface(
+                        shape = shape,
+                        shadowElevation = shadowElevation,
+                    ) {
+                        Drivers(model, driverDebugViewModel)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(padding))
+
+            Surface(
+                shape = shape,
+                shadowElevation = shadowElevation,
+            ) {
+                GameControls(model, gameViewModel)
             }
         }
-
-        Spacer(Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
-
-        GameControls(model, gameViewModel)
     }
 }
 
 @Composable
 private fun GameControls(
     model: GameModel,
-    gameViewModel: GameViewModel
+    gameViewModel: GameViewModel,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier
+        modifier = modifier
             .padding(16.dp)
     ) {
         Button(
@@ -248,4 +269,3 @@ private fun Game(
         }
     }
 }
-

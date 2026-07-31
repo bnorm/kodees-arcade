@@ -1,11 +1,12 @@
 package dev.bnorm.arcade.display.game.driver
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.VerticalScrollbar
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,6 +16,8 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,40 +36,67 @@ fun Drivers(
 ) {
     val vertical = rememberScrollState()
 
-    Box(
-        modifier
-            .animateContentSize()
-            .fillMaxHeight()
-            .width(IntrinsicSize.Max)
-    ) {
+    Box(modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxHeight()
+                .width(264.dp)
                 .verticalScroll(vertical)
                 .padding(8.dp)
-                .padding(end = 8.dp)
         ) {
             for (name in model.start.drivers) {
                 key(name) {
                     val isOpen = name in driverDebugViewModel.open
-                    Button(
-                        colors = ButtonDefaults.buttonColors().copy(
-                            if (isOpen) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            if (isOpen) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-                        ),
-                        onClick = {
-                            driverDebugViewModel.open(name)
-                        },
+                    val containerColor = animateColorAsState(
+                        targetValue = when {
+                            isOpen -> MaterialTheme.colorScheme.primary
+                            else -> Color.Transparent
+                        }
+                    )
+                    val contentColor = animateColorAsState(
+                        targetValue = when {
+                            isOpen -> MaterialTheme.colorScheme.onPrimary
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = name,
-                            style = MaterialTheme.typography.titleMedium,
+                        Button(
+                            onClick = {
+                                driverDebugViewModel.open(name)
+                            },
+                            colors = ButtonDefaults.buttonColors().copy(
+                                containerColor = containerColor.value,
+                                contentColor = contentColor.value,
+                            ),
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
-                        )
+                                .weight(1f)
+                                .animateContentSize()
+                        ) {
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                            )
+                        }
+
+                        AnimatedVisibility(isOpen) {
+                            IconButton(
+                                onClick = {
+                                    // TODO sometimes there's a ui pause
+                                    driverDebugViewModel.close(name)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = dev.bnorm.arcade.display.asset.icon.close,
+                                    contentDescription = "Close driver window."
+                                )
+                            }
+                        }
                     }
                 }
             }
