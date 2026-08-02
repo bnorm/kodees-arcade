@@ -2,9 +2,10 @@ package dev.bnorm.arcade.display.game
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -13,6 +14,8 @@ import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.display.game.driver.DriverDebugViewModel
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.driver.Track
+import dev.bnorm.arcade.driver.canvas.internal.DrawRequest
+import dev.bnorm.arcade.geometry.Angle
 import dev.bnorm.arcade.machine.Game
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
@@ -81,16 +84,31 @@ sealed class GameViewEvent {
     data class Ups(val ups: Float) : GameViewEvent()
 }
 
+@Stable
 data class GameModel(
     val active: Boolean,
     val running: Boolean,
     val desiredUps: Float,
     val actualUps: Float,
-    val start: Game.Event.Start,
-    val update: Game.Event.Update?,
+    val track: Track,
+    val drivers: List<DriverState>,
     val complete: Game.Event.Complete?,
-    val driverOutput: Map<String, TextLines>
-)
+) {
+    @Stable
+    data class DriverState(
+        // Display
+        val name: String,
+        val x: Double,
+        val y: Double,
+        val heading: Angle,
+        // Progress
+        val lap: Int = 0,
+        val checkpoint: Int = 0,
+        // Debug
+        val drawRequests: List<DrawRequest> = emptyList(),
+        val output: TextLines = TextLines()
+    )
+}
 
 @Composable
 fun GamePresenter(
@@ -104,31 +122,29 @@ fun GamePresenter(
     var desiredUps by remember { mutableFloatStateOf(60f) }
     var running by remember { mutableStateOf(true) }
 
-    var start by remember { mutableStateOf(Game.Event.Start(initialTrack, emptyList())) }
-    var update by remember { mutableStateOf<Game.Event.Update?>(null) }
+    var track by remember { mutableStateOf(initialTrack) }
+    val drivers = remember { mutableStateListOf<GameModel.DriverState>() }
     var complete by remember { mutableStateOf<Game.Event.Complete?>(null) }
-
-    val driverOutput = remember { mutableStateMapOf<String, TextLines>() }
 
     LaunchedEffect(events) {
         events.collect {
             when (it) {
                 GameViewEvent.Clear -> {
                     active = false
-                    update = null
+                    drivers.clear()
                     complete = null
                 }
 
                 is GameViewEvent.New -> {
                     game = it.game
                     active = true
-                    update = null
+                    drivers.clear()
                     complete = null
                 }
 
                 GameViewEvent.Restart -> {
                     active = true
-                    update = null
+                    drivers.clear()
                     complete = null
                 }
 
@@ -158,23 +174,32 @@ fun GamePresenter(
                     }
 
                     is Game.Event.Start -> {
-                        start = event
-                        driverOutput.clear()
-                        for (name in event.drivers) {
-                            driverOutput[name] = TextLines()
+                        track = event.track
+                        drivers.clear()
+                        for ((index, name) in event.drivers.withIndex()) {
+                            val position = event.track.positions[index]
+                            drivers.add(
+                                GameModel.DriverState(
+                                    name = name,
+                                    x = position.location.x,
+                                    y = position.location.y,
+                                    heading = position.heading,
+                                )
+                            )
                         }
                     }
 
                     is Game.Event.Update -> {
-                        update = event
-                        for ((index, driver) in event.drivers.withIndex()) {
-                            val stdout = driver.debug?.stdout
-                            val stderr = driver.debug?.stderr
-                            if (stdout == null && stderr == null) continue
-
-                            val lines = driverOutput.getValue(start.drivers[index])
-                            if (stdout != null) lines.append(stdout)
-                            if (stderr != null) lines.append(stderr)
+                        for ((index, update) in event.drivers.withIndex()) {
+                            val driver = drivers[index].copy(
+                                x = update.x,
+                                y = update.y,
+                                heading = update.heading,
+                                drawRequests = update.debug?.drawRequests.orEmpty()
+                            )
+                            update.debug?.stdout?.let { driver.output.append(it) }
+                            update.debug?.stderr?.let { driver.output.append(it) }
+                            drivers[index] = driver
                         }
                     }
                 }
@@ -213,11 +238,8 @@ fun GamePresenter(
         running = running,
         desiredUps = desiredUps,
         actualUps = desiredUps,
-        start = start,
-        update = update,
+        track = track,
+        drivers = drivers.toList(),
         complete = complete,
-        driverOutput = driverOutput,
     )
 }
-
-

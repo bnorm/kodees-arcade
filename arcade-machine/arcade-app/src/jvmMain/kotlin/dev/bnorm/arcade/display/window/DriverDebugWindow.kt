@@ -40,20 +40,20 @@ class DriverDebugWindow(
     override fun ApplicationScope.Content() {
         val game by gameViewModel.models.collectAsState()
 
-        for (name in game.start.drivers) {
-            key(name) {
-                if (name in debugViewModel.open) {
+        for (driver in game.drivers) {
+            key(driver.name) {
+                if (driver.name in debugViewModel.open) {
                     Window(
-                        title = name,
+                        title = driver.name,
                         state = rememberWindowState(width = 600.dp, height = 400.dp),
                         onCloseRequest = {
-                            debugViewModel.close(name)
+                            debugViewModel.close(driver.name)
                         }
                     ) {
                         arcadeMenuBar.Content()
 
                         LaunchedEffect(Unit) {
-                            debugViewModel.focusRequests.filter { it.driver == name }.collectLatest {
+                            debugViewModel.focusRequests.filter { it.driver == driver.name }.collectLatest {
                                 window.toFront()
                                 window.requestFocus()
                             }
@@ -68,17 +68,17 @@ class DriverDebugWindow(
                                     .weight(1f)
                             ) {
                                 DriverTerminal(
-                                    output = game.driverOutput[name] ?: TextLines(),
+                                    output = driver.output,
                                 )
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                val checked = name in debugViewModel.drawing
+                                val checked = driver.name in debugViewModel.drawing
                                 Checkbox(
                                     checked = checked,
                                     onCheckedChange = {
                                         when (checked) {
-                                            true -> debugViewModel.stopDrawing(name)
-                                            false -> debugViewModel.startDrawing(name)
+                                            true -> debugViewModel.stopDrawing(driver.name)
+                                            false -> debugViewModel.startDrawing(driver.name)
                                         }
                                     }
                                 )

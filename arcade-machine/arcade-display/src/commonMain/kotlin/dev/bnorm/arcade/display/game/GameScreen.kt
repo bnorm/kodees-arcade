@@ -46,6 +46,7 @@ import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.display.internal.LogarithmicSlider
 import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.display.track.toOffset
+import dev.bnorm.arcade.geometry.Point
 import dev.zacsweers.metro.Inject
 
 @Inject
@@ -153,7 +154,7 @@ private fun GameControls(
         modifier = modifier
             .padding(16.dp)
     ) {
-        if (model.active || model.start.drivers.isEmpty()) {
+        if (model.active || model.drivers.isEmpty()) {
             Button(
                 enabled = model.active,
                 onClick = {
@@ -225,8 +226,8 @@ private fun Game(
         )
     }
 
-    val track = model.start.track
-    val names = model.start.drivers
+    val track = model.track
+    val drivers = model.drivers
     FixedSize(
         size = IntSize(
             width = track.width.toInt(),
@@ -238,18 +239,16 @@ private fun Game(
         TrackImage(track, modifier = Modifier.fillMaxSize())
 
         val textMeasurer = rememberTextMeasurer()
-        val nameMeasureResults = remember(names) {
-            names.map { textMeasurer.measure(it) }
+        val nameMeasureResults = remember(drivers) {
+            drivers.map { textMeasurer.measure(it.name) }
         }
 
         val carSize = Size(27.2f, 20f)
         Canvas(Modifier.fillMaxSize()) {
-            val drivers = model.update?.drivers.orEmpty()
-            for ((index, position) in drivers.withIndex()) {
-                val x = position.x.toFloat()
-                val y = size.height - position.y.toFloat()
+            for ((index, driver) in drivers.withIndex()) {
+                val x = driver.x.toFloat()
+                val y = size.height - driver.y.toFloat()
                 val center = Offset(x, y)
-
 
                 val result = nameMeasureResults[index]
                 val textOffset = Offset(
@@ -259,9 +258,9 @@ private fun Game(
                 drawText(result, color = Color.Black, topLeft = center + textOffset)
             }
 
-            for ((index, position) in drivers.withIndex()) {
-                val center = position.toOffset()
-                rotate(degrees = -position.heading.degrees.toFloat(), pivot = center) {
+            for ((index, driver) in drivers.withIndex()) {
+                val center = Point(driver.x, driver.y).toOffset()
+                rotate(degrees = -driver.heading.degrees.toFloat(), pivot = center) {
                     val tint = ColorFilter.tint(color = colors[index % colors.size], BlendMode.SrcIn)
                     translate(left = center.x - carSize.width / 2, top = center.y - carSize.height / 2) {
                         with(carBackground) { draw(carSize) }
@@ -272,7 +271,7 @@ private fun Game(
             }
 
             for (driver in drivers) {
-                driver.debug?.drawRequests?.forEach { request ->
+                driver.drawRequests.forEach { request ->
                     request.draw()
                 }
             }

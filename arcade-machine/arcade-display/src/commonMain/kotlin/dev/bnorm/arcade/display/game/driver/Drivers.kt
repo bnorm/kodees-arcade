@@ -45,9 +45,9 @@ fun Drivers(
                 .verticalScroll(vertical)
                 .padding(8.dp)
         ) {
-            for (name in model.start.drivers) {
-                key(name) {
-                    val isOpen = name in driverDebugViewModel.open
+            for (driver in model.drivers) {
+                key(driver.name) {
+                    val isOpen = driver.name in driverDebugViewModel.open
                     val containerColor = animateColorAsState(
                         targetValue = when {
                             isOpen -> MaterialTheme.colorScheme.primary
@@ -66,7 +66,7 @@ fun Drivers(
                     ) {
                         Button(
                             onClick = {
-                                driverDebugViewModel.open(name)
+                                driverDebugViewModel.open(driver.name)
                             },
                             colors = ButtonDefaults.buttonColors().copy(
                                 containerColor = containerColor.value,
@@ -77,7 +77,7 @@ fun Drivers(
                                 .animateContentSize()
                         ) {
                             Text(
-                                text = name,
+                                text = driver.name,
                                 style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -88,7 +88,7 @@ fun Drivers(
                             IconButton(
                                 onClick = {
                                     // TODO sometimes there's a ui pause
-                                    driverDebugViewModel.close(name)
+                                    driverDebugViewModel.close(driver.name)
                                 }
                             ) {
                                 Icon(
