@@ -14,10 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -30,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -58,7 +57,7 @@ fun DriverTerminal(
                     // Scrolled all the way to the bottom while not pinned => pinned.
                     false -> consumed.y <= 0f && available.y < 0f
                 }
-                return Offset.Zero
+                return available
             }
         }
     }
@@ -71,37 +70,31 @@ fun DriverTerminal(
         }
     }
 
-    Surface(
-        color = Color.Black,
-        contentColor = Color.White,
-        shape = RoundedCornerShape(8.dp),
-        modifier = modifier,
+    // TODO scrollable2D doesn't seem to work on desktop...
+    Box(
+        modifier = modifier
+            .fillMaxSize()
     ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-        ) {
-            val scrollbarStyle = LocalScrollbarStyle.current.copy(
-                unhoverColor = Color.White.copy(alpha = 0.5f),
-                hoverColor = Color.White.copy(alpha = 0.8f),
-                minimalHeight = 32.dp,
-            )
+        val contentColor = LocalContentColor.current
+        val scrollbarStyle = LocalScrollbarStyle.current.copy(
+            unhoverColor = contentColor.copy(alpha = 0.5f),
+            hoverColor = contentColor.copy(alpha = 0.8f),
+            minimalHeight = 32.dp,
+        )
 
-            val textStyle = MaterialTheme.typography.bodySmall.let {
-                it.copy(lineHeight = it.fontSize, fontFamily = FontFamily.Monospace)
+        val textStyle = MaterialTheme.typography.bodySmall.let {
+            it.copy(lineHeight = it.fontSize, fontFamily = FontFamily.Monospace)
+        }
+        val textModifier = rememberTextMeasurer()
+        val density = LocalDensity.current
+        val minWidth by derivedStateOf {
+            with(density) {
+                textModifier.measure(text = " ".repeat(output.columns), style = textStyle).size.width.toDp()
             }
-            val textModifier = rememberTextMeasurer()
-            val density = LocalDensity.current
-            val minWidth by derivedStateOf {
-                with(density) {
-                    textModifier.measure(text = " ".repeat(output.columns), style = textStyle).size.width.toDp()
-                }
-            }
+        }
 
-            ProvideTextStyle(textStyle) {
-                // TODO wrap with SelectionContainer
-                //  - but this unfortunately crashes
-                //  - is there a way to work around this issue?
+        ProvideTextStyle(textStyle) {
+            SelectionContainer() {
                 LazyColumn(
                     state = vertical,
                     contentPadding = PaddingValues(
@@ -117,7 +110,7 @@ fun DriverTerminal(
                     for (line in output.lines) {
                         item(line) {
                             Text(
-                                output.getLine(line),
+                                text = output.getLine(line),
                                 modifier = Modifier
                                     .width(minWidth)
                             )
@@ -125,22 +118,22 @@ fun DriverTerminal(
                     }
                 }
             }
-            CompositionLocalProvider(
-                LocalScrollbarStyle provides scrollbarStyle
-            ) {
-                VerticalScrollbar(
-                    adapter = rememberScrollbarAdapter(vertical),
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(bottom = scrollbarStyle.thickness)
-                )
-                HorizontalScrollbar(
-                    adapter = rememberScrollbarAdapter(horizontal),
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(end = scrollbarStyle.thickness)
-                )
-            }
+        }
+        CompositionLocalProvider(
+            LocalScrollbarStyle provides scrollbarStyle
+        ) {
+            VerticalScrollbar(
+                adapter = rememberScrollbarAdapter(vertical),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(bottom = scrollbarStyle.thickness)
+            )
+            HorizontalScrollbar(
+                adapter = rememberScrollbarAdapter(horizontal),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(end = scrollbarStyle.thickness)
+            )
         }
     }
 }
