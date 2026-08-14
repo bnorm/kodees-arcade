@@ -1,36 +1,28 @@
 package dev.bnorm.arcade.display.menu
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowScope
-import dev.bnorm.arcade.display.AvailableDriverViewModel
 import dev.bnorm.arcade.display.ArcadeMenuItem
+import dev.bnorm.arcade.display.window.WatchWindow
+import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
-import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
+import dev.zacsweers.metro.SingleIn
 
+@SingleIn(AppScope::class)
 @ContributesIntoSet(WindowScope::class)
 class WatchedDirectoryItem(
-    private val availableDriverViewModel: AvailableDriverViewModel,
-    private val scope: WindowScope,
+    private val window: WatchWindow,
 ) : ArcadeMenuItem {
     override val category get() = ArcadeMenuItem.Category.Settings
     override val order get() = 1
 
     @Composable
     override fun MenuScope.Content() {
-        availableDriverViewModel.models.collectAsState()
-
-        val watchPicker = scope.rememberDirectoryPickerLauncher { dir ->
-            if (dir != null) {
-                availableDriverViewModel.watch(dir)
-            }
-        }
-
         Item(
-            text = "Watch",
+            text = "Watched Directories",
             onClick = {
-                watchPicker.launch()
+                window.visible = true
             }
         )
     }

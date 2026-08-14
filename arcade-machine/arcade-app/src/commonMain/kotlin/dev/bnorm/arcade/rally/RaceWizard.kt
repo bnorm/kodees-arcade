@@ -66,7 +66,6 @@ import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.engine.WasmDriver
 import dev.bnorm.arcade.rally.engine.WasmGame
 import dev.bnorm.arcade.rally.engine.WasmModule
 import dev.bnorm.arcade.server.client.ArcadeClient
@@ -449,13 +448,15 @@ class RaceWizardScreen(
             Text("Available Drivers:", style = MaterialTheme.typography.titleLarge)
             if (availableDriverViewModel != null) {
                 val model by availableDriverViewModel.models.collectAsState()
-                for (driver in model.drivers) {
-                    Button(
-                        onClick = {
-                            selectDriverFile(driver.file)
+                for (watched in model.watched) {
+                    for (driver in watched.drivers) {
+                        Button(
+                            onClick = {
+                                selectDriverFile(driver.file)
+                            }
+                        ) {
+                            Text(driver.name)
                         }
-                    ) {
-                        Text(driver.name)
                     }
                 }
             }

@@ -29,8 +29,8 @@ class DesktopAvailableDriverViewModel(
         take(AvailableDriverEvent.Watch(directory))
     }
 
-    override fun unwatch(watched: AvailableDriverModel.Watched) {
-        take(AvailableDriverEvent.Unwatch(watched))
+    override fun unwatch(key: String) {
+        take(AvailableDriverEvent.Unwatch(key))
     }
 
     @Composable
@@ -41,7 +41,7 @@ class DesktopAvailableDriverViewModel(
 
 sealed class AvailableDriverEvent {
     data class Watch(val directory: PlatformFile) : AvailableDriverEvent()
-    data class Unwatch(val watched: AvailableDriverModel.Watched) : AvailableDriverEvent()
+    data class Unwatch(val key: String) : AvailableDriverEvent()
 }
 
 @Composable
@@ -65,29 +65,27 @@ fun AvailableDriverPresenter(
                 }
 
                 is AvailableDriverEvent.Unwatch -> {
-                    val key = event.watched.key
-                    cache.remove(key)
-                    keys.remove(key)
+                    cache.remove(event.key)
+                    keys.remove(event.key)
                 }
             }
         }
     }
 
-    val watched = keys.mapNotNull {
-        val directory = cache[it] ?: return@mapNotNull null
-        AvailableDriverModel.Watched(it, directory)
-    }
-
     return AvailableDriverModel(
-        watched = watched,
-        drivers = buildList {
-            for (w in watched) {
-                for (file in w.directory.list()) {
-                    if (file.extension == "wasm") {
-                        add(AvailableDriverModel.Driver(file.nameWithoutExtension, file))
+        watched = keys.mapNotNull {
+            val directory = cache[it] ?: return@mapNotNull null
+            AvailableDriverModel.Watched(
+                key = it,
+                directory = directory,
+                drivers = buildList {
+                    for (file in directory.list()) {
+                        if (file.extension == "wasm") {
+                            add(AvailableDriverModel.Watched.Driver(file.nameWithoutExtension, file))
+                        }
                     }
-                }
-            }
+                },
+            )
         }
     )
 }
