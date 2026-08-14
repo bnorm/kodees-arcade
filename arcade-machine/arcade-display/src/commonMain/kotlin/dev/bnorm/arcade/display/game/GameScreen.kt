@@ -1,7 +1,6 @@
 package dev.bnorm.arcade.display.game
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,6 +46,7 @@ import dev.bnorm.arcade.display.internal.FixedSize
 import dev.bnorm.arcade.display.internal.LogarithmicSlider
 import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.display.track.toOffset
+import dev.bnorm.arcade.geometry.Point
 import dev.zacsweers.metro.Inject
 
 @Inject
@@ -69,76 +69,108 @@ fun GameScreen(
 ) {
     val model by gameViewModel.models.collectAsState()
 
-    var showResults by remember(model.complete) { mutableStateOf(true) }
-    model.complete?.let {
-        if (showResults) {
-            BasicAlertDialog(
-                onDismissRequest = {
-                    showResults = false
-                    gameViewModel.clear()
-                },
+    val complete = model.complete
+    var showResults by remember(complete) { mutableStateOf(true) }
+    if (complete != null && showResults) {
+        BasicAlertDialog(
+            onDismissRequest = {
+                showResults = false
+                gameViewModel.clear()
+            },
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.large,
             ) {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                ) {
-                    RaceResults(
-                        results = it.results,
-                        modifier = Modifier
-                            .padding(16.dp)
-                    )
-                }
+                RaceResults(
+                    results = complete.results,
+                    modifier = Modifier
+                        .padding(16.dp)
+                )
             }
         }
     }
 
-    Column(modifier) {
-        Row(
+    val shape = MaterialTheme.shapes.large
+    val shadowElevation = 4.dp
+    val padding = 16.dp
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = modifier
+    ) {
+        Column(
             Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .padding(padding)
         ) {
-            Game(
-                model = model,
-                modifier = Modifier
+            Row(
+                Modifier
                     .weight(1f)
-                    .fillMaxHeight()
-            )
-
-            if (showDebug) {
-                Spacer(Modifier.fillMaxHeight().width(2.dp).background(Color.Black))
-
-                Drivers(
-                    model,
-                    driverDebugViewModel,
+                    .fillMaxWidth()
+            ) {
+                Surface(
+                    shape = shape,
+                    shadowElevation = shadowElevation,
+                    color = Color(red = 0x00, green = 0x55, blue = 0x00),
                     modifier = Modifier
-                )
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    Game(model, modifier = Modifier.fillMaxSize())
+                }
+
+                if (showDebug) {
+                    Spacer(Modifier.width(padding))
+
+                    Surface(
+                        shape = shape,
+                        shadowElevation = shadowElevation,
+                    ) {
+                        Drivers(model, driverDebugViewModel)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(padding))
+
+            Surface(
+                shape = shape,
+                shadowElevation = shadowElevation,
+            ) {
+                GameControls(model, gameViewModel)
             }
         }
-
-        Spacer(Modifier.fillMaxWidth().height(2.dp).background(Color.Black))
-
-        GameControls(model, gameViewModel)
     }
 }
 
 @Composable
 private fun GameControls(
     model: GameModel,
-    gameViewModel: GameViewModel
+    gameViewModel: GameViewModel,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier
+        modifier = modifier
             .padding(16.dp)
     ) {
-        Button(
-            enabled = model.active,
-            onClick = {
-                gameViewModel.stop()
+        if (model.active || model.drivers.isEmpty()) {
+            Button(
+                enabled = model.active,
+                onClick = {
+                    gameViewModel.stop()
+                }
+            ) {
+                Text("Stop")
             }
-        ) {
-            Text("Stop!")
+        } else {
+            Button(
+                onClick = {
+                    gameViewModel.restart()
+                }
+            ) {
+                Text("Restart")
+            }
         }
 
         Button(
@@ -156,7 +188,7 @@ private fun GameControls(
         }
 
         Text(
-            text = "FPS: ${model.desiredUps.toInt()}",
+            text = "UPS: ${model.desiredUps.toInt()}",
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.width(96.dp)
         )
@@ -194,8 +226,8 @@ private fun Game(
         )
     }
 
-    val track = model.start.track
-    val names = model.start.drivers
+    val track = model.track
+    val drivers = model.drivers
     FixedSize(
         size = IntSize(
             width = track.width.toInt(),
@@ -207,18 +239,16 @@ private fun Game(
         TrackImage(track, modifier = Modifier.fillMaxSize())
 
         val textMeasurer = rememberTextMeasurer()
-        val nameMeasureResults = remember(names) {
-            names.map { textMeasurer.measure(it) }
+        val nameMeasureResults = remember(drivers) {
+            drivers.map { textMeasurer.measure(it.name) }
         }
 
         val carSize = Size(27.2f, 20f)
         Canvas(Modifier.fillMaxSize()) {
-            val drivers = model.update?.drivers.orEmpty()
-            for ((index, position) in drivers.withIndex()) {
-                val x = position.x.toFloat()
-                val y = size.height - position.y.toFloat()
+            for ((index, driver) in drivers.withIndex()) {
+                val x = driver.x.toFloat()
+                val y = size.height - driver.y.toFloat()
                 val center = Offset(x, y)
-
 
                 val result = nameMeasureResults[index]
                 val textOffset = Offset(
@@ -228,9 +258,9 @@ private fun Game(
                 drawText(result, color = Color.Black, topLeft = center + textOffset)
             }
 
-            for ((index, position) in drivers.withIndex()) {
-                val center = position.toOffset()
-                rotate(degrees = -position.heading.degrees.toFloat(), pivot = center) {
+            for ((index, driver) in drivers.withIndex()) {
+                val center = Point(driver.x, driver.y).toOffset()
+                rotate(degrees = -driver.heading.degrees.toFloat(), pivot = center) {
                     val tint = ColorFilter.tint(color = colors[index % colors.size], BlendMode.SrcIn)
                     translate(left = center.x - carSize.width / 2, top = center.y - carSize.height / 2) {
                         with(carBackground) { draw(carSize) }
@@ -241,11 +271,10 @@ private fun Game(
             }
 
             for (driver in drivers) {
-                driver.debug?.drawRequests?.forEach { request ->
+                driver.drawRequests.forEach { request ->
                     request.draw()
                 }
             }
         }
     }
 }
-

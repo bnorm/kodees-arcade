@@ -11,11 +11,11 @@ interface Game {
     suspend fun start(onEvent: suspend (Event) -> Unit)
 
     interface DriverDebug {
-        fun isEnabled(driver: String): Boolean
+        fun isDrawingEnabled(driver: String): Boolean
 
         companion object {
             val Disabled = object : DriverDebug {
-                override fun isEnabled(driver: String): Boolean = false
+                override fun isDrawingEnabled(driver: String): Boolean = false
             }
         }
     }

@@ -55,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -67,7 +66,6 @@ import dev.bnorm.arcade.display.track.TrackImage
 import dev.bnorm.arcade.display.track.TrackViewModel
 import dev.bnorm.arcade.driver.Track
 import dev.bnorm.arcade.machine.Game
-import dev.bnorm.arcade.rally.engine.WasmDriver
 import dev.bnorm.arcade.rally.engine.WasmGame
 import dev.bnorm.arcade.rally.engine.WasmModule
 import dev.bnorm.arcade.server.client.ArcadeClient
@@ -122,8 +120,8 @@ class RaceWizardScreen(
             }
         }
 
-        suspend fun createWasmDriver(): WasmDriver {
-            return module.await().createDriver(name)
+        suspend fun awaitWasmModule(): Pair<String, WasmModule> {
+            return name to module.await()
         }
     }
 
@@ -355,7 +353,7 @@ class RaceWizardScreen(
                     color = if (validPosition) Color.Unspecified else MaterialTheme.colorScheme.error,
                 )
 
-                val error = driver.error
+                val throwable = driver.error
                 if (!driver.ready) {
                     // TODO size the icon together with the text
                     val transition = rememberInfiniteTransition()
@@ -364,12 +362,12 @@ class RaceWizardScreen(
                         animationSpec = infiniteRepeatable(tween(1000))
                     )
                     Icon(
-                        painter = rememberVectorPainter(progress_activity),
+                        imageVector = progress_activity,
                         contentDescription = null,
                         modifier = Modifier
                             .graphicsLayer { rotationZ = rotation }
                     )
-                } else if (error != null) {
+                } else if (throwable != null) {
                     TooltipBox(
                         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                             TooltipAnchorPosition.Below
@@ -377,12 +375,14 @@ class RaceWizardScreen(
                         state = rememberTooltipState(isPersistent = true),
                         tooltip = {
                             PlainTooltip {
-                                Text(error.stackTraceToString())
+                                Text(throwable.stackTraceToString())
                             }
                         },
                     ) {
-                        // TODO icon
-                        Text("!!")
+                        Icon(
+                            imageVector = dev.bnorm.arcade.display.asset.icon.error,
+                            contentDescription = "Compilation Error"
+                        )
                     }
                 }
 
@@ -400,11 +400,13 @@ class RaceWizardScreen(
                             },
                             modifier = Modifier
                         ) {
-                            // TODO icon
-                            Text("D")
+                            Icon(
+                                imageVector = dev.bnorm.arcade.display.asset.icon.keyboard_arrow_down,
+                                contentDescription = "Move driver down."
+                            )
                         }
                     } else {
-                        Spacer(Modifier.width(40.dp))
+                        Spacer(Modifier.width(48.dp))
                     }
                     if (position != 0) {
                         IconButton(
@@ -415,11 +417,13 @@ class RaceWizardScreen(
                             },
                             modifier = Modifier
                         ) {
-                            // TODO icon
-                            Text("U")
+                            Icon(
+                                imageVector = dev.bnorm.arcade.display.asset.icon.keyboard_arrow_up,
+                                contentDescription = "Move driver up."
+                            )
                         }
                     } else {
-                        Spacer(Modifier.width(40.dp))
+                        Spacer(Modifier.width(48.dp))
                     }
                     IconButton(
                         onClick = {
@@ -428,8 +432,10 @@ class RaceWizardScreen(
                         },
                         modifier = Modifier
                     ) {
-                        // TODO icon
-                        Text("X")
+                        Icon(
+                            imageVector = dev.bnorm.arcade.display.asset.icon.close,
+                            contentDescription = "Remove driver."
+                        )
                     }
                 }
             }
@@ -442,13 +448,15 @@ class RaceWizardScreen(
             Text("Available Drivers:", style = MaterialTheme.typography.titleLarge)
             if (availableDriverViewModel != null) {
                 val model by availableDriverViewModel.models.collectAsState()
-                for (driver in model.drivers) {
-                    Button(
-                        onClick = {
-                            selectDriverFile(driver.file)
+                for (watched in model.watched) {
+                    for (driver in watched.drivers) {
+                        Button(
+                            onClick = {
+                                selectDriverFile(driver.file)
+                            }
+                        ) {
+                            Text(driver.name)
                         }
-                    ) {
-                        Text(driver.name)
                     }
                 }
             }
@@ -468,8 +476,8 @@ class RaceWizardScreen(
             onClick = {
                 if (enabled) {
                     scope.launch {
-                        val drivers = drivers.map { it.createWasmDriver() }
-                        val game = WasmGame(selectedTrack, drivers, laps, driverDebug)
+                        val modules = drivers.map { it.awaitWasmModule() }
+                        val game = WasmGame(selectedTrack, modules, laps, driverDebug)
                         onStart(game)
                     }
                 }

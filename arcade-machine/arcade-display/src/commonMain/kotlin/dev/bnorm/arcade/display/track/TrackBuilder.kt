@@ -3,6 +3,7 @@ package dev.bnorm.arcade.display.track
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
@@ -66,6 +68,7 @@ import dev.bnorm.arcade.geometry.toNormal
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
+import dev.bnorm.arcade.rally.TRACK_WIDTH
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -129,7 +132,7 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
         when (keyboardState.pressed.singleOrNull()) {
             Key.C -> BuilderMode.Close
             Key.S -> BuilderMode.Straight
-            Key.MetaLeft, Key.MetaRight -> BuilderMode.Transform
+            Key.CtrlLeft, Key.CtrlRight -> BuilderMode.Transform
             else -> BuilderMode.Curve
         }
     }
@@ -167,7 +170,8 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
         focusRequester.requestFocus()
     }
 
-    Column(
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier
             .focusable()
             .focusRequester(focusRequester)
@@ -190,7 +194,32 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
                 }
             }
     ) {
-        Row {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                enabled = complete,
+                onClick = {
+                    focusRequester.requestFocus()
+
+                    val bounds = TrackPath.of(checkpoints).bounds
+                    val padding = TRACK_WIDTH
+                    val delta = Point(bounds.minX - padding, bounds.minY - padding)
+                    val boundedCheckpoints = checkpoints.map { it - delta }
+                    val track = Track(
+                        width = bounds.width + 2.0 * padding,
+                        height = bounds.height + 2.0 * padding,
+                        // Rotate checkpoints so the first defines the starting line.
+                        checkpoints = List(checkpoints.size) { boundedCheckpoints[(it + 1) % checkpoints.size] },
+                        positions = computePositions(boundedCheckpoints),
+                    )
+                    onSave(track)
+                }
+            ) {
+                Text("Save")
+            }
+
             Button(
                 onClick = {
                     focusRequester.requestFocus()
@@ -202,26 +231,39 @@ fun TrackBuilder(initialSize: IntSize, onSave: (Track) -> Unit, modifier: Modifi
                 Text("Clear")
             }
 
-            Button(
-                enabled = complete,
-                onClick = {
-                    focusRequester.requestFocus()
-
-                    val bounds = TrackPath.of(checkpoints).bounds
-                    val delta = Point(bounds.minX - TRACK_WIDTH, bounds.minY - TRACK_WIDTH)
-                    val boundedCheckpoints = checkpoints.map { it - delta }
-                    val track = Track(
-                        width = bounds.width + 2.0 * TRACK_WIDTH,
-                        height = bounds.height + 2.0 * TRACK_WIDTH,
-                        // Rotate checkpoints so the first defines the starting line.
-                        checkpoints = List(checkpoints.size) { boundedCheckpoints[(it + 1) % checkpoints.size] },
-                        positions = computePositions(boundedCheckpoints),
-                    )
-                    onSave(track)
-                }
-            ) {
-                Text("Save")
-            }
+            Text(
+                """
+                Welcome to the track builder!
+                To add track segments, click within the box.
+                
+                The first segment takes 3 clicks:
+                1. To determine the starting location.
+                2. To determine the starting direction.
+                3. To determine the curvature of starting segment.
+                
+                To make sure the track remains a constant width,
+                all segments are straight or perfectly circular.
+                A preview segment will be shown as the mouse is moved.
+                
+                To remove a segment, press Ctrl+Z.
+                To remove all segments, click the 'Clear' button.
+                
+                To lock the segment to be straight, hold S.
+                To complete the track with 2 final segments, hold C.
+                To resize the entire track, hold Ctrl and scroll.
+                To move the entire track, hold Ctrl, click, and drag.
+                
+                When saving, the track is automatically sized and padded
+                based on the track segments.
+                
+                Tips!
+                1. Because drivers only receive checkpoints and there
+                is not traction, it is very easy to cut corners. Break
+                up longer corners into smaller segments!
+                2. The first segment determines the starting grid. The
+                bigger it is, the more drivers can participate!
+                """.trimIndent()
+            )
         }
 
         FixedSize(
@@ -479,7 +521,7 @@ private fun computeCurveSegment(
 
     // Limit direct distance between segments.
     // TODO configurable?
-    distance = minOf(distance, 250.0)
+//    distance = minOf(distance, 250.0)
 
     // 'vector.magnitude' is the base of an isosceles triangle with base angle of 'alpha'.
     // Therefore, cos(alpha) = opposite / hypotenuse, where:
@@ -519,11 +561,11 @@ private fun computeStraightSegment(
     if (deltaMouseAngle > Angle.ZERO) return BuilderResult.Straight(segmentCenter, segment = null)
 
     val nearest = mouse.nearest(last.toLine().toNormal(segmentCenter))
-    var distance = segmentCenter.distanceTo(nearest)
+    val distance = segmentCenter.distanceTo(nearest)
 
     // Limit direct distance between segments.
     // TODO configurable?
-    distance = minOf(distance, 250.0)
+//    distance = minOf(distance, 250.0)
 
     // TODO there's a way to reduce the number of cos/sin usage here
     val deltaVector = Vector(segmentVector.angle - Angle.QUARTER_CIRCLE, distance)

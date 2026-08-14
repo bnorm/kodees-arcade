@@ -1,8 +1,6 @@
 package dev.bnorm.arcade.display.game.driver
 
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateSetOf
-import dev.bnorm.arcade.display.ViewModel
 import dev.bnorm.arcade.display.ViewModelCoroutineScope
 import dev.bnorm.arcade.machine.Game
 import dev.zacsweers.metro.AppScope
@@ -12,40 +10,50 @@ import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 
 @Inject
 @SingleIn(AppScope::class)
 @ContributesBinding(AppScope::class, binding<Game.DriverDebug>())
 class DriverDebugViewModel(
-    @ViewModelCoroutineScope scope: CoroutineScope,
-    // TODO web has a limit of a single driver?
-) : ViewModel<DriverDebugViewEvent, DriverDebugModel>(scope), Game.DriverDebug {
-    private val enabled = mutableStateSetOf<String>()
+    @ViewModelCoroutineScope private val scope: CoroutineScope,
+) : Game.DriverDebug {
+    val open: Set<String>
+        field = mutableStateSetOf<String>()
+    val drawing: Set<String>
+        field = mutableStateSetOf<String>()
 
-    override fun isEnabled(driver: String): Boolean {
-        return driver in enabled
+    val focusRequests: Flow<FocusRequest>
+        field = MutableSharedFlow()
+
+    class FocusRequest(val driver: String)
+
+    override fun isDrawingEnabled(driver: String): Boolean {
+        return driver in drawing
     }
 
     fun clear() {
-        enabled.clear()
+        open.clear()
+        drawing.clear()
     }
 
-    fun enable(driver: String) {
-        enabled.add(driver)
+    fun open(driver: String) {
+        open.add(driver)
+        scope.launch {
+            focusRequests.emit(FocusRequest(driver))
+        }
     }
 
-    fun disable(driver: String) {
-        enabled.remove(driver)
+    fun close(driver: String) {
+        open.remove(driver)
     }
 
-    @Composable
-    override fun models(events: Flow<DriverDebugViewEvent>): DriverDebugModel {
-        TODO()
+    fun startDrawing(driver: String) {
+        drawing.add(driver)
+    }
+
+    fun stopDrawing(driver: String) {
+        drawing.remove(driver)
     }
 }
-
-sealed class DriverDebugViewEvent {
-}
-
-class DriverDebugModel(
-)

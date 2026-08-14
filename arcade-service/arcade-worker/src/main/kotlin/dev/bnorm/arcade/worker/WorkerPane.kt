@@ -263,10 +263,10 @@ suspend fun WorkerGame(client: ArcadeClient, event: RaceProcessEvent): WasmGame 
             checkpoints = track.checkpoints,
             positions = track.positions,
         ),
-        drivers = buildList {
+        modules = buildList {
             for (driver in race.drivers) {
                 val blob = client.downloadDriverVersion(driver.driverId, driver.version) // TODO error
-                add(WasmModule(blob).createDriver(driver.name))
+                add(driver.name to WasmModule(blob))
             }
         },
         laps = race.laps

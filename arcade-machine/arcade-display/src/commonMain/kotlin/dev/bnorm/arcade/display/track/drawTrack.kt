@@ -20,9 +20,9 @@ import dev.bnorm.arcade.geometry.toLine
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.geometry.toVector
+import dev.bnorm.arcade.rally.TRACK_WIDTH
 
 // TODO move these to physics?
-internal const val TRACK_WIDTH = 90.0
 internal const val CAR_WIDTH = 20.0
 
 
@@ -30,6 +30,7 @@ private val OFF_WHITE = Color(red = 0xDD, green = 0xDD, blue = 0xDD)
 private val CURB_COLOR_1 = Color(red = 0x88, green = 0x00, blue = 0x00)
 private val CURB_COLOR_2 = OFF_WHITE
 private val PAVEMENT_COLOR = Color(red = 0x44, green = 0x44, blue = 0x44)
+private val CHECKPOINT_COLOR = Color(red = 0x39, green = 0x39, blue = 0x39)
 private val BORDER_COLOR = Color(red = 0x00, green = 0x00, blue = 0x00)
 
 private const val CURB_WIDTH = 6f
@@ -53,8 +54,9 @@ internal fun DrawScope.drawTrack(
     complete: Boolean,
 ) {
     drawPavement(checkpoints, complete)
-    if (startingLine != null) drawStartingLine(startingLine)
     drawStartingGrid(positions)
+    if (startingLine != null) drawStartingLine(startingLine)
+    drawCheckpoints(checkpoints)
 }
 
 private fun DrawScope.drawPavement(
@@ -109,6 +111,17 @@ private fun DrawScope.drawStartingLine(segment: Segment) {
             strokeWidth = 8f,
         )
         flip = !flip
+    }
+}
+
+private fun DrawScope.drawCheckpoints(checkpoints: List<Segment>) {
+    for (segment in checkpoints) {
+        drawLine(
+            color = CHECKPOINT_COLOR,
+            start = segment.start.toOffset(),
+            end = segment.end.toOffset(),
+            strokeWidth = 1f,
+        )
     }
 }
 

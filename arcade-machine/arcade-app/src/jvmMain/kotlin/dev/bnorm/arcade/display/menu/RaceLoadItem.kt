@@ -31,7 +31,7 @@ class RaceLoadItem(
         }
 
         Item(
-            text = "Load",
+            text = "Replay",
             onClick = {
                 gameViewModel.clear()
                 recordingPicker.launch()
