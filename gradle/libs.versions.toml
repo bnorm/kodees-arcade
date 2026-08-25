@@ -11,7 +11,7 @@ kotlinx-serialization = "1.11.0"
 ktor = "3.5.2"
 metro = "1.4.2"
 molecule = "2.2.0"
-wasmtime4j = "47.0.2-1.5.0"
+wasmtime4j = "48.0.0-2.0.0"
 
 [plugins]
 compose = { id = "org.jetbrains.compose", version.ref = "compose-jb" }
