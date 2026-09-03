@@ -1,6 +1,7 @@
 import dev.bnorm.arcade.rally.CORNERING
+import dev.bnorm.arcade.rally.MAX_BOOST_THROTTLE
 import dev.bnorm.arcade.rally.MAX_SPEED
- import dev.bnorm.arcade.rally.MIN_TURNING_RADIUS
+import dev.bnorm.arcade.rally.MIN_TURNING_RADIUS
 import kotlin.math.sqrt
 
 val TURNING_RADIUS_SPEED = sqrt(MIN_TURNING_RADIUS * CORNERING)
@@ -19,7 +20,6 @@ fun getMaxSpeed(radius: Double, traction: Double = 1.0): Double {
 }
 
 fun getMaxThrottle(radius: Double, traction: Double = 1.0): Double {
-    // TODO what if a speed boost is available?
     return (getMaxSpeed(radius, traction) / MAX_SPEED)
-        .coerceAtMost(1.0)
+        .coerceAtMost(MAX_BOOST_THROTTLE)
 }

@@ -18,10 +18,6 @@ const val TRACK_WIDTH = 15.0 * SCALE
 
 // THROTTLE AND SPEED
 
-// Limits
-const val MAX_THROTTLE = 1.0
-const val MIN_THROTTLE = -1.0
-
 // Measurements in meters per second squared (m/s^2).
 const val ACCELERATION = 30.0 / (UPS_TARGET * UPS_TARGET) * SCALE // About 3Gs.
 const val DECELERATION = 60.0 / (UPS_TARGET * UPS_TARGET) * SCALE // About 6Gs.
@@ -30,48 +26,69 @@ const val BOOST_DEGRADE = 0.5 / (UPS_TARGET * UPS_TARGET) * SCALE
 
 // Measurements in meters per second (m/s).
 const val MAX_SPEED = 50.0 / UPS_TARGET * SCALE // 180 kph / ~112 mph.
-const val MAX_SPEED_BOOST = 5.0 / UPS_TARGET * SCALE // 18 kph / ~11 mph.
+const val MAX_SPEED_BOOST = 10.0 / UPS_TARGET * SCALE // 36 kph / ~22 mph.
 const val MIN_SPEED = -10.0 / UPS_TARGET * SCALE // 36 kph / 22 mph.
+
+// Limits
+const val MIN_THROTTLE = -1.0 // -MAX_SPEED / MAX_SPEED
+const val MAX_THROTTLE = 1.0 // MAX_SPEED / MAX_SPEED
+const val MAX_BOOST_THROTTLE = (MAX_SPEED + MAX_SPEED_BOOST) / MAX_SPEED
 
 fun simulateSpeed(speed: Double, boost: Double, throttle: Double): Double {
     // TODO should there be burnout?
     //  - hard acceleration causes speed increase to be lower?
     // TODO should there be skidding?
     //  - hard deceleration causes speed decrease to be lower?
-    // TODO if boost is always going to be applied, the driver needs to know about any current boost.
 
-    fun simulateAcceleration(actualSpeed: Double, targetSpeed: Double): Double {
+    fun simulateAcceleration(currentSpeed: Double, targetSpeed: Double, overThrottle: Boolean): Double {
         // Let's deal with only positive target speed...
-        if (targetSpeed < 0.0) return -simulateAcceleration(-actualSpeed, -targetSpeed)
+        if (targetSpeed < 0.0) return -simulateAcceleration(-currentSpeed, -targetSpeed, overThrottle)
 
         // Target speed is always >= 0
-        return if (actualSpeed < 0.0) {
-            if (-actualSpeed < DECELERATION) {
+        return if (currentSpeed < 0.0) {
+            if (-currentSpeed < DECELERATION) {
                 // Need to decelerate and accelerate.
-                val ratio = -actualSpeed / DECELERATION
-                minOf(ratio + ACCELERATION, targetSpeed)
+                val ratio = -currentSpeed / DECELERATION
+                minOf(ratio * ACCELERATION, targetSpeed)
             } else {
                 // Need to only decelerate.
-                actualSpeed + DECELERATION
+                currentSpeed + DECELERATION
             }
         } else {
-            if (targetSpeed > actualSpeed) {
+            if (targetSpeed > currentSpeed) {
                 // Need to accelerate.
-                minOf(actualSpeed + ACCELERATION, targetSpeed)
-            } else if (actualSpeed >= MAX_SPEED && targetSpeed >= MAX_SPEED) {
+                minOf(currentSpeed + ACCELERATION, targetSpeed)
+            } else if (currentSpeed >= MAX_SPEED && overThrottle) {
                 // Let any speed boost slowly degrade.
-                maxOf(actualSpeed - BOOST_DEGRADE, targetSpeed)
+                maxOf(currentSpeed - BOOST_DEGRADE, targetSpeed)
             } else {
                 // Need to decelerate.
-                maxOf(actualSpeed - DECELERATION, targetSpeed)
+                maxOf(currentSpeed - DECELERATION, targetSpeed)
             }
         }
     }
 
     return when {
-        throttle == 0.0 -> simulateAcceleration(speed, 0.0)
-        throttle > 0.0 -> simulateAcceleration(speed, throttle * MAX_SPEED + boost)
-        else -> simulateAcceleration(speed, -throttle * MIN_SPEED)
+        throttle == 0.0 -> {
+            simulateAcceleration(currentSpeed = speed, targetSpeed = 0.0, overThrottle = false)
+        }
+
+        throttle > 0.0 -> {
+            val boostedThrottle = throttle.coerceAtMost((MAX_SPEED + boost) / MAX_SPEED)
+            simulateAcceleration(
+                currentSpeed = speed,
+                targetSpeed = boostedThrottle * MAX_SPEED,
+                overThrottle = throttle > boostedThrottle,
+            )
+        }
+
+        else -> {
+            simulateAcceleration(
+                currentSpeed = speed,
+                targetSpeed = throttle.coerceAtLeast(MIN_THROTTLE) * -MIN_SPEED,
+                overThrottle = false,
+            )
+        }
     }
 }
 
