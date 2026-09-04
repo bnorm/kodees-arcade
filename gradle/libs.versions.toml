@@ -69,5 +69,5 @@ logback = { module = "ch.qos.logback:logback-classic", version = "1.6.3" }
 molecule-runtime = { module = "app.cash.molecule:molecule-runtime", version.ref = "molecule" }
 mosaic-runtime = { module = "com.jakewharton.mosaic:mosaic-runtime", version = "0.18.0" }
 r2dbc-h2 = { module = "io.r2dbc:r2dbc-h2", version = "1.1.0.RELEASE" }
-slf4j-nop = { module = "org.slf4j:slf4j-nop", version = "2.0.18" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version = "2.0.19" }
 wasmtime4j-panama = { module = "ai.tegmentum:wasmtime4j-panama", version.ref = "wasmtime4j" }
