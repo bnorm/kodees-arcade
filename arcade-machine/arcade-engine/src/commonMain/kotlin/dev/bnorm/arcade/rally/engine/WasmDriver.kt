@@ -22,5 +22,6 @@ interface WasmDriver : AutoCloseable {
 
     fun onRace(race: Race)
     fun onTurn(car: Car)
+    fun onCar(car: Car)
     fun onDraw(): List<DrawRequest>
 }

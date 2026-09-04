@@ -103,6 +103,7 @@ interface types {
   }
 
   record car {
+    name: string,
     time: s64,
     location: point,
     velocity: vector,
@@ -124,6 +125,7 @@ interface driver {
 
   on-race: func(race: race);
   on-turn: func(car: car);
+  on-car: func(car: car);
   on-draw: func();
 }
 
