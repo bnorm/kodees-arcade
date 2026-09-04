@@ -22,6 +22,7 @@ import dev.bnorm.arcade.geometry.times
 import dev.bnorm.arcade.geometry.toPoint
 import dev.bnorm.arcade.geometry.toRelative
 import dev.bnorm.arcade.rally.DECELERATION
+import dev.bnorm.arcade.rally.MAX_BOOST_THROTTLE
 import dev.bnorm.arcade.rally.MAX_SPEED
 import dev.bnorm.arcade.rally.getTurningRadius
 import kotlin.math.ceil
@@ -90,7 +91,7 @@ object Kodee : Driver() {
         // Compute required throttle to make that turn.
         if (abs(bearing) < Angle.ofDegrees(0.1)) {
             // Pointed "directly" at the target! Full speed ahead!
-            controls.throttle = 1.0
+            controls.throttle = MAX_BOOST_THROTTLE
 
             // Let's check how we're lined up for the *next* checkpoint.
             val next = targets[(car.nextCheckpoint + 1) % targets.size]
