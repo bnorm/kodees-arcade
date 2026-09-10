@@ -90,6 +90,8 @@ fun driverOnRace(
 @DriverExport
 fun driverOnTurn(
     driver: Driver,
+    namePtr: Int,
+    nameLength: Int,
     time: Long,
     x: Double,
     y: Double,
@@ -102,6 +104,7 @@ fun driverOnTurn(
     withScopedMemoryAllocator {
         driver.onTurn(
             Car(
+                name = Pointer(namePtr.toUInt()).loadString(nameLength),
                 time = time,
                 location = Point(x, y),
                 velocity = Vector(Angle.ofRadians(heading), speed),
@@ -109,6 +112,37 @@ fun driverOnTurn(
                 nextCheckpoint = nextCheckpoint,
             ),
             ImportControls
+        )
+    }
+}
+
+/**
+ * Helper function to use Wasm memory and imported host functions for a [Car].
+ */
+@DriverExport
+fun driverOnCar(
+    driver: Driver,
+    namePtr: Int,
+    nameLength: Int,
+    time: Long,
+    x: Double,
+    y: Double,
+    heading: Double,
+    speed: Double,
+    lap: Int,
+    nextCheckpoint: Int,
+) {
+    freeAllComponentModelReallocAllocatedMemory()
+    withScopedMemoryAllocator {
+        driver.onCar(
+            Car(
+                name = Pointer(namePtr.toUInt()).loadString(nameLength),
+                time = time,
+                location = Point(x, y),
+                velocity = Vector(Angle.ofRadians(heading), speed),
+                lap = lap,
+                nextCheckpoint = nextCheckpoint,
+            )
         )
     }
 }
@@ -125,3 +159,5 @@ fun driverOnDraw(driver: Driver) {
 }
 
 private fun Pointer.loadDouble(): Double = Double.fromBits(loadLong())
+private fun Pointer.loadByteArray(size: Int): ByteArray = ByteArray(size) { i -> (this + i).loadByte() }
+private fun Pointer.loadString(length: Int): String = loadByteArray(length).decodeToString()

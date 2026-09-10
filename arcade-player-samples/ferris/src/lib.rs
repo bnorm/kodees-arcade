@@ -74,6 +74,8 @@ impl Guest for Farris {
          */
     }
 
+    fn on_car(car: Car) -> () {}
+
     fn on_draw() -> () {}
 }
 

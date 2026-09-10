@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 class Car(
+    val name: String,
     val time: Long,
     val location: Point,
     val velocity: Vector,

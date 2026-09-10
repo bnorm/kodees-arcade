@@ -170,6 +170,10 @@ private class WasmtimeWasmDriver private constructor(
         guest.instance.getFunction("bnorm:arcade/driver#on-turn").getOrNull()!!
     }
 
+    private val onCar by lazy(LazyThreadSafetyMode.NONE) {
+        guest.instance.getFunction("bnorm:arcade/driver#on-car").getOrNull()
+    }
+
     private val onDraw by lazy(LazyThreadSafetyMode.NONE) {
         guest.instance.getFunction("bnorm:arcade/driver#on-draw").getOrNull()
     }
@@ -210,7 +214,20 @@ private class WasmtimeWasmDriver private constructor(
     }
 
     override fun onTurn(car: Car) {
+        val memory = guest.memory
+        memory.require(
+            car.name.length * 8
+        )
+
+        val namePtr = 0
+        val bytes = car.name.encodeToByteArray()
+        repeat(bytes.size) {
+            memory.writeBytes(namePtr, bytes)
+        }
+
         onTurn.call(
+            i32(namePtr),
+            i32(bytes.size),
             i64(car.time),
             f64(car.location.x),
             f64(car.location.y),
@@ -219,6 +236,33 @@ private class WasmtimeWasmDriver private constructor(
             i32(car.lap),
             i32(car.nextCheckpoint),
         )
+    }
+
+    override fun onCar(car: Car) {
+        if (onCar != null) {
+            val memory = guest.memory
+            memory.require(
+                car.name.length * 8
+            )
+
+            val namePtr = 0
+            val bytes = car.name.encodeToByteArray()
+            repeat(bytes.size) {
+                memory.writeBytes(namePtr, bytes)
+            }
+
+            onCar?.call(
+                i32(namePtr),
+                i32(bytes.size),
+                i64(car.time),
+                f64(car.location.x),
+                f64(car.location.y),
+                f64(car.velocity.angle.radians),
+                f64(car.velocity.magnitude),
+                i32(car.lap),
+                i32(car.nextCheckpoint),
+            )
+        }
     }
 
     override fun onDraw(): List<DrawRequest> {

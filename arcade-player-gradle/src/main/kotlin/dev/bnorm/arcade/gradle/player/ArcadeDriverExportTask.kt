@@ -70,6 +70,8 @@ open class ArcadeDriverExportTask : DefaultTask() {
              */
             @WasmExport("bnorm:arcade/driver#on-turn")
             fun onTurn(
+                namePtr: Int,
+                nameLength: Int,
                 time: Long,
                 x: Double,
                 y: Double,
@@ -80,6 +82,37 @@ open class ArcadeDriverExportTask : DefaultTask() {
             ) {
                 dev.bnorm.arcade.driver.internal.driverOnTurn(
                     driver,
+                    namePtr,
+                    nameLength,
+                    time,
+                    x,
+                    y,
+                    heading,
+                    speed,
+                    lap,
+                    nextCheckpoint,
+                )
+            }
+            
+            /**
+             * Wasm exported function used by the game engine to call our driver.
+             */
+            @WasmExport("bnorm:arcade/driver#on-car")
+            fun onCar(
+                namePtr: Int,
+                nameLength: Int,
+                time: Long,
+                x: Double,
+                y: Double,
+                heading: Double,
+                speed: Double,
+                lap: Int,
+                nextCheckpoint: Int,
+            ) {
+                dev.bnorm.arcade.driver.internal.driverOnCar(
+                    driver,
+                    namePtr,
+                    nameLength,
                     time,
                     x,
                     y,

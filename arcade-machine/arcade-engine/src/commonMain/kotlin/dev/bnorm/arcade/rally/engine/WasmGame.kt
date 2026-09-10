@@ -54,12 +54,33 @@ class WasmGame(
             )
 
             while (!gameState.finished) {
+
+                // Inform all drivers of all other drivers.
+                for (first in gameState.driverStates) {
+                    if (first.finished) continue
+
+                    val firstCar = Car(
+                        name = first.driver.name,
+                        time = gameState.time,
+                        location = Point(first.x, first.y),
+                        velocity = Vector(first.heading, first.speed),
+                        lap = first.lap,
+                        nextCheckpoint = first.checkpoint,
+                    )
+
+                    for (second in gameState.driverStates) {
+                        if (second.finished || second === first) continue
+                        second.driver.onCar(firstCar)
+                    }
+                }
+
                 // Allow drivers to manipulate controls.
                 for (state in gameState.driverStates) {
                     if (state.finished) continue
 
                     state.driver.onTurn(
                         Car(
+                            name = state.driver.name,
                             time = gameState.time,
                             location = Point(state.x, state.y),
                             velocity = Vector(state.heading, state.speed),

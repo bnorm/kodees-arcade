@@ -134,6 +134,10 @@ private class BrowserWasmDriver private constructor(
         instance.exports["bnorm:arcade/driver#on-turn"]!!.unsafeCast()
     }
 
+    private val onCar: JsFunction<Tuple, JsAny?>? by lazy(LazyThreadSafetyMode.NONE) {
+        instance.exports["bnorm:arcade/driver#on-car"]?.unsafeCast()
+    }
+
     private val onDraw: JsFunction<Tuple, JsAny?>? by lazy(LazyThreadSafetyMode.NONE) {
         instance.exports["bnorm:arcade/driver#on-draw"]?.unsafeCast()
     }
@@ -173,7 +177,19 @@ private class BrowserWasmDriver private constructor(
     }
 
     override fun onTurn(car: Car) {
+        memory.require(
+            car.name.length * 8
+        )
+
+        val namePtr = 0
+        val bytes = car.name.encodeToByteArray()
+        repeat(bytes.size) {
+            memory.writeBytes(namePtr, bytes)
+        }
+
         onTurn.invoke(
+            namePtr,
+            bytes.size,
             car.time,
             car.location.x,
             car.location.y,
@@ -182,6 +198,33 @@ private class BrowserWasmDriver private constructor(
             car.lap,
             car.nextCheckpoint,
         )
+    }
+
+
+    override fun onCar(car: Car) {
+        if (onCar != null) {
+            memory.require(
+                car.name.length * 8
+            )
+
+            val namePtr = 0
+            val bytes = car.name.encodeToByteArray()
+            repeat(bytes.size) {
+                memory.writeBytes(namePtr, bytes)
+            }
+
+            onCar?.invoke(
+                namePtr,
+                bytes.size,
+                car.time,
+                car.location.x,
+                car.location.y,
+                car.velocity.angle.radians,
+                car.velocity.magnitude,
+                car.lap,
+                car.nextCheckpoint,
+            )
+        }
     }
 
     override fun onDraw(): List<DrawRequest> {
@@ -212,23 +255,27 @@ private fun JsFunction<Tuple, JsAny?>.invoke(
 }
 
 private fun JsFunction<Tuple, JsAny?>.invoke(
-    p0: Long,
-    p1: Double,
-    p2: Double,
+    p0: Int,
+    p1: Int,
+    p2: Long,
     p3: Double,
     p4: Double,
-    p5: Int,
-    p6: Int,
+    p5: Double,
+    p6: Double,
+    p7: Int,
+    p8: Int,
 ) {
     invoke(
         this,
-        p0.toJsBigInt(),
-        p1.toJsDouble(),
-        p2.toJsDouble(),
+        p0.toJsInt(),
+        p1.toJsInt(),
+        p2.toJsBigInt(),
         p3.toJsDouble(),
         p4.toJsDouble(),
-        p5.toJsInt(),
-        p6.toJsInt()
+        p5.toJsDouble(),
+        p6.toJsDouble(),
+        p7.toJsInt(),
+        p8.toJsInt()
     )
 }
 
@@ -249,6 +296,22 @@ private fun invoke(
     p6: JsAny,
 ) {
     js("func(p0, p1, p2, p3, p4, p5, p6)")
+}
+
+@Suppress("unused")
+private fun invoke(
+    func: JsFunction<Tuple, JsAny?>,
+    p0: JsAny,
+    p1: JsAny,
+    p2: JsAny,
+    p3: JsAny,
+    p4: JsAny,
+    p5: JsAny,
+    p6: JsAny,
+    p7: JsAny,
+    p8: JsAny,
+) {
+    js("func(p0, p1, p2, p3, p4, p5, p6, p7, p8)")
 }
 
 // TODO convert this to Kotlin, somehow...
